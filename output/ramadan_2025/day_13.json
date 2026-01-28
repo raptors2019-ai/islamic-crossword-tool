@@ -1,0 +1,463 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 13",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.655685",
+    "rows": 10,
+    "cols": 11,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 5
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "O"
+      },
+      {
+        "type": "letter",
+        "solution": "S",
+        "number": 2
+      },
+      {
+        "type": "letter",
+        "solution": "Q"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "E"
+      },
+      {
+        "type": "letter",
+        "solution": "S",
+        "number": 6
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "D",
+        "number": 4
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "K"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "G"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "I",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "T"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "The most beloved of places to Allah are the _.” (Hadith)",
+        "answer": "MOSQUES",
+        "row": 3,
+        "col": 4,
+        "length": 7
+      },
+      {
+        "number": 3,
+        "clue": "Waiting period after divorce",
+        "answer": "IDDAH",
+        "row": 6,
+        "col": 0,
+        "length": 5
+      },
+      {
+        "number": 4,
+        "clue": "Powerhouse in textiles today",
+        "answer": "DHAKA",
+        "row": 4,
+        "col": 0,
+        "length": 5
+      }
+    ],
+    "down": [
+      {
+        "number": 1,
+        "clue": "Sunset",
+        "answer": "MAGHRIB",
+        "row": 3,
+        "col": 4,
+        "length": 7
+      },
+      {
+        "number": 2,
+        "clue": "The largest branch of Islam",
+        "answer": "SUNNI",
+        "row": 3,
+        "col": 6,
+        "length": 5
+      },
+      {
+        "number": 5,
+        "clue": "Miraculous food provided to the wandering Israelites in the wilderness",
+        "answer": "MANNA",
+        "row": 0,
+        "col": 2,
+        "length": 5
+      },
+      {
+        "number": 6,
+        "clue": "Item of clothing torn from the back, proving Yusuf was fleeing and not the aggressor",
+        "answer": "SHIRT",
+        "row": 3,
+        "col": 10,
+        "length": 5
+      }
+    ]
+  }
+}

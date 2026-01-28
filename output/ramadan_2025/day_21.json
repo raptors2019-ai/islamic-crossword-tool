@@ -1,0 +1,340 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 21",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.671632",
+    "rows": 8,
+    "cols": 9,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "J",
+        "number": 2
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R",
+        "number": 6
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "W",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "Q"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "F"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Z",
+        "number": 4
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "letter",
+        "solution": "S"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Z"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 7
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "B",
+        "number": 5
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "letter",
+        "solution": "T"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "Pillar of hajj standing in prayer at the plain of Arafat",
+        "answer": "WUQUF",
+        "row": 1,
+        "col": 3,
+        "length": 5
+      },
+      {
+        "number": 3,
+        "clue": "Arabic word for throne",
+        "answer": "ARSH",
+        "row": 3,
+        "col": 1,
+        "length": 4
+      },
+      {
+        "number": 5,
+        "clue": "Ahl-Al _\"\" (Family of Muhammad)",
+        "answer": "BAYT",
+        "row": 6,
+        "col": 0,
+        "length": 4
+      },
+      {
+        "number": 7,
+        "clue": "Miraculous food provided to the wandering Israelites in the wilderness",
+        "answer": "MANNA",
+        "row": 5,
+        "col": 4,
+        "length": 5
+      }
+    ],
+    "down": [
+      {
+        "number": 2,
+        "clue": "The Arab tribe that settled in Mecca after discovering the miracle of the water",
+        "answer": "JURHUM",
+        "row": 0,
+        "col": 4,
+        "length": 6
+      },
+      {
+        "number": 4,
+        "clue": "Sacred H₂O source",
+        "answer": "ZAMZAM",
+        "row": 2,
+        "col": 1,
+        "length": 6
+      },
+      {
+        "number": 6,
+        "clue": "The Arabic name for the Spirit (Gabriel)",
+        "answer": "RUH",
+        "row": 0,
+        "col": 6,
+        "length": 3
+      }
+    ]
+  }
+}

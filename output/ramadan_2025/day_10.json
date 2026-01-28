@@ -1,0 +1,558 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 10",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.649972",
+    "rows": 17,
+    "cols": 8,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 7
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "T",
+        "number": 4
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A",
+        "number": 5
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "letter",
+        "solution": "S"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "J"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "K",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "letter",
+        "solution": "I",
+        "number": 2
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 6
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "S",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "O"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "O"
+      },
+      {
+        "type": "letter",
+        "solution": "M"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "S"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "The name of the wise man Prophet Musa meets (Al-_)",
+        "answer": "KHIDR",
+        "row": 8,
+        "col": 0,
+        "length": 5
+      },
+      {
+        "number": 3,
+        "clue": "The unnatural act practiced openly by the residents of Sodom",
+        "answer": "SODOMY",
+        "row": 12,
+        "col": 2,
+        "length": 6
+      },
+      {
+        "number": 5,
+        "clue": "Arabic word for throne",
+        "answer": "ARSH",
+        "row": 2,
+        "col": 1,
+        "length": 4
+      }
+    ],
+    "down": [
+      {
+        "number": 2,
+        "clue": "Satan in Islam",
+        "answer": "IBLIS",
+        "row": 8,
+        "col": 2,
+        "length": 5
+      },
+      {
+        "number": 4,
+        "clue": "saying \"\"labbaik allahumma labbaik",
+        "answer": "TALBIYAH",
+        "row": 1,
+        "col": 1,
+        "length": 8
+      },
+      {
+        "number": 6,
+        "clue": "Arabic word for place of study, Islamic school or educational institution.",
+        "answer": "MADRASA",
+        "row": 10,
+        "col": 4,
+        "length": 7
+      },
+      {
+        "number": 7,
+        "clue": "House of worship where \"\"sole\"\" searching happens at the door?",
+        "answer": "MASJID",
+        "row": 0,
+        "col": 3,
+        "length": 6
+      }
+    ]
+  }
+}

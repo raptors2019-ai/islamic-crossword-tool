@@ -1,0 +1,365 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 2",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.633387",
+    "rows": 8,
+    "cols": 10,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "K",
+        "number": 6
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "F",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "I",
+        "number": 2
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "A",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "W"
+      },
+      {
+        "type": "letter",
+        "solution": "S"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Z"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "W"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "H",
+        "number": 4
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 5
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 7
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "S"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "Special place in Junnah",
+        "answer": "FIRDAWS",
+        "row": 2,
+        "col": 3,
+        "length": 7
+      },
+      {
+        "number": 4,
+        "clue": "5th commandment, \"\"Do not take a _ life, made sacred by Allah, except with legal right.",
+        "answer": "HUMAN",
+        "row": 4,
+        "col": 0,
+        "length": 5
+      },
+      {
+        "number": 7,
+        "clue": "Arabic word for place of study, Islamic school or educational institution.",
+        "answer": "MADRASA",
+        "row": 7,
+        "col": 1,
+        "length": 7
+      }
+    ],
+    "down": [
+      {
+        "number": 2,
+        "clue": "son",
+        "answer": "IBN",
+        "row": 2,
+        "col": 4,
+        "length": 3
+      },
+      {
+        "number": 3,
+        "clue": "Ulul '_ \"\"Prophet's of Resolve",
+        "answer": "AZM",
+        "row": 2,
+        "col": 7,
+        "length": 3
+      },
+      {
+        "number": 5,
+        "clue": "Colloquial Arabic for 'one hundred'",
+        "answer": "MIYA",
+        "row": 4,
+        "col": 2,
+        "length": 4
+      },
+      {
+        "number": 6,
+        "clue": "Dressing the Kaaba",
+        "answer": "KISWA",
+        "row": 0,
+        "col": 9,
+        "length": 5
+      }
+    ]
+  }
+}

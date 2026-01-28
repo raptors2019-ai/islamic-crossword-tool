@@ -1,0 +1,564 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 19",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.667366",
+    "rows": 14,
+    "cols": 10,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "T",
+        "number": 4
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "S",
+        "number": 5
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "letter",
+        "solution": "E"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "O",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "R",
+        "number": 2
+      },
+      {
+        "type": "letter",
+        "solution": "P"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "E"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "W"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "A",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "K"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "letter",
+        "solution": "A",
+        "number": 6
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "R"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "K"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "D"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "S",
+        "number": 7
+      },
+      {
+        "type": "letter",
+        "solution": "T"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "F"
+      },
+      {
+        "type": "letter",
+        "solution": "F"
+      }
+    ],
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Q"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "The \"\"Final Frontier\"\" of the soul.",
+        "answer": "AKHIRAH",
+        "row": 8,
+        "col": 2,
+        "length": 7
+      },
+      {
+        "number": 3,
+        "clue": "6th commandment, \"\"Do not come near the wealth of the _ unless intending to enhance it...",
+        "answer": "ORPHAN",
+        "row": 5,
+        "col": 1,
+        "length": 6
+      },
+      {
+        "number": 5,
+        "clue": "Bilqis was the Queen of _",
+        "answer": "SHEBA",
+        "row": 1,
+        "col": 0,
+        "length": 5
+      },
+      {
+        "number": 7,
+        "clue": "The object held by Musa that miraculously transformed into a wriggling serpent",
+        "answer": "STAFF",
+        "row": 12,
+        "col": 5,
+        "length": 5
+      }
+    ],
+    "down": [
+      {
+        "number": 2,
+        "clue": "AJR meaning in English",
+        "answer": "REWARD",
+        "row": 5,
+        "col": 2,
+        "length": 6
+      },
+      {
+        "number": 4,
+        "clue": "The book of Musa",
+        "answer": "TAURAH",
+        "row": 0,
+        "col": 4,
+        "length": 6
+      },
+      {
+        "number": 6,
+        "clue": "Arabic for Moral values in Islam",
+        "answer": "AKHLAQ",
+        "row": 8,
+        "col": 7,
+        "length": 6
+      }
+    ]
+  }
+}

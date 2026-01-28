@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup 2: Clue & Spelling Helper</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .mockup-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            color: #333;
+        }
+        .panel-body { padding: 20px; }
+
+        /* Question callout */
+        .question-callout {
+            background: #e3f2fd;
+            border-left: 4px solid #1976d2;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .question-callout h4 {
+            color: #0d47a1;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .question-callout p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Word Editor */
+        .word-editor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .word-display {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 12px;
+        }
+        .word-arabic {
+            font-size: 48px;
+            color: #1a5d3a;
+            margin-bottom: 10px;
+        }
+        .word-english {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2e7d32;
+            letter-spacing: 4px;
+        }
+
+        /* Spelling Variants */
+        .spelling-section { margin-top: 20px; }
+        .spelling-section h4 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        .spelling-variants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .variant {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .variant:hover {
+            border-color: #1976d2;
+            background: #e3f2fd;
+        }
+        .variant.selected {
+            border-color: #1976d2;
+            background: #1976d2;
+            color: white;
+        }
+        .variant.add-new {
+            border-style: dashed;
+            color: #999;
+        }
+
+        /* Clue Editor */
+        .clue-editor h4 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        .clue-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .clue-input:focus {
+            outline: none;
+            border-color: #1976d2;
+        }
+
+        /* AI Suggestions */
+        .ai-suggestions {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #666;
+        }
+        .ai-badge {
+            background: linear-gradient(135deg, #7c4dff 0%, #536dfe 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .suggestion {
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .suggestion:hover {
+            border-color: #7c4dff;
+        }
+        .suggestion-text { font-size: 15px; color: #333; }
+        .suggestion-type {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        /* Difficulty */
+        .difficulty-section {
+            margin-top: 20px;
+        }
+        .difficulty-section h4 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        .difficulty-slider {
+            display: flex;
+            gap: 8px;
+        }
+        .diff-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .diff-btn:hover { border-color: #1976d2; }
+        .diff-btn.selected {
+            border-color: #1976d2;
+            background: #e3f2fd;
+        }
+        .diff-btn .label { font-weight: 600; font-size: 14px; }
+        .diff-btn .desc { font-size: 11px; color: #999; margin-top: 4px; }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-primary:hover { background: #1565c0; }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        /* Bulk Editor */
+        .bulk-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .bulk-table th {
+            text-align: left;
+            padding: 12px;
+            background: #f5f5f5;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+        }
+        .bulk-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        .bulk-table .word-cell {
+            font-weight: 600;
+            color: #1a5d3a;
+        }
+        .bulk-table input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .bulk-table input:focus {
+            outline: none;
+            border-color: #1976d2;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .status-badge.complete { background: #e8f5e9; color: #2e7d32; }
+        .status-badge.needs-review { background: #fff3e0; color: #e65100; }
+        .status-badge.missing { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✏️ Clue & Spelling Helper</h1>
+        <span class="mockup-badge">MOCKUP 2: Clue Editor</span>
+    </div>
+
+    <div class="container">
+        <div class="question-callout">
+            <h4>💬 Questions for Azmat:</h4>
+            <p>
+                • How does he currently write clues? Does he use the definitions from the word list or write custom ones?<br>
+                • For Arabic words with multiple transliterations (QURAN/KORAN, MUSA/MOSES), which spellings does he prefer?<br>
+                • Would AI-suggested clues be helpful, or does he want full control?<br>
+                • Does he need different difficulty levels for different audiences?
+            </p>
+        </div>
+
+        <!-- Single Word Editor -->
+        <div class="panel">
+            <div class="panel-header">Edit Word: ZAKARIYA</div>
+            <div class="panel-body">
+                <div class="word-editor">
+                    <div>
+                        <div class="word-display">
+                            <div class="word-arabic">زكريا</div>
+                            <div class="word-english">ZAKARIYA</div>
+                        </div>
+
+                        <div class="spelling-section">
+                            <h4>📝 Accepted Spellings (click to set primary)</h4>
+                            <div class="spelling-variants">
+                                <div class="variant selected">ZAKARIYA</div>
+                                <div class="variant">ZAKARIYYA</div>
+                                <div class="variant">ZECHARIAH</div>
+                                <div class="variant">ZACHARIAS</div>
+                                <div class="variant add-new">+ Add spelling</div>
+                            </div>
+                        </div>
+
+                        <div class="difficulty-section">
+                            <h4>🎯 Clue Difficulty</h4>
+                            <div class="difficulty-slider">
+                                <div class="diff-btn">
+                                    <div class="label">Easy</div>
+                                    <div class="desc">Direct definition</div>
+                                </div>
+                                <div class="diff-btn selected">
+                                    <div class="label">Medium</div>
+                                    <div class="desc">Some context needed</div>
+                                </div>
+                                <div class="diff-btn">
+                                    <div class="label">Hard</div>
+                                    <div class="desc">Requires knowledge</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="clue-editor">
+                        <h4>Current Clue</h4>
+                        <input type="text" class="clue-input" value="Prophet and guardian of Maryam (RA)">
+
+                        <div class="ai-suggestions">
+                            <div class="ai-header">
+                                <span class="ai-badge">AI</span>
+                                Suggested Clues
+                            </div>
+                            <div class="suggestion">
+                                <div class="suggestion-text">Father of Yahya (John the Baptist)</div>
+                                <div class="suggestion-type">Quranic reference</div>
+                            </div>
+                            <div class="suggestion">
+                                <div class="suggestion-text">Prophet who was given glad tidings of a son in old age</div>
+                                <div class="suggestion-type">Story-based</div>
+                            </div>
+                            <div class="suggestion">
+                                <div class="suggestion-text">He prayed for an heir while standing in the mihrab</div>
+                                <div class="suggestion-type">Detailed reference (Q. 3:39)</div>
+                            </div>
+                            <div class="suggestion">
+                                <div class="suggestion-text">_____ (AS), guardian of Maryam</div>
+                                <div class="suggestion-type">Fill-in-the-blank</div>
+                            </div>
+                        </div>
+
+                        <div class="actions">
+                            <button class="btn btn-primary">💾 Save Changes</button>
+                            <button class="btn btn-secondary">⟳ Generate More</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Editor -->
+        <div class="panel">
+            <div class="panel-header">Bulk Clue Editor (All Puzzle Words)</div>
+            <div class="panel-body">
+                <table class="bulk-table">
+                    <thead>
+                        <tr>
+                            <th style="width:120px">Word</th>
+                            <th>Clue</th>
+                            <th style="width:100px">Status</th>
+                            <th style="width:80px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="word-cell">QURAN</td>
+                            <td><input type="text" value="Muslim Holy Book"></td>
+                            <td><span class="status-badge complete">✓ Good</span></td>
+                            <td><button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">✨ AI</button></td>
+                        </tr>
+                        <tr>
+                            <td class="word-cell">ZAKARIYA</td>
+                            <td><input type="text" value="Prophet and guardian of Maryam (RA)"></td>
+                            <td><span class="status-badge complete">✓ Good</span></td>
+                            <td><button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">✨ AI</button></td>
+                        </tr>
+                        <tr>
+                            <td class="word-cell">HAJJ</td>
+                            <td><input type="text" value="Pilgrimage to Mecca" style="border-color:#ff9800;"></td>
+                            <td><span class="status-badge needs-review">⚠️ Short</span></td>
+                            <td><button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">✨ AI</button></td>
+                        </tr>
+                        <tr>
+                            <td class="word-cell">SALAH</td>
+                            <td><input type="text" value=""></td>
+                            <td><span class="status-badge missing">✗ Missing</span></td>
+                            <td><button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">✨ AI</button></td>
+                        </tr>
+                        <tr>
+                            <td class="word-cell">MUSA</td>
+                            <td><input type="text" value="Prophet who parted the sea"></td>
+                            <td><span class="status-badge complete">✓ Good</span></td>
+                            <td><button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;">✨ AI</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="actions">
+                    <button class="btn btn-primary">💾 Save All</button>
+                    <button class="btn btn-secondary">✨ Auto-fill Missing</button>
+                    <button class="btn btn-secondary">📋 Import from CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

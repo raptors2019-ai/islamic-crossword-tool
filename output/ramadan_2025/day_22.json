@@ -1,0 +1,380 @@
+{
+  "metadata": {
+    "title": "Ramadan Day 22",
+    "author": "myislam.org",
+    "date": "2026-01-28T15:54:03.673453",
+    "rows": 7,
+    "cols": 12,
+    "wordCount": 7
+  },
+  "grid": [
+    [
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "P",
+        "number": 2
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "W",
+        "number": 4
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "M",
+        "number": 6
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "letter",
+        "solution": "K"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "Q",
+        "number": 1
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "M"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "R",
+        "number": 5
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "letter",
+        "solution": "U"
+      },
+      {
+        "type": "letter",
+        "solution": "B"
+      },
+      {
+        "type": "letter",
+        "solution": "I"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "letter",
+        "solution": "H"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "Y"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "C"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "A"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "letter",
+        "solution": "I",
+        "number": 3
+      },
+      {
+        "type": "letter",
+        "solution": "N"
+      },
+      {
+        "type": "letter",
+        "solution": "J"
+      },
+      {
+        "type": "letter",
+        "solution": "E"
+      },
+      {
+        "type": "letter",
+        "solution": "E"
+      },
+      {
+        "type": "letter",
+        "solution": "L"
+      },
+      {
+        "type": "empty"
+      }
+    ],
+    [
+      {
+        "type": "letter",
+        "solution": "M"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      },
+      {
+        "type": "empty"
+      }
+    ]
+  ],
+  "clues": {
+    "across": [
+      {
+        "number": 1,
+        "clue": "Pen used for writing the Qur'an or Islamic calligraphy",
+        "answer": "QALAM",
+        "row": 1,
+        "col": 7,
+        "length": 5
+      },
+      {
+        "number": 3,
+        "clue": "The Arabic name for Holy Scripture revealed to Isa",
+        "answer": "INJEEL",
+        "row": 5,
+        "col": 5,
+        "length": 6
+      },
+      {
+        "number": 5,
+        "clue": "Tawhid al-_\"\" is the Islamic belief that Allah is the Creator, Sustainer, and Lord of universe.",
+        "answer": "RUBUBIYYAH",
+        "row": 3,
+        "col": 0,
+        "length": 10
+      },
+      {
+        "number": 6,
+        "clue": "She-camel’s provision from the story of Prophet Salih (AS)",
+        "answer": "MILK",
+        "row": 1,
+        "col": 0,
+        "length": 4
+      }
+    ],
+    "down": [
+      {
+        "number": 2,
+        "clue": "Buckingham _____",
+        "answer": "PALACE",
+        "row": 0,
+        "col": 8,
+        "length": 6
+      },
+      {
+        "number": 4,
+        "clue": "Dhul Jalal _ Ikram",
+        "answer": "WAL",
+        "row": 0,
+        "col": 10,
+        "length": 3
+      },
+      {
+        "number": 6,
+        "clue": "The only woman mentioned in the Qur'an by her name",
+        "answer": "MARYAM",
+        "row": 1,
+        "col": 0,
+        "length": 6
+      }
+    ]
+  }
+}

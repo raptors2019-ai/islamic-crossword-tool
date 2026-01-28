@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Islamic Crossword Puzzles</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c5530;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #2c5530;
+            margin-top: 0;
+            border-bottom: 2px solid #2c5530;
+            padding-bottom: 10px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+        a {
+            color: #1976D2;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .badge-play {
+            background: #4CAF50;
+            color: white;
+        }
+        .badge-solution {
+            background: #FF9800;
+            color: white;
+        }
+        .badge-json {
+            background: #9E9E9E;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕌 Islamic Crossword Puzzles</h1>
+
+    <div class="section">
+        <h2>Ramadan 2025</h2>
+        <ul id="ramadan-list">
+            <li>Loading...</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Recent Puzzles</h2>
+        <ul id="recent-list">
+            <li>Loading...</li>
+        </ul>
+    </div>
+
+    <script>
+        // Simple directory listing (works when served via Python http.server)
+        async function listFiles(path, listId, filter) {
+            const list = document.getElementById(listId);
+            try {
+                const response = await fetch(path);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = Array.from(doc.querySelectorAll('a'))
+                    .map(a => a.href.split('/').pop())
+                    .filter(name => name && filter(name))
+                    .sort();
+
+                if (links.length === 0) {
+                    list.innerHTML = '<li>No puzzles found. Generate some with: python generate.py --output html</li>';
+                    return;
+                }
+
+                list.innerHTML = links.map(name => {
+                    const baseName = name.replace('.html', '').replace('_solution', '');
+                    const isSolution = name.includes('_solution');
+                    const isJson = name.endsWith('.json');
+
+                    if (isSolution) return '';
+                    if (isJson) return '';
+
+                    let badges = '';
+                    badges += `<a href="${path}${name}"><span class="badge badge-play">Play</span></a>`;
+
+                    const solutionName = name.replace('.html', '_solution.html');
+                    if (links.includes(solutionName)) {
+                        badges += `<a href="${path}${solutionName}"><span class="badge badge-solution">Solution</span></a>`;
+                    }
+
+                    const jsonName = name.replace('.html', '.json');
+                    if (links.includes(jsonName)) {
+                        badges += `<a href="${path}${jsonName}"><span class="badge badge-json">JSON</span></a>`;
+                    }
+
+                    return `<li>${baseName} ${badges}</li>`;
+                }).filter(x => x).join('');
+            } catch (e) {
+                list.innerHTML = '<li>Could not load directory listing</li>';
+            }
+        }
+
+        listFiles('ramadan_2025/', 'ramadan-list', name => name.endsWith('.html') || name.endsWith('.json'));
+        listFiles('./', 'recent-list', name => name.startsWith('puzzle_') && (name.endsWith('.html') || name.endsWith('.json')));
+    </script>
+</body>
+</html>

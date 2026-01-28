@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramadan Day 10</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #2c5530;
+        }
+        .puzzle-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+        .grid-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(17, 40px);
+            gap: 1px;
+            background: #333;
+            border: 2px solid #333;
+        }
+        .cell {
+            background: white;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cell.black {
+            background: #333;
+        }
+        .cell.empty {
+            background: #f0f0f0;
+        }
+        .cell-number {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #666;
+        }
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: transparent;
+        }
+        .cell-input:focus {
+            outline: none;
+            background: #fffde7;
+        }
+        .cell-solution {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c5530;
+        }
+        .clues-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .clue-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 250px;
+            flex: 1;
+        }
+        .clue-section h2 {
+            margin-top: 0;
+            color: #2c5530;
+            border-bottom: 2px solid #2c5530;
+            padding-bottom: 10px;
+        }
+        .clue {
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+        .clue-number {
+            font-weight: bold;
+            color: #2c5530;
+        }
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+        .btn-clear:hover {
+            background: #d32f2f;
+        }
+        .btn-check {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-check:hover {
+            background: #1976D2;
+        }
+        .btn-reveal {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-reveal:hover {
+            background: #388E3C;
+        }
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: repeat(8, 35px);
+                grid-template-rows: repeat(17, 35px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Ramadan Day 10</h1>
+
+    <div class="puzzle-container">
+        <div class="grid-container">
+            <div class="grid">
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">7</span><input type="text" class="cell-input" maxlength="1" data-row="0" data-col="3" data-solution="M"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">4</span><input type="text" class="cell-input" maxlength="1" data-row="1" data-col="1" data-solution="T"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="1" data-col="3" data-solution="A"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">5</span><input type="text" class="cell-input" maxlength="1" data-row="2" data-col="1" data-solution="A"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="2" data-col="2" data-solution="R"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="2" data-col="3" data-solution="S"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="2" data-col="4" data-solution="H"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="3" data-col="1" data-solution="L"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="3" data-col="3" data-solution="J"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="4" data-col="1" data-solution="B"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="4" data-col="3" data-solution="I"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="5" data-col="1" data-solution="I"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="5" data-col="3" data-solution="D"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="6" data-col="1" data-solution="Y"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="7" data-col="1" data-solution="A"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">1</span><input type="text" class="cell-input" maxlength="1" data-row="8" data-col="0" data-solution="K"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="8" data-col="1" data-solution="H"></div>
+                <div class="cell"><span class="cell-number">2</span><input type="text" class="cell-input" maxlength="1" data-row="8" data-col="2" data-solution="I"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="8" data-col="3" data-solution="D"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="8" data-col="4" data-solution="R"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="9" data-col="2" data-solution="B"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="10" data-col="2" data-solution="L"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">6</span><input type="text" class="cell-input" maxlength="1" data-row="10" data-col="4" data-solution="M"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="11" data-col="2" data-solution="I"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="11" data-col="4" data-solution="A"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><span class="cell-number">3</span><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="2" data-solution="S"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="3" data-solution="O"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="4" data-solution="D"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="5" data-solution="O"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="6" data-solution="M"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="12" data-col="7" data-solution="Y"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="13" data-col="4" data-solution="R"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="14" data-col="4" data-solution="A"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="15" data-col="4" data-solution="S"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell"><input type="text" class="cell-input" maxlength="1" data-row="16" data-col="4" data-solution="A"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+                <div class="cell empty"></div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-clear" onclick="clearGrid()">Clear</button>
+                <button class="btn btn-check" onclick="checkGrid()">Check</button>
+                <button class="btn btn-reveal" onclick="revealGrid()">Reveal</button>
+            </div>
+        </div>
+
+        <div class="clues-container">
+            <div class="clue-section">
+                <h2>Across</h2>
+                <div class="clue"><span class="clue-number">1.</span> The name of the wise man Prophet Musa meets (Al-_)</div>
+                <div class="clue"><span class="clue-number">3.</span> The unnatural act practiced openly by the residents of Sodom</div>
+                <div class="clue"><span class="clue-number">5.</span> Arabic word for throne</div>
+            </div>
+
+            <div class="clue-section">
+                <h2>Down</h2>
+                <div class="clue"><span class="clue-number">2.</span> Satan in Islam</div>
+                <div class="clue"><span class="clue-number">4.</span> saying ""labbaik allahumma labbaik</div>
+                <div class="clue"><span class="clue-number">6.</span> Arabic word for place of study, Islamic school or educational institution.</div>
+                <div class="clue"><span class="clue-number">7.</span> House of worship where ""sole"" searching happens at the door?</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation and input handling
+        document.querySelectorAll('.cell-input').forEach(input => {
+            input.addEventListener('input', function(e) {
+                if (this.value) {
+                    // Move to next input
+                    const inputs = Array.from(document.querySelectorAll('.cell-input'));
+                    const currentIndex = inputs.indexOf(this);
+                    if (currentIndex < inputs.length - 1) {
+                        inputs[currentIndex + 1].focus();
+                    }
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !this.value) {
+                    // Move to previous input
+                    const inputs = Array.from(document.querySelectorAll('.cell-input'));
+                    const currentIndex = inputs.indexOf(this);
+                    if (currentIndex > 0) {
+                        inputs[currentIndex - 1].focus();
+                    }
+                }
+            });
+        });
+
+        function clearGrid() {
+            document.querySelectorAll('.cell-input').forEach(input => {
+                input.value = '';
+                input.style.background = '';
+            });
+        }
+
+        function checkGrid() {
+            document.querySelectorAll('.cell-input').forEach(input => {
+                const solution = input.dataset.solution;
+                if (input.value.toUpperCase() === solution) {
+                    input.style.background = '#c8e6c9';
+                } else if (input.value) {
+                    input.style.background = '#ffcdd2';
+                }
+            });
+        }
+
+        function revealGrid() {
+            document.querySelectorAll('.cell-input').forEach(input => {
+                input.value = input.dataset.solution;
+                input.style.background = '#e3f2fd';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup 1: Visual Puzzle Builder</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a5d3a 0%, #2d8a5e 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .mockup-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-body { padding: 16px; }
+
+        /* Word Bank */
+        .word-bank {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .word-item {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            background: white;
+        }
+        .word-item:hover {
+            border-color: #2d8a5e;
+            box-shadow: 0 2px 8px rgba(45,138,94,0.15);
+        }
+        .word-item.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+        .word-item.used {
+            opacity: 0.4;
+            background: #f5f5f5;
+        }
+        .word-text {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a5d3a;
+            margin-bottom: 4px;
+        }
+        .word-clue {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+        .word-meta {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .word-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        /* Grid Area */
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 38px);
+            grid-template-rows: repeat(12, 38px);
+            gap: 2px;
+            background: #333;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .cell {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .cell:hover { background: #fff9c4; }
+        .cell.filled { background: white; color: #1a5d3a; }
+        .cell.empty { background: #f5f5f5; }
+        .cell.black { background: #333; cursor: default; }
+        .cell.drop-target { background: #c8e6c9; }
+        .cell-number {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 9px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .grid-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1a5d3a;
+            color: white;
+        }
+        .btn-primary:hover { background: #145a32; }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover { background: #d0d0d0; }
+        .btn-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .btn-danger:hover { background: #ffcdd2; }
+
+        /* Clues Panel */
+        .clue-section { margin-bottom: 20px; }
+        .clue-section h3 {
+            font-size: 14px;
+            color: #1a5d3a;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+        .clue-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 6px;
+        }
+        .clue-number {
+            font-weight: 700;
+            color: #1a5d3a;
+            min-width: 24px;
+        }
+        .clue-text {
+            flex: 1;
+            font-size: 14px;
+            color: #333;
+        }
+        .clue-edit-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .clue-edit-btn:hover { color: #1a5d3a; }
+
+        /* Status Bar */
+        .status-bar {
+            background: #f5f5f5;
+            padding: 12px 20px;
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-dot.good { background: #4caf50; }
+        .status-dot.warning { background: #ff9800; }
+        .status-dot.error { background: #f44336; }
+
+        /* Question callout */
+        .question-callout {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 16px;
+            margin: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .question-callout h4 {
+            color: #e65100;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .question-callout p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🕌 Crossword Puzzle Builder</h1>
+        <span class="mockup-badge">MOCKUP 1: Visual Builder</span>
+    </div>
+
+    <div class="question-callout">
+        <h4>💬 Questions for Azmat:</h4>
+        <p>
+            • Does he prefer dragging words onto the grid, or auto-generating and then tweaking?<br>
+            • How important is seeing the grid build up visually vs. just getting a finished puzzle?<br>
+            • Does he need to manually place words or just approve/reject generated placements?
+        </p>
+    </div>
+
+    <div class="container">
+        <!-- Word Bank Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                Word Bank
+                <input type="text" placeholder="Search..." style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 100px;">
+            </div>
+            <div class="panel-body word-bank">
+                <div class="word-item" draggable="true">
+                    <div class="word-text">QURAN</div>
+                    <div class="word-clue">Muslim Holy Book</div>
+                    <div class="word-meta">
+                        <span class="word-tag">5 letters</span>
+                    </div>
+                </div>
+                <div class="word-item" draggable="true">
+                    <div class="word-text">SALAH</div>
+                    <div class="word-clue">Fajr, Dhuhr, Asr, Maghrib, Isha</div>
+                    <div class="word-meta">
+                        <span class="word-tag">5 letters</span>
+                    </div>
+                </div>
+                <div class="word-item used" draggable="true">
+                    <div class="word-text">HAJJ</div>
+                    <div class="word-clue">Pilgrimage to Mecca</div>
+                    <div class="word-meta">
+                        <span class="word-tag">4 letters</span>
+                        <span class="word-tag" style="background:#e3f2fd;color:#1565c0;">✓ Used</span>
+                    </div>
+                </div>
+                <div class="word-item" draggable="true">
+                    <div class="word-text">RAMADAN</div>
+                    <div class="word-clue">Holy month of fasting</div>
+                    <div class="word-meta">
+                        <span class="word-tag">7 letters</span>
+                    </div>
+                </div>
+                <div class="word-item" draggable="true">
+                    <div class="word-text">MUSA</div>
+                    <div class="word-clue">Prophet who parted the sea</div>
+                    <div class="word-meta">
+                        <span class="word-tag">4 letters</span>
+                    </div>
+                </div>
+                <div class="word-item" draggable="true">
+                    <div class="word-text">IBRAHIM</div>
+                    <div class="word-clue">Father of prophets</div>
+                    <div class="word-meta">
+                        <span class="word-tag">7 letters</span>
+                    </div>
+                </div>
+                <div class="word-item" draggable="true">
+                    <div class="word-text">ZAKAH</div>
+                    <div class="word-clue">Obligatory charity, one of the five pillars</div>
+                    <div class="word-meta">
+                        <span class="word-tag">5 letters</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                Puzzle Grid
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;">↶ Undo</button>
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;">Auto-Fill</button>
+                </div>
+            </div>
+            <div class="grid-container">
+                <div class="grid" id="puzzle-grid">
+                    <!-- Grid will be generated by JS -->
+                </div>
+                <div class="grid-actions">
+                    <button class="btn btn-primary">✨ Generate Puzzle</button>
+                    <button class="btn btn-secondary">🔄 Shuffle</button>
+                    <button class="btn btn-danger">🗑️ Clear All</button>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot good"></span>
+                    <span>4 words placed</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot good"></span>
+                    <span>All intersections valid</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot warning"></span>
+                    <span>3 more words recommended</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clues Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                Clues
+                <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;">Edit All</button>
+            </div>
+            <div class="panel-body">
+                <div class="clue-section">
+                    <h3>ACROSS</h3>
+                    <div class="clue-item">
+                        <span class="clue-number">1.</span>
+                        <span class="clue-text">Pilgrimage to Mecca</span>
+                        <button class="clue-edit-btn">✏️</button>
+                    </div>
+                    <div class="clue-item">
+                        <span class="clue-number">4.</span>
+                        <span class="clue-text">Prophet who parted the sea</span>
+                        <button class="clue-edit-btn">✏️</button>
+                    </div>
+                </div>
+                <div class="clue-section">
+                    <h3>DOWN</h3>
+                    <div class="clue-item">
+                        <span class="clue-number">2.</span>
+                        <span class="clue-text">Muslim Holy Book</span>
+                        <button class="clue-edit-btn">✏️</button>
+                    </div>
+                    <div class="clue-item">
+                        <span class="clue-number">3.</span>
+                        <span class="clue-text">Fajr, Dhuhr, Asr, Maghrib, Isha</span>
+                        <button class="clue-edit-btn">✏️</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate sample grid
+        const grid = document.getElementById('puzzle-grid');
+        const sample = [
+            '............',
+            '............',
+            '....Q.......',
+            '....U.......',
+            '.HAJJ.......',
+            '....A.......',
+            '....N.MUSA..',
+            '............',
+            '............',
+            '............',
+            '............',
+            '............',
+        ];
+
+        let cellNum = 1;
+        for (let r = 0; r < 12; r++) {
+            for (let c = 0; c < 12; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const char = sample[r][c];
+
+                if (char === '.') {
+                    cell.classList.add('empty');
+                } else {
+                    cell.classList.add('filled');
+                    cell.textContent = char;
+
+                    // Add numbers to start of words
+                    if ((r === 2 && c === 4) || (r === 4 && c === 1) || (r === 6 && c === 6)) {
+                        const num = document.createElement('span');
+                        num.className = 'cell-number';
+                        num.textContent = cellNum++;
+                        cell.appendChild(num);
+                    }
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+    </script>
+</body>
+</html>
