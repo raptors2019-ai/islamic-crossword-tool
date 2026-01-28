@@ -287,7 +287,10 @@ export default function DesignCEnhanced() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 max-w-lg">
+      <main className={cn(
+        "container mx-auto px-4 py-6",
+        currentStep === 'arrange' ? 'max-w-4xl' : 'max-w-lg'
+      )}>
         {/* Step 1: Theme */}
         {currentStep === 'theme' && (
           <div className="space-y-4">
@@ -529,92 +532,100 @@ export default function DesignCEnhanced() {
               </Card>
             ) : generatedPuzzle ? (
               <>
-                <Card className="bg-[#004d77]/50 border-[#4A90C2]/30">
-                  <CardContent className="p-4">
-                    <CrosswordGrid
-                      grid={generatedPuzzle.grid}
-                      clues={generatedPuzzle.clues}
-                      theme="dark"
-                      cellSize="md"
-                      showControls={true}
-                      showNumbers={true}
-                      showLetters={true}
-                    />
+                {/* Grid and Stats side-by-side on larger screens */}
+                <div className="flex flex-col lg:flex-row gap-4">
+                  {/* Left: Grid */}
+                  <div className="flex-1">
+                    <Card className="bg-[#004d77]/50 border-[#4A90C2]/30">
+                      <CardContent className="p-4">
+                        <CrosswordGrid
+                          grid={generatedPuzzle.grid}
+                          clues={generatedPuzzle.clues}
+                          theme="dark"
+                          cellSize="md"
+                          showControls={true}
+                          showNumbers={true}
+                          showLetters={true}
+                        />
 
-                    <div className="flex justify-center gap-2 mt-4">
-                      <Button
-                        size="sm"
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className="bg-[#4A90C2] hover:bg-[#3a7eb0] text-white font-bold px-6 shadow-lg"
-                      >
-                        🔄 Regenerate
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Puzzle Statistics */}
-                <PuzzleStats statistics={generatedPuzzle.statistics} />
-
-                {/* Placed words with variant toggle */}
-                <div className="bg-[#004d77]/30 rounded-xl p-4">
-                  <div className="text-[#8fc1e3] text-xs uppercase tracking-wide mb-2">
-                    Placed Words (click ↔ to swap spellings)
+                        <div className="flex justify-center gap-2 mt-4">
+                          <Button
+                            size="sm"
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            className="bg-[#4A90C2] hover:bg-[#3a7eb0] text-white font-bold px-6 shadow-lg"
+                          >
+                            🔄 Regenerate
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {generatedPuzzle.placedWordIds.map((id) => {
-                      const word = themeWords.find((w) => w.id === id);
-                      if (!word) return null;
-                      const hasVariants = word.spellingVariants && word.spellingVariants.length > 1;
 
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => hasVariants && toggleSpelling(id)}
-                          disabled={!hasVariants}
-                          className={cn(
-                            'px-2 py-1 rounded text-sm flex items-center gap-1 text-white',
-                            hasVariants
-                              ? 'bg-[#4A90C2] hover:bg-[#3a7eb0] cursor-pointer'
-                              : 'bg-[#004d77] cursor-default'
-                          )}
+                  {/* Right: Stats */}
+                  <div className="lg:w-80 space-y-4">
+                    <PuzzleStats statistics={generatedPuzzle.statistics} />
+
+                    {/* Placed words with variant toggle */}
+                    <div className="bg-[#004d77]/30 rounded-xl p-4">
+                      <div className="text-[#8fc1e3] text-xs uppercase tracking-wide mb-2">
+                        Placed Words (click ↔ to swap spellings)
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {generatedPuzzle.placedWordIds.map((id) => {
+                          const word = themeWords.find((w) => w.id === id);
+                          if (!word) return null;
+                          const hasVariants = word.spellingVariants && word.spellingVariants.length > 1;
+
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => hasVariants && toggleSpelling(id)}
+                              disabled={!hasVariants}
+                              className={cn(
+                                'px-2 py-1 rounded text-sm flex items-center gap-1 text-white',
+                                hasVariants
+                                  ? 'bg-[#4A90C2] hover:bg-[#3a7eb0] cursor-pointer'
+                                  : 'bg-[#004d77] cursor-default'
+                              )}
+                            >
+                              {word.activeSpelling}
+                              {hasVariants && <span className="text-[#b3d4ed] text-xs">↔</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Filler Suggestions for unplaced words */}
+                    {generatedPuzzle.fillerSuggestions.length > 0 && (
+                      <FillerSuggestions
+                        suggestions={generatedPuzzle.fillerSuggestions}
+                        themeWords={themeWords}
+                        onSwapWord={swapWord}
+                        onUseVariant={useVariant}
+                        onRemoveWord={removeWord}
+                      />
+                    )}
+
+                    {/* Quick action */}
+                    <Card className="bg-[#D4AF37]/20 border-[#D4AF37]/50">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div>
+                          <div className="text-white font-medium text-sm">Looks good?</div>
+                          <div className="text-[#D4AF37] text-xs">Clues are already filled in</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="bg-[#D4AF37] hover:bg-[#c9a430] text-[#1A1A1A]"
+                          onClick={() => setCurrentStep('review')}
                         >
-                          {word.activeSpelling}
-                          {hasVariants && <span className="text-[#b3d4ed] text-xs">↔</span>}
-                        </button>
-                      );
-                    })}
+                          Skip to Export →
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
-
-                {/* Filler Suggestions for unplaced words */}
-                {generatedPuzzle.fillerSuggestions.length > 0 && (
-                  <FillerSuggestions
-                    suggestions={generatedPuzzle.fillerSuggestions}
-                    themeWords={themeWords}
-                    onSwapWord={swapWord}
-                    onUseVariant={useVariant}
-                    onRemoveWord={removeWord}
-                  />
-                )}
-
-                {/* Quick action */}
-                <Card className="bg-[#D4AF37]/20 border-[#D4AF37]/50">
-                  <CardContent className="p-3 flex items-center justify-between">
-                    <div>
-                      <div className="text-white font-medium text-sm">Looks good?</div>
-                      <div className="text-[#D4AF37] text-xs">Clues are already filled in</div>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-[#D4AF37] hover:bg-[#c9a430] text-[#1A1A1A]"
-                      onClick={() => setCurrentStep('review')}
-                    >
-                      Skip to Export →
-                    </Button>
-                  </CardContent>
-                </Card>
               </>
             ) : (
               <Card className="bg-[#004d77]/50 border-[#4A90C2]/30">
