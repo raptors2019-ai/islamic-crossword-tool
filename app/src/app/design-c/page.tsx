@@ -12,6 +12,7 @@ import { ThemeWord, GeneratedPuzzle, Word } from '@/lib/types';
 import { generatePuzzle, wordToThemeWord } from '@/lib/generator-api';
 import { PuzzleStats } from '@/components/puzzle-stats';
 import { FillerSuggestions } from '@/components/filler-suggestions';
+import { CrosswordGrid } from '@/components/crossword-grid';
 
 // Design C: "Step-by-Step Wizard" - Mobile-first, guided flow
 // Color Theme: Deep Indigo (#003B5C), Sky Blue (#4A90C2), Warm Gold (#D4AF37)
@@ -209,55 +210,6 @@ export default function DesignCEnhanced() {
     }
   }, [currentStep, generatedPuzzle, themeWords.length, isGenerating, handleGenerate]);
 
-  // Render generated grid
-  const renderGrid = (compact = false) => {
-    if (!generatedPuzzle) return null;
-    const { grid } = generatedPuzzle;
-    const cellSize = compact ? 'w-7 h-7 text-sm' : 'w-8 h-8 sm:w-9 sm:h-9 text-base sm:text-lg';
-
-    return (
-      <div className="flex justify-center">
-        <div className={cn('inline-grid gap-0.5 p-1 rounded-lg', compact ? 'bg-gray-200' : 'bg-[#003B5C]')}>
-          {grid.map((row, r) => (
-            <div key={r} className="flex gap-0.5">
-              {row.map((cell, c) => (
-                <div
-                  key={c}
-                  className={cn(
-                    cellSize,
-                    'flex items-center justify-center font-bold rounded relative',
-                    cell.type === 'letter'
-                      ? compact
-                        ? 'bg-white text-[#1A1A1A] border border-gray-300'
-                        : 'bg-white text-[#003B5C]'
-                      : cell.type === 'black'
-                      ? compact
-                        ? 'bg-gray-400'
-                        : 'bg-[#003B5C]'
-                      : compact
-                      ? 'bg-gray-100'
-                      : 'bg-[#004d77]/30'
-                  )}
-                >
-                  {cell.number && (
-                    <span
-                      className={cn(
-                        'absolute top-0 left-0.5',
-                        compact ? 'text-[6px] text-gray-500' : 'text-[8px] text-[#4A90C2]'
-                      )}
-                    >
-                      {cell.number}
-                    </span>
-                  )}
-                  {cell.solution}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   // Handle continue button
   const handleContinue = () => {
@@ -579,15 +531,22 @@ export default function DesignCEnhanced() {
               <>
                 <Card className="bg-[#004d77]/50 border-[#4A90C2]/30">
                   <CardContent className="p-4">
-                    {renderGrid()}
+                    <CrosswordGrid
+                      grid={generatedPuzzle.grid}
+                      clues={generatedPuzzle.clues}
+                      theme="dark"
+                      cellSize="md"
+                      showControls={true}
+                      showNumbers={true}
+                      showLetters={true}
+                    />
 
                     <div className="flex justify-center gap-2 mt-4">
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={handleGenerate}
                         disabled={isGenerating}
-                        className="text-white border-[#4A90C2] hover:bg-[#4A90C2]/20"
+                        className="bg-[#4A90C2] hover:bg-[#3a7eb0] text-white font-bold px-6 shadow-lg"
                       >
                         🔄 Regenerate
                       </Button>
@@ -737,7 +696,17 @@ export default function DesignCEnhanced() {
 
             <Card className="bg-[#F8FBFD]">
               <CardContent className="p-4">
-                {generatedPuzzle && renderGrid(true)}
+                {generatedPuzzle && (
+                  <CrosswordGrid
+                    grid={generatedPuzzle.grid}
+                    theme="newspaper"
+                    cellSize="sm"
+                    compact={true}
+                    showControls={false}
+                    showNumbers={true}
+                    showLetters={true}
+                  />
+                )}
 
                 <div className="space-y-4 text-sm mt-4">
                   {generatedPuzzle && generatedPuzzle.clues.across.length > 0 && (
