@@ -1,0 +1,23 @@
+<ACROSS PUZZLE V2>
+<TITLE>
+	Get to know the Prophet Names
+<AUTHOR>
+	Ahmed
+<COPYRIGHT>
+
+<SIZE>
+	5x5
+<GRID>
+	YAHYA
+	U.A.L
+	NOBEL
+	U.I.A
+	SALIH
+<ACROSS>
+A prophet whose name was never given before (Q. 19:7)
+A prize both Malala Yousafzai and Abdul Salam won
+Prophet sent to guide the people of Thamud
+<DOWN>
+The only Prophet whose entire city believed after his warning
+Who said "If you raise your hand to kill me, I will not raise mine to kill you." (Q. 5:28)
+The most mentioned name of God in the Quran

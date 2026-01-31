@@ -1,0 +1,198 @@
+AD;100; The community whom Allah sent the Prophet Hud.
+MO;100;Popular western abbr. name for Mohammed
+ANT;100; The creature whose warning to its colony caused Sulaiman (AS) to smile
+ARK;100; The mighty vessel constructed under Nuh (AS)
+AXE;100; The sharp tool Ibrahim (AS) used to smash the false gods
+AZM;100;"Ulul '_ ""Prophet's of Resolve"""
+CUP;100;" What was placed in Binyamin's bag;"
+EID;100; Islamic holiday marking the end of Ramadan
+HUD;100; Warner sent to the arrogant people of 'Ad
+ISA;100; The Prophet and messenger born without a father
+JOB;100
+LOT;100; Ibrahim’s nephew who believed in his message and migrated with him
+LUT;100; Ibrahim’s nephew who believed in his message and migrated with him
+NUH;100
+RUH;100; The Arabic name for the Spirit (Gabriel)
+SAI;100; Refers to the ritual walking seven times between the hills of Safa and Marwa
+SON;100;  The specific relation Yahya was to the Prophet Zakariyah
+ADAM;100;First vicegerent placed on earth
+ADHA;100;" ""Eid Al-_"" (Ibrahim)"
+ANTS;100;  Insects that Sulaiman overheard
+ARSH;100;Arabic word for throne
+AZIZ;100; The chief minister of Egypt who purchased Yusuf from the slave market
+BAAL;100; The specific idol worshipped by the Israelites during Prophet Ilyas time (Q. 37:123-125)
+BADR;100; The valley where a small Muslim force defeated a larger Meccan army
+BAYT;100;" ""Ahl-Al _"" (Family of Muhammad)"
+CALF;100; Golden animal worshipped by the Israelites in Musa’s absence
+CLAY;100; The substance from which Allah molded the form of Adam (Q. 38:71)
+CROW;100; The bird which Allah sent to Qabil to demonstrate funeral rite (Q. 5:31)
+FIRE;100;"The element that became ""coolness and safety"" for Ibrahim"
+FISH;100;" The Qur'an refers to Yunus (AS) as Dhan-Nun meaning, ""Man of the _"" (Q. 21:87)"
+FITR;100;" ""Eid Al-_"" (After Ramadan)"
+FIVE;100; Ten percent of the original Mi'raj mandate
+HIRA;100; Name of cave with first revelation
+HUKM;100; Arabic word, trait given to Yahya meaning good judgment to discern as an authority on the scripture
+IRON;100; Specific metal that Allah miraculously made soft and flexible for Dawud (Q 34:11)
+JINN;100; Creatures who are created from a smokeless flame of fire
+JOHN;100; The English-equivalent name for the son granted to Zakariyah
+JUDI;100;The mountain where the Nuh's Ark finally came to rest after the waters subsided
+KILL;100; What the Meccan clan leaders tried to do to Muhammad before his emigration
+MARY;100; Among the women who attained perfection are _, the daughter of Imran and Asiya, the wife of Pharaoh
+MILK;100; She-camel’s provision from the story of Prophet Salih (AS)
+MUSA;100
+NABI;100;A Prophet
+NILE;100; The river into which the infant Musa was cast in a basket
+NOAH;100
+PLAN;100;" ""But they _, and Allah Plans. And Allah is the best of Planners"" (Q. 8:30)"
+UHUD;100; The hill north of Medina where a significant battle took place in the third year of the mission
+WELL;100; The desolate place where Yusuf was cast by his brothers
+WEPT;100;  What Yahya frequently did in fear of Allah, eventually marking his cheeks
+WIND;100; The violent element that raged for eight days that destroyed Ad (Q. 69:6)
+WOOD;100;" In 50:14 it refers to a community Ashab al-Aykah or ""Companions of the _"""
+AARON;100; English equivalent to Prophet Harun (AS)
+ALLAH;100;" 1st commandment, ""Do not associate others with _ in worship (shirk)."""
+ANGEL;100; A messenger of God, created from light.
+ANSAR;100;" The ""Helpers"" of Medina who assisted and welcomed the Emigrants"
+ASIYA;100; Among the women who attained perfection are Mary, the daughter of Imran and _, the wife of Pharaoh
+AYYUB;100; The Prophet who lost fourteen children
+BLIND;100; What condition “Eyes turned white from grief” as described of Yaqub (Q. 12:84)
+BLOOD;100; Final plague that turned the water of the river red
+BURAQ;100; used for the night journey to Jerusalem
+DATES;100; The contents of what Prophet Ibrahim left Hagar in a leather pouch
+DAVID;100; English equivalent to Prophet Dawud (AS)
+DAWUD;100; The Prophet who fought Goliath and killed him.
+DREAM;100; Pharaoh had one, Yusuf interpreted one
+EGYPT;100;Country where Yusuf rose to power
+ENOCH;100
+FEAST;100;" What Isa (AS) brought to the ""table""?"
+FRUIT;100; Provision found miraculously out of season in Maryam sanctuary
+GLASS;100; Material of the smooth floor that Queen Bilqis mistook for a pool of water
+HABIL;100; The intelligent and obedient son who offered his best camel as sacrifice
+HAGAR;100; The mother of Ismail
+HARUN;100; Elder brother of Prophet Musa
+HASTE;100; The quality man was created of, exemplified by Adam jumping for fruit (Q. 21:37)
+HAWWA;100;Earliest matriarch
+HIJRA;100; Journey from Mecca to Medina
+HUMAN;100;" 5th commandment, ""Do not take a _ life, made sacred by Allah, except with legal right."""
+IBLIS;100;Satan in Islam
+IDOLS;100; Objects the people of 'Ad worshipped alongside Allah
+IDRIS;100; the first man who learned how to write
+ILYAS;100; The Prophet sent to people who worshipped the idol Baal
+INJIL;100;The book of Isa
+ISAAC;100
+ISHAQ;100; The son born to Sarah after she received glad tidings from three angels
+JACOB;100
+JALUT;100; Giant killed by Dawud (AS)
+JESUS;100
+JONAH;100
+JUDAS;100; The betraying apostle who offered to deliver Isa for thirty pieces of silver
+KHIDR;100; The name of the wise man Prophet Musa meets (Al-_)
+MANNA;100; Miraculous food provided to the wandering Israelites in the wilderness
+MECCA;100; Birthplace of Prophet Muhammad (SAW)
+MOSES;100
+NIGHT;100;Three layers of darkness Yunus was engulfed the _, the sea, and whale's belly
+PAIRS;100; How the animals were brought on Nuh's Ark, consisting of a male and a female
+PLANS;100;"""But they plan, and Allah _. And Allah is the best of Planners"" (Q. 8:30)"
+QABIL;100; Elder twin who committed the first criminal act on earth
+QARUN;100; The wealthy man swallowed by the earth in Musa's time
+SALIH;100; Prophet sent to guide the people of Thamud
+SARAH;100; Prophet Ibrahim's wife who accompanied him during his migration
+SEVEN;100; The number of years Ayyub suffered from his severe physical affliction
+SHEBA;100; Bilqis was the Queen of _
+SHIRT;100;Item of clothing torn from the back, proving Yusuf was fleeing and not the aggressor
+SINAI;100; Mount where the Prophet Musa first heard the voice of Allah
+SLING;100; The simple weapon used by the youth Dawud
+STAFF;100; The object held by Musa that miraculously transformed into a wriggling serpent
+TABLE;100;" The Last Supper. In Islamic tradition, this event is referenced as ""_ Spread"""
+THREE;100; How many angels visited Prophet Ibrahim and his wife
+TORAH;100;English equivalent to scripture given to Musa
+WHALE;100;"The sea creature that served as a ""prison"" for Yunus in three layers of darkness"
+YAHYA;100
+YAQUB;100; The famous father of twelve sons
+YUNUS;100; The arabic name of the Prophet Jonah
+YUSUF;100;Man who was given half the world's beauty (S.M #162a)
+ZABUR;100; The scripture that was revealed to Prophet Dawud
+ALYASA;100; The Arabic name for the Prophet whom the source identifies as Elisha
+ASHURA;100; The day the grandson of Prophet Muhammad (SAW) was martyred
+BASKET;100; Floating container that carried an infant to the palace grounds
+BEAUTY;100;" Yusuf (AS) was said to have been given, ""half of (world) _"""
+BILQIS;100; Royal who mistook a glass floor for a pool of water
+COUSIN;100; Familial relationship between Muhammad (SAW) and Ali ibn Abi Talib (RA)
+CRADLE;100; First miracle of Isa (as) was speaking to the men from where?
+ELISHA;100
+EXODUS;100; Departure of the children of Israel from the land of bondage
+FAMINE;100;" ""lean times"" before the locusts arrived"
+FRIDAY;100; The best day on which the first man was created
+HADITH;100; Narratives of Muhammad (SAW)
+HOOPOE;100; The bird that acted as a messenger for Prophet Sulaiman
+INJEEL;100; The Arabic name for Holy Scripture revealed to Isa
+ISMAIL;100; The first-born son whose birth was a gift to Ibrahim in his old age
+JETHRO;100
+JOSEPH;100
+JURHUM;100; The Arab tribe that settled in Mecca after discovering the miracle of the water
+MARYAM;100; The only woman mentioned in the Qur'an by her name
+NAMRUD;100; The arrogant king who disputed with Ibrahim about the power to give life and death
+ORPHAN;100;" 6th commandment, ""Do not come near the wealth of the _ unless intending to enhance it..."""
+PALACE;100;" ""Buckingham _____"""
+PRISON;100; Yusuf's holding place before freedom
+PSALMS;100; The holy scripture, also known as the Zabur, revealed to Dawud
+REDSEA;100; Impassable barrier that parted
+SAMIRI;100; Evil man who fashioned a golden calf for worship
+SHUAIB;100; The prophet sent down to fix corruption in unethical business
+SODOMY;100; The unnatural act practiced openly by the residents of Sodom
+SPREAD;100;" The Last Supper. In Islamic tradition, this event is referenced as ""Table _"""
+SUNNAH;100; Steps of Prophet Muhammad (SAW)
+TAURAH;100;The book of Musa
+TAWRAT;100; Arabic name for the divine scripture revealed to the Prophet Musa
+THAMUD;100; The powerful tribe that succeeded the 'Ad and carved homes out of the hills
+THRONE;100;" ""Ayat al-Kursi,"" or ""Verse of the _____"""
+TOWERS;100; Lofty structures built by the Ad craftsmen to show their power
+TYRANT;100; An oppressive leader
+WEIGHT;100;" 7th commandment, ""Give full measure and [what] with justice"""
+WISDOM;100; Prophet Idris teaching, “The real joy of life is to have _.”
+ZABOOR;100;Book given to Dawud
+ZAMZAM;100; Sacred H₂O source
+ABRAHAM;100
+IBRAHIM;100; The name of the Patriarch (father) of the Prophets
+ISHMAEL;100; The first-born son whose birth was a gift to Ibrahim in his old age
+JIBREEL;100; The angel Gabriel in Islam
+JUSTICE;100;" 8th commandment, ""Whenever you speak, maintain _ even regarding a close relative."""
+LEPROSY;100; Isa (AS) cured a blind man and a person with what disease?
+LOCUSTS;100;  Swarming insects sent to destroy the crops of the disbelievers
+MESSIAH;100; The sacred title of Isa
+NINEVEH;100; Ancient city inhabited by idolaters where Yunus (AS) was sent to preach
+PARENTS;100;" 2nd commandment of Allah given to Musa, ""Do good to your _"""
+PEBBLES;100; Specific items Dawud gathered into his pouch before the fight
+QURAYSH;100; The guardians of the Kaaba
+SOLOMON;100; English equivalent to Prophet Sulaiman (AS)
+STOMACH;100;" The ""prison"" where Yunus resided while glorifying Allah in the darkness"
+TABLETS;100; Material upon which the lessons and laws were written
+YATHRIB;100; The old name for the ancient city of Medina
+CATAPULT;100; The machine used by the idolaters to cast the Prophet into the blazing pit
+CHILDREN;100;" 3rd commandment, ""Do not slay your _ out of fear of poverty. We provide you..."""
+DHULKIFL;100; The Prophet whose name translates to 'possessor of the fold'
+MUHAMMAD;100
+PATIENCE;100;" Story of Yusuf (AS) teaches us, Fa Saabrun Jameel, ""Beautiful _"""
+PLANNERS;100;" ""But they plan, and Allah plans. And Allah is the best of _"" (Q. 8:30)"
+PROVIDER;100;" Isa (AS) said, ""Provide for us! You are indeed the Best _"""
+SHECAMEL;100; The clear sign issued from the mountain as a test for the people of Thamud
+SULAIMAN;100; Prophet who was taught the language of birds
+ZAKARIYA;100; Prophet and guardian of Maryam (RA)
+AHLALBAYT;100; Family of Prophet Muhammad (SAW)
+BLINDNESS;100; Condition cured by Yusuf’s shirt
+EIDALADHA;100; Muslim holiday with a lot of meat
+EIDALFITR;100; Post-Ramadan celebration
+IGNORANCE;100; jahiliyyah
+JERUSALEM;100; Where is the Bayt Al-Maqdis
+ZECHARIAH;100
+CAVEOFHIRA;100; Where Prophet Muhammad (SAW) received first revelation
+GOLDENCALF;100; Idol worshipped by the Israelites in Musa’s absence.
+INCESTUOUS;100; Yahya opposed Ruler of Palestine Herod Antipas marriage because it was...
+JAHILIYYAH;100; Pre-Islamic era
+PEOPLEOFAD;100; The community whom Allah sent the Prophet Hud.
+ALHAMDULILLAH;100; What Adam (AS) said after he sneezed
+HOMOSEXUALITY;100; The most notorious evil that was committed by the city of Sodom
+CONGREGATIONAL;100;" ""__ prayer"" (jumuah)"
+FAREWELLSERMON;100; Final Khutbah delivered by Prophet Muhammad (SAW)
+SADAQAHJARIYAH;100; Perpetual Charity
+PEOPLEOFTHEBOOK;100; Ahl Al-Kitaab

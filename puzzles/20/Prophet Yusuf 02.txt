@@ -1,0 +1,23 @@
+<ACROSS PUZZLE V2>
+<TITLE>
+	Prophet Yusuf 02
+<AUTHOR>
+	Ahmed
+<COPYRIGHT>
+
+<SIZE>
+	5x5
+<GRID>
+	..S..
+	.CUP.
+	NAJIS
+	.TUG.
+	..D..
+<ACROSS>
+Story of Yusuf, It holds water, but it held back his brother.
+Arabic for ritually impure, unclean
+The sharp pull on Yusuf's shirt that led to a tear
+<DOWN>
+When seven bones touch the floor (S.M #490e)
+The quintessential pet adorned by many Muslims
+Source of gelatin often avoided?

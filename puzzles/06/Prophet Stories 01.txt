@@ -1,0 +1,25 @@
+<ACROSS PUZZLE V2>
+<TITLE>
+	Prophet Stories 01
+<AUTHOR>
+	Ahmed
+<COPYRIGHT>
+
+<SIZE>
+	5x5
+<GRID>
+	.SOH.
+	AARON
+	.L.R.
+	RAISE
+	.HOE.
+<ACROSS>
+Trig mnemonic part (Sine = Opp/Hyp).
+English name of the Islamic prophet whose name would appear first in a phone book?
+Do this to one's hands during du'a or takbir in prayer.
+Gardening tool for tilling the earth
+<DOWN>
+Reduced from 50 to 5 as per Musa's request
+Ultimatum word / Threatener's word
+What caused Prophet Sulaiman to miss his afternoon prayers?
+Input/Output, briefly.

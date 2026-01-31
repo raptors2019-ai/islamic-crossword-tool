@@ -1,0 +1,27 @@
+<ACROSS PUZZLE V2>
+<TITLE>
+	Prophet Nuh 01
+<AUTHOR>
+	Ahmed
+<COPYRIGHT>
+
+<SIZE>
+	5x5
+<GRID>
+	SAID.
+	O.DUA
+	FLOOD
+	ALL.H
+	.CS.A
+<ACROSS>
+___ bin Zayd (One of the Ten Promised Paradise).
+"Weapon of the believer."
+The result of Nuh's prayer, "My Lord! Leave not one of the disbelievers on the earth." (Q. 71:26)
+"The ___-Hearing, The ___-Seeing" (As-Sami, Al-Basir)
+Major for a future developer (Abbr.)
+<DOWN>
+Couch potato's spot
+Wadd, Suwa, Yaghuth, Ya'uq, and Nasr are names of... (Q. 71:23)
+Dynamic ___
+The second word of the "Big Eid" (Eid al-__)
+Limited Liability Corporation, init.
