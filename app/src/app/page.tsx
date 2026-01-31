@@ -20,6 +20,8 @@ import { PuzzleStats } from '@/components/puzzle-stats';
 import { FillerSuggestions } from '@/components/filler-suggestions';
 import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
+import { ProphetSelector } from '@/components/prophet-selector';
+import { ProphetKeyword } from '@/lib/prophet-keywords';
 
 const themePresets = [
   { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
@@ -113,6 +115,29 @@ export default function Home() {
     setGeneratedPuzzle(null);
   };
 
+  const addProphetKeyword = useCallback((keyword: ProphetKeyword) => {
+    // STRICT 5x5 validation: word must be 2-5 letters
+    if (keyword.word.length < 2 || keyword.word.length > 5) return;
+
+    // Check if word already exists
+    const exists = themeWords.some(
+      (w) => w.activeSpelling.toUpperCase() === keyword.word.toUpperCase()
+    );
+    if (exists || themeWords.length >= 12) return;
+
+    const id = `prophet-${Date.now()}-${keyword.word}`;
+    const newWord: ThemeWord = {
+      id,
+      word: keyword.word,
+      clue: keyword.clue,
+      activeSpelling: keyword.word,
+      category: 'prophets',
+    };
+    setThemeWords([...themeWords, newWord]);
+    setClues({ ...clues, [id]: keyword.clue });
+    setGeneratedPuzzle(null);
+  }, [themeWords, clues]);
+
   const removeWord = (id: string) => {
     setThemeWords(themeWords.filter(w => w.id !== id));
     const { [id]: _, ...rest } = clues;
@@ -158,18 +183,18 @@ export default function Home() {
   const selectedWord = themeWords.find(w => w.id === selectedWordId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#001a2c] via-[#003B5C] to-[#002a42] islamic-pattern">
+    <div className="min-h-screen bg-gradient-to-br from-[#001a2c] via-[#003B5C] to-[#002a42]">
       {/* Header */}
-      <header className="glass sticky top-0 z-50 star-pattern">
+      <header className="sticky top-0 z-50 bg-[#004d77]/60 backdrop-blur-md border-b border-[#4A90C2]/20">
         <div className="container mx-auto px-6 py-4">
           <div className="flex flex-wrap items-center gap-6">
             {/* Logo */}
-            <div className="flex items-center gap-3 animate-fade-in-up">
+            <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#b8952f] flex items-center justify-center shadow-lg">
                 <span className="text-xl">☪</span>
               </div>
               <div>
-                <h1 className="text-white text-lg tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>
+                <h1 className="text-white text-lg tracking-wide font-serif font-semibold">
                   Crossword Builder
                 </h1>
                 <p className="text-[#8fc1e3] text-xs tracking-widest uppercase">5×5 Islamic Puzzles</p>
@@ -177,7 +202,7 @@ export default function Home() {
             </div>
 
             {/* Theme Selector */}
-            <div className="animate-fade-in-up stagger-1 opacity-0">
+            <div>
               <Select value={selectedTheme} onValueChange={(v) => { setSelectedTheme(v); autoSelectWordsForTheme(v); }}>
                 <SelectTrigger className="w-[200px] bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors">
                   <SelectValue />
@@ -196,30 +221,29 @@ export default function Home() {
             </div>
 
             {/* Title Input */}
-            <div className="flex-1 min-w-[200px] max-w-[320px] animate-fade-in-up stagger-2 opacity-0">
+            <div className="flex-1 min-w-[200px] max-w-[320px]">
               <Input
                 value={puzzleTitle}
                 onChange={(e) => setPuzzleTitle(e.target.value)}
-                className="bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] input-glow transition-all"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}
+                className="bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] font-serif text-lg focus:ring-2 focus:ring-[#4A90C2]/30"
               />
             </div>
 
             {/* Islamic Percentage */}
-            <div className="animate-fade-in-up stagger-3 opacity-0">
-              <div className={cn(
-                'px-4 py-2 rounded-full flex items-center gap-2 transition-all badge-animated',
+            <div
+              className={cn(
+                'px-4 py-2 rounded-full flex items-center gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
                 islamicPercentage >= 50
                   ? 'bg-emerald-900/50 border border-emerald-500/30'
                   : 'bg-red-900/50 border border-red-500/30'
-              )}>
-                <div className={cn(
-                  'w-2 h-2 rounded-full',
-                  islamicPercentage >= 50 ? 'bg-emerald-400 animate-pulse' : 'bg-red-400 animate-pulse'
-                )} />
-                <span className="text-white font-medium">{islamicPercentage}%</span>
-                <span className="text-[#8fc1e3] text-sm">Islamic</span>
-              </div>
+              )}
+            >
+              <div className={cn(
+                'w-2 h-2 rounded-full animate-pulse',
+                islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
+              )} />
+              <span className="text-white font-medium">{islamicPercentage}%</span>
+              <span className="text-[#8fc1e3] text-sm">Islamic</span>
             </div>
           </div>
         </div>
@@ -230,11 +254,11 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_340px] gap-8">
 
           {/* Left Column: Word Bank */}
-          <div className="space-y-6 animate-fade-in-up stagger-1 opacity-0">
-            <Card className="glass border-[#4A90C2]/20 overflow-hidden card-gold-accent">
+          <div className="space-y-6">
+            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
               <CardContent className="p-5">
-                <h3 className="section-header text-[#D4AF37] text-lg mb-4 decorative-line">
-                  <span>Word Bank</span>
+                <h3 className="text-[#D4AF37] text-lg mb-4 font-serif font-semibold tracking-wide">
+                  Word Bank
                 </h3>
 
                 {/* Add Word */}
@@ -245,7 +269,7 @@ export default function Home() {
                     onChange={(e) => setCustomWordInput(e.target.value.toUpperCase())}
                     onKeyDown={(e) => e.key === 'Enter' && addCustomWord()}
                     maxLength={5}
-                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest input-glow"
+                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest focus:ring-2 focus:ring-[#4A90C2]/30"
                   />
                   <Button
                     onClick={addCustomWord}
@@ -256,6 +280,20 @@ export default function Home() {
                   </Button>
                 </div>
 
+                {/* Prophet Keyword Selector - shown only for prophets theme */}
+                {selectedTheme === 'prophets' && (
+                  <div className="mb-5 pb-5 border-b border-[#4A90C2]/20">
+                    <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">
+                      Prophet Story Keywords
+                    </h4>
+                    <ProphetSelector
+                      onKeywordSelect={addProphetKeyword}
+                      selectedWords={themeWords}
+                      puzzle={generatedPuzzle}
+                    />
+                  </div>
+                )}
+
                 {/* Selected Words */}
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-3">
@@ -263,7 +301,7 @@ export default function Home() {
                     <span className="text-[#D4AF37] font-bold">{themeWords.length}/12</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {themeWords.map((word, index) => {
+                    {themeWords.map((word) => {
                       const isPlaced = generatedPuzzle?.placedWordIds.includes(word.id);
                       const isSelected = selectedWordId === word.id;
                       const chipStyle = isSelected
@@ -276,10 +314,9 @@ export default function Home() {
                           key={word.id}
                           onClick={() => setSelectedWordId(word.id)}
                           className={cn(
-                            'word-chip px-3 py-1.5 rounded-md text-sm font-medium tracking-wide transition-all',
+                            'px-3 py-1.5 rounded-md text-sm font-medium tracking-wide transition-all hover:scale-105',
                             chipStyle
                           )}
-                          style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <span className="flex items-center gap-2">
                             {word.activeSpelling}
@@ -302,7 +339,7 @@ export default function Home() {
                     placeholder="Search..."
                     value={wordSearch}
                     onChange={(e) => setWordSearch(e.target.value)}
-                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] pl-9 input-glow"
+                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] pl-9 focus:ring-2 focus:ring-[#4A90C2]/30"
                   />
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -339,7 +376,7 @@ export default function Home() {
                 </div>
 
                 {/* Word List */}
-                <div className="max-h-[350px] overflow-y-auto space-y-1.5 custom-scrollbar pr-2">
+                <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-2">
                   {filteredWordBank.slice(0, 25).map((word) => (
                     <button
                       key={word.id}
@@ -370,19 +407,19 @@ export default function Home() {
           </div>
 
           {/* Center Column: Puzzle Grid */}
-          <div className="space-y-6 animate-fade-in-up stagger-2 opacity-0">
-            <Card className="glass border-[#4A90C2]/20 overflow-hidden">
+          <div className="space-y-6">
+            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
               <CardContent className="p-6">
                 {isGenerating ? (
                   <div className="text-center py-16">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#4A90C2]/20 flex items-center justify-center animate-float">
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#4A90C2]/20 flex items-center justify-center animate-bounce">
                       <span className="text-4xl animate-pulse">☪</span>
                     </div>
-                    <p className="text-[#b3d4ed] text-lg" style={{ fontFamily: 'var(--font-display)' }}>
+                    <p className="text-[#b3d4ed] text-lg font-serif">
                       Generating your puzzle...
                     </p>
                     <div className="w-48 h-1 mx-auto mt-4 rounded-full bg-[#001a2c] overflow-hidden">
-                      <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#4A90C2] animate-shimmer" />
+                      <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#4A90C2] animate-pulse" />
                     </div>
                   </div>
                 ) : generatedPuzzle ? (
@@ -424,7 +461,7 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 4v16M4 9h16" />
                       </svg>
                     </div>
-                    <h3 className="text-white text-xl mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+                    <h3 className="text-white text-xl mb-2 font-serif">
                       Ready to Create
                     </h3>
                     <p className="text-[#8fc1e3] mb-6">
@@ -438,7 +475,7 @@ export default function Home() {
                       className={cn(
                         'px-8 py-3 text-lg font-semibold transition-all',
                         themeWords.length >= 3
-                          ? 'bg-gradient-to-r from-[#D4AF37] to-[#e5c86b] text-[#001a2c] hover:scale-105 animate-pulse-gold'
+                          ? 'bg-gradient-to-r from-[#D4AF37] to-[#e5c86b] text-[#001a2c] hover:scale-105 animate-pulse'
                           : 'bg-[#4A90C2]/30 text-[#6ba8d4]'
                       )}
                     >
@@ -461,17 +498,17 @@ export default function Home() {
           </div>
 
           {/* Right Column: Clue Editor */}
-          <div className="space-y-6 animate-fade-in-up stagger-3 opacity-0">
-            <Card className="glass border-[#4A90C2]/20 overflow-hidden card-gold-accent">
+          <div className="space-y-6">
+            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
               <CardContent className="p-5">
-                <h3 className="section-header text-[#D4AF37] text-lg mb-4 decorative-line">
-                  <span>Clue Editor</span>
+                <h3 className="text-[#D4AF37] text-lg mb-4 font-serif font-semibold tracking-wide">
+                  Clue Editor
                 </h3>
 
                 {selectedWord ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl text-white font-bold tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>
+                      <span className="text-2xl text-white font-bold tracking-widest font-serif">
                         {selectedWord.activeSpelling}
                       </span>
                       {selectedWord.arabicScript && (
@@ -494,7 +531,7 @@ export default function Home() {
                     <Textarea
                       value={clues[selectedWord.id] || selectedWord.clue || ''}
                       onChange={(e) => setClues({ ...clues, [selectedWord.id]: e.target.value })}
-                      className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white min-h-[100px] placeholder:text-[#6ba8d4] input-glow resize-none"
+                      className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white min-h-[100px] placeholder:text-[#6ba8d4] resize-none focus:ring-2 focus:ring-[#4A90C2]/30"
                       placeholder="Enter your clue..."
                     />
 
@@ -530,7 +567,7 @@ export default function Home() {
                 {/* All Clues */}
                 <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
                   <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">All Clues</h4>
-                  <div className="max-h-[280px] overflow-y-auto space-y-2 custom-scrollbar pr-2">
+                  <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2">
                     {themeWords.map((word) => {
                       const isPlaced = generatedPuzzle?.placedWordIds.includes(word.id);
                       return (
@@ -566,13 +603,13 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 glass border-t border-[#4A90C2]/20">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#004d77]/60 backdrop-blur-md border-t border-[#4A90C2]/20">
         <div className="container mx-auto px-6 py-4">
           <div className="flex flex-wrap justify-center gap-4">
             <Button
               onClick={() => generatedPuzzle && downloadFlutterJson(generatedPuzzle, selectedTheme, puzzleTitle)}
               disabled={!generatedPuzzle}
-              className="btn-export-primary bg-gradient-to-r from-[#D4AF37] to-[#b8952f] hover:from-[#e5c86b] hover:to-[#D4AF37] text-[#001a2c] font-bold px-6 shadow-lg shadow-[#D4AF37]/20 transition-all hover:scale-105 disabled:opacity-40"
+              className="bg-gradient-to-r from-[#D4AF37] to-[#b8952f] hover:from-[#e5c86b] hover:to-[#D4AF37] text-[#001a2c] font-bold px-6 shadow-lg shadow-[#D4AF37]/20 transition-all hover:scale-105 disabled:opacity-40"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
