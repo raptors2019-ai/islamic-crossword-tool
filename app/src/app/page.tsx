@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -12,17 +11,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { sampleWords } from '@/lib/sample-data';
-import { ThemeWord, GeneratedPuzzle, Word } from '@/lib/types';
-import { generatePuzzle, wordToThemeWord } from '@/lib/generator-api';
+import { ThemeWord, GeneratedPuzzle } from '@/lib/types';
+import { generatePuzzle } from '@/lib/generator-api';
 import { PuzzleStats } from '@/components/puzzle-stats';
-import { FillerSuggestions } from '@/components/filler-suggestions';
 import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
-import { ProphetSelector } from '@/components/prophet-selector';
+import { WordHub } from '@/components/word-hub';
+import { GapFillers } from '@/components/gap-fillers';
 import { ProphetKeyword } from '@/lib/prophet-keywords';
 import { KeywordReview } from '@/components/keyword-review';
+import { ConstraintSuggestions } from '@/components/constraint-suggestions';
+import { SlotStats } from '@/components/slot-stats';
+import { useEditableGrid } from '@/hooks/use-editable-grid';
+import { detectWords, DetectedWord } from '@/lib/word-detector';
+import {
+  toGeneratedPuzzleGrid,
+  placeWord,
+  calculateCellNumbers,
+  placeWordAtBestPosition,
+  GRID_SIZE,
+} from '@/lib/editable-grid';
 
 const themePresets = [
   { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
@@ -38,19 +48,52 @@ export default function Home() {
   const [puzzleTitle, setPuzzleTitle] = useState('Prophet Stories Crossword');
   const [themeWords, setThemeWords] = useState<ThemeWord[]>([]);
   const [clues, setClues] = useState<Record<string, string>>({});
-  const [wordSearch, setWordSearch] = useState('');
-  const [customWordInput, setCustomWordInput] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [generatedPuzzle, setGeneratedPuzzle] = useState<GeneratedPuzzle | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
 
-  useEffect(() => {
-    if (themeWords.length === 0) {
-      autoSelectWordsForTheme(selectedTheme);
+  // Editable grid hook for always-on interactive grid
+  const {
+    cells: editableCells,
+    selectedCell,
+    direction: editDirection,
+    currentPattern,
+    selectCell,
+    handleKeyDown,
+    handleContextMenu,
+    setCells,
+    clearGrid,
+  } = useEditableGrid();
+
+  // Detect words in the editable grid
+  const detectedWords = useMemo(() => {
+    return detectWords(editableCells);
+  }, [editableCells]);
+
+  // Get the current pattern string for constraint suggestions
+  const patternString = currentPattern?.pattern || null;
+
+  // Handle filling a word from constraint suggestions
+  const handleFillSuggestion = useCallback((word: string, clue: string) => {
+    if (!currentPattern || !selectedCell) return;
+
+    const newCells = placeWord(
+      editableCells,
+      word,
+      currentPattern.startRow,
+      currentPattern.startCol,
+      editDirection,
+      'auto',
+      true // Preserve user-typed letters
+    );
+
+    if (newCells) {
+      setCells(newCells);
     }
-  }, []);
+  }, [currentPattern, selectedCell, editableCells, editDirection, setCells]);
+
+  // Start with empty word list - user selects keywords from Word Hub
 
   useEffect(() => {
     const preset = themePresets.find(t => t.id === selectedTheme);
@@ -59,21 +102,11 @@ export default function Home() {
     }
   }, [selectedTheme]);
 
-  const autoSelectWordsForTheme = (theme: string) => {
-    let filtered = sampleWords.filter(w => w.word.length <= 5);
-    const themeToCategory: Record<string, string> = {
-      prophets: 'prophets',
-      names: 'names-of-allah',
-      quran: 'quran',
-      companions: 'companions',
-    };
-    if (themeToCategory[theme]) {
-      filtered = filtered.filter(w => w.category === themeToCategory[theme]);
-    }
-    const selected = filtered.slice(0, 8);
-    setThemeWords(selected.map(wordToThemeWord));
-    setClues(Object.fromEntries(selected.map(w => [w.id, w.clue])));
+  const clearWordsForTheme = () => {
+    setThemeWords([]);
+    setClues({});
     setGeneratedPuzzle(null);
+    setSelectedWordId(null);
   };
 
   const islamicPercentage = useMemo(() => {
@@ -83,39 +116,45 @@ export default function Home() {
     return Math.round((count / themeWords.length) * 100);
   }, [themeWords]);
 
-  const filteredWordBank = useMemo(() => {
-    const usedIds = new Set(themeWords.map(w => w.id));
-    return sampleWords.filter(word => {
-      if (usedIds.has(word.id) || word.word.length > 5) return false;
-      const matchesSearch = !wordSearch ||
-        word.word.toLowerCase().includes(wordSearch.toLowerCase()) ||
-        word.clue.toLowerCase().includes(wordSearch.toLowerCase());
-      const matchesCategory = !categoryFilter || word.category === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [wordSearch, themeWords, categoryFilter]);
+  const addCustomWord = useCallback((word: string) => {
+    const upperWord = word.trim().toUpperCase();
+    if (!upperWord || upperWord.length > 5 || upperWord.length < 2) return;
+    // Check if word already exists
+    const exists = themeWords.some(
+      (w) => w.activeSpelling.toUpperCase() === upperWord
+    );
+    if (exists || themeWords.length >= 12) return;
 
-  const categories = useMemo(() =>
-    [...new Set(sampleWords.map(w => w.category).filter(Boolean))],
-  []);
-
-  const addWord = (word: Word) => {
-    if (themeWords.length >= 12 || word.word.length > 5) return;
-    setThemeWords([...themeWords, wordToThemeWord(word)]);
-    setClues({ ...clues, [word.id]: word.clue });
-    setGeneratedPuzzle(null);
-  };
-
-  const addCustomWord = () => {
-    const word = customWordInput.trim().toUpperCase();
-    if (!word || word.length > 5) return;
     const id = `custom-${Date.now()}`;
-    setThemeWords([...themeWords, { id, word, clue: '', activeSpelling: word }]);
-    setClues({ ...clues, [id]: '' });
-    setCustomWordInput('');
+    const newThemeWords = [...themeWords, { id, word: upperWord, clue: '', activeSpelling: upperWord }];
+    const newClues = { ...clues, [id]: '' };
+    setThemeWords(newThemeWords);
+    setClues(newClues);
     setSelectedWordId(id);
-    setGeneratedPuzzle(null);
-  };
+
+    // Try to place the word in the editable grid
+    const preferDirection = themeWords.length % 2 === 0 ? 'across' : 'down';
+    const result = placeWordAtBestPosition(editableCells, upperWord, preferDirection);
+    if (result) {
+      setCells(result.cells);
+    }
+
+    // Auto-generate puzzle if we have enough words
+    if (newThemeWords.length >= 3) {
+      setIsGenerating(true);
+      generatePuzzle({
+        title: puzzleTitle,
+        themeWords: newThemeWords,
+        targetWords: Math.min(newThemeWords.length, 8),
+      }).then((puzzle) => {
+        setGeneratedPuzzle(puzzle);
+      }).finally(() => {
+        setIsGenerating(false);
+      });
+    } else {
+      setGeneratedPuzzle(null);
+    }
+  }, [themeWords, clues, puzzleTitle, editableCells, setCells]);
 
   const addProphetKeyword = useCallback((keyword: ProphetKeyword) => {
     // STRICT 5x5 validation: word must be 2-5 letters
@@ -135,10 +174,65 @@ export default function Home() {
       activeSpelling: keyword.word,
       category: 'prophets',
     };
-    setThemeWords([...themeWords, newWord]);
-    setClues({ ...clues, [id]: keyword.clue });
-    setGeneratedPuzzle(null);
-  }, [themeWords, clues]);
+    const newThemeWords = [...themeWords, newWord];
+    const newClues = { ...clues, [id]: keyword.clue };
+    setThemeWords(newThemeWords);
+    setClues(newClues);
+
+    // Try to place the word in the editable grid
+    // Alternate direction based on number of words for better intersections
+    const preferDirection = themeWords.length % 2 === 0 ? 'across' : 'down';
+    const result = placeWordAtBestPosition(editableCells, keyword.word, preferDirection);
+    if (result) {
+      setCells(result.cells);
+    }
+
+    // Auto-generate puzzle if we have enough words
+    if (newThemeWords.length >= 3) {
+      setIsGenerating(true);
+      generatePuzzle({
+        title: puzzleTitle,
+        themeWords: newThemeWords,
+        targetWords: Math.min(newThemeWords.length, 8),
+      }).then((puzzle) => {
+        setGeneratedPuzzle(puzzle);
+      }).finally(() => {
+        setIsGenerating(false);
+      });
+    } else {
+      setGeneratedPuzzle(null);
+    }
+  }, [themeWords, clues, puzzleTitle, editableCells, setCells]);
+
+  const removeProphetKeyword = useCallback((word: string) => {
+    const wordToRemove = themeWords.find(
+      (w) => w.activeSpelling.toUpperCase() === word.toUpperCase()
+    );
+    if (!wordToRemove) return;
+
+    const newThemeWords = themeWords.filter((w) => w.id !== wordToRemove.id);
+    const { [wordToRemove.id]: _, ...newClues } = clues;
+
+    setThemeWords(newThemeWords);
+    setClues(newClues);
+    if (selectedWordId === wordToRemove.id) setSelectedWordId(null);
+
+    // Regenerate puzzle if we still have enough words
+    if (newThemeWords.length >= 3) {
+      setIsGenerating(true);
+      generatePuzzle({
+        title: puzzleTitle,
+        themeWords: newThemeWords,
+        targetWords: Math.min(newThemeWords.length, 8),
+      }).then((puzzle) => {
+        setGeneratedPuzzle(puzzle);
+      }).finally(() => {
+        setIsGenerating(false);
+      });
+    } else {
+      setGeneratedPuzzle(null);
+    }
+  }, [themeWords, clues, selectedWordId, puzzleTitle]);
 
   const removeWord = (id: string) => {
     setThemeWords(themeWords.filter(w => w.id !== id));
@@ -159,13 +253,68 @@ export default function Home() {
 
   const swapWord = (originalId: string, newWord: string, newClue: string) => {
     const newId = `swap-${Date.now()}`;
-    setThemeWords(themeWords.map(w =>
+    const newThemeWords = themeWords.map(w =>
       w.id === originalId ? { id: newId, word: newWord, clue: newClue, activeSpelling: newWord } : w
-    ));
+    );
+    setThemeWords(newThemeWords);
     const { [originalId]: _, ...rest } = clues;
     setClues({ ...rest, [newId]: newClue });
-    setGeneratedPuzzle(null);
+
+    // Auto-regenerate puzzle
+    if (newThemeWords.length >= 3) {
+      setIsGenerating(true);
+      generatePuzzle({
+        title: puzzleTitle,
+        themeWords: newThemeWords,
+        targetWords: Math.min(newThemeWords.length, 8),
+      }).then((puzzle) => {
+        setGeneratedPuzzle(puzzle);
+      }).finally(() => {
+        setIsGenerating(false);
+      });
+    } else {
+      setGeneratedPuzzle(null);
+    }
   };
+
+  const addWordFromSuggestion = useCallback((word: string, clue: string) => {
+    const upperWord = word.trim().toUpperCase();
+    if (!upperWord || upperWord.length > 5 || upperWord.length < 2) return;
+    // Check if word already exists
+    const exists = themeWords.some(
+      (w) => w.activeSpelling.toUpperCase() === upperWord
+    );
+    if (exists || themeWords.length >= 12) return;
+
+    const id = `suggestion-${Date.now()}`;
+    const newThemeWords = [...themeWords, { id, word: upperWord, clue, activeSpelling: upperWord }];
+    const newClues = { ...clues, [id]: clue };
+    setThemeWords(newThemeWords);
+    setClues(newClues);
+
+    // Try to place the word in the editable grid
+    const preferDirection = themeWords.length % 2 === 0 ? 'across' : 'down';
+    const result = placeWordAtBestPosition(editableCells, upperWord, preferDirection);
+    if (result) {
+      setCells(result.cells);
+    }
+
+    // Auto-generate puzzle if we have enough words
+    if (newThemeWords.length >= 3) {
+      setIsGenerating(true);
+      generatePuzzle({
+        title: puzzleTitle,
+        themeWords: newThemeWords,
+        targetWords: Math.min(newThemeWords.length, 8),
+      }).then((puzzle) => {
+        setGeneratedPuzzle(puzzle);
+      }).finally(() => {
+        setIsGenerating(false);
+      });
+    } else {
+      setGeneratedPuzzle(null);
+    }
+  }, [themeWords, clues, puzzleTitle, editableCells, setCells]);
 
   const handleGenerate = useCallback(async () => {
     if (themeWords.length < 3) return;
@@ -205,7 +354,7 @@ export default function Home() {
 
             {/* Theme Selector */}
             <div>
-              <Select value={selectedTheme} onValueChange={(v) => { setSelectedTheme(v); autoSelectWordsForTheme(v); }}>
+              <Select value={selectedTheme} onValueChange={(v) => { setSelectedTheme(v); clearWordsForTheme(); }}>
                 <SelectTrigger className="w-[200px] bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors">
                   <SelectValue />
                 </SelectTrigger>
@@ -255,248 +404,166 @@ export default function Home() {
       <main className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_340px] gap-8">
 
-          {/* Left Column: Word Bank */}
+          {/* Left Column: Slot Stats + Constraint Suggestions + Gap Fillers */}
           <div className="space-y-6">
-            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
-              <CardContent className="p-5">
-                <h3 className="text-[#D4AF37] text-lg mb-4 font-serif font-semibold tracking-wide">
-                  Word Bank
-                </h3>
+            {/* Slot Statistics */}
+            <SlotStats
+              cells={editableCells}
+              themeWords={themeWords}
+            />
 
-                {/* Add Word */}
-                <div className="flex gap-2 mb-5">
-                  <Input
-                    placeholder="Add word..."
-                    value={customWordInput}
-                    onChange={(e) => setCustomWordInput(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === 'Enter' && addCustomWord()}
-                    maxLength={5}
-                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest focus:ring-2 focus:ring-[#4A90C2]/30"
-                  />
-                  <Button
-                    onClick={addCustomWord}
-                    disabled={!customWordInput.trim() || customWordInput.length > 5}
-                    className="bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] font-bold px-4 transition-all hover:scale-105"
-                  >
-                    +
-                  </Button>
-                </div>
+            {/* Live Constraint Suggestions */}
+            <ConstraintSuggestions
+              pattern={patternString}
+              direction={editDirection}
+              onSelectWord={handleFillSuggestion}
+            />
 
-                {/* Prophet Keyword Selector - shown only for prophets theme */}
-                {selectedTheme === 'prophets' && (
-                  <div className="mb-5 pb-5 border-b border-[#4A90C2]/20">
-                    <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">
-                      Prophet Story Keywords
-                    </h4>
-                    <ProphetSelector
-                      onKeywordSelect={addProphetKeyword}
-                      selectedWords={themeWords}
-                      puzzle={generatedPuzzle}
-                    />
-                  </div>
-                )}
-
-                {/* Selected Words */}
-                <div className="mb-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">Your Words</span>
-                    <span className="text-[#D4AF37] font-bold">{themeWords.length}/12</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {themeWords.map((word) => {
-                      const isPlaced = generatedPuzzle?.placedWordIds.includes(word.id);
-                      const isSelected = selectedWordId === word.id;
-                      const chipStyle = isSelected
-                        ? 'bg-[#D4AF37] text-[#001a2c] shadow-lg shadow-[#D4AF37]/20'
-                        : isPlaced
-                        ? 'bg-[#4A90C2]/30 text-white border border-[#4A90C2]/40'
-                        : 'bg-[#001a2c]/60 text-[#8fc1e3] border border-[#4A90C2]/20';
-                      return (
-                        <button
-                          key={word.id}
-                          onClick={() => setSelectedWordId(word.id)}
-                          className={cn(
-                            'px-3 py-1.5 rounded-md text-sm font-medium tracking-wide transition-all hover:scale-105',
-                            chipStyle
-                          )}
-                        >
-                          <span className="flex items-center gap-2">
-                            {word.activeSpelling}
-                            <span
-                              onClick={(e) => { e.stopPropagation(); removeWord(word.id); }}
-                              className="opacity-50 hover:opacity-100 hover:text-red-400 transition-opacity"
-                            >
-                              ×
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Search */}
-                <div className="relative mb-4">
-                  <Input
-                    placeholder="Search..."
-                    value={wordSearch}
-                    onChange={(e) => setWordSearch(e.target.value)}
-                    className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] pl-9 focus:ring-2 focus:ring-[#4A90C2]/30"
-                  />
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-
-                {/* Categories */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  <button
-                    onClick={() => setCategoryFilter(null)}
-                    className={cn(
-                      'px-3 py-1 rounded-full text-xs font-medium transition-all',
-                      !categoryFilter
-                        ? 'bg-[#D4AF37] text-[#001a2c]'
-                        : 'bg-[#001a2c]/40 text-[#8fc1e3] hover:bg-[#001a2c]/60'
-                    )}
-                  >
-                    All
-                  </button>
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setCategoryFilter(cat || null)}
-                      className={cn(
-                        'px-3 py-1 rounded-full text-xs font-medium transition-all capitalize',
-                        categoryFilter === cat
-                          ? 'bg-[#4A90C2] text-white'
-                          : 'bg-[#001a2c]/40 text-[#8fc1e3] hover:bg-[#001a2c]/60'
-                      )}
-                    >
-                      {cat?.replace(/-/g, ' ')}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Word List */}
-                <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-2">
-                  {filteredWordBank.slice(0, 25).map((word) => (
-                    <button
-                      key={word.id}
-                      onClick={() => addWord(word)}
-                      className="w-full p-3 rounded-lg text-left transition-all bg-[#001a2c]/40 hover:bg-[#001a2c]/70 border border-transparent hover:border-[#4A90C2]/30 group"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-white font-medium tracking-wide group-hover:text-[#D4AF37] transition-colors">
-                          {word.word}
-                        </span>
-                        <span className="text-[#6ba8d4] text-xs bg-[#4A90C2]/20 px-2 py-0.5 rounded">
-                          {word.word.length}L
-                        </span>
-                      </div>
-                      {word.arabicScript && (
-                        <div className="text-[#8fc1e3] text-sm mt-1 opacity-70">{word.arabicScript}</div>
-                      )}
-                    </button>
-                  ))}
-                  {filteredWordBank.length > 25 && (
-                    <div className="text-center text-[#6ba8d4] text-sm py-3 border-t border-[#4A90C2]/20 mt-2">
-                      +{filteredWordBank.length - 25} more available
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Center Column: Puzzle Grid */}
-          <div className="space-y-6">
-            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
-              <CardContent className="p-6">
-                {isGenerating ? (
-                  <div className="text-center py-16">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#4A90C2]/20 flex items-center justify-center animate-bounce">
-                      <span className="text-4xl animate-pulse">☪</span>
-                    </div>
-                    <p className="text-[#b3d4ed] text-lg font-serif">
-                      Generating your puzzle...
-                    </p>
-                    <div className="w-48 h-1 mx-auto mt-4 rounded-full bg-[#001a2c] overflow-hidden">
-                      <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#4A90C2] animate-pulse" />
-                    </div>
-                  </div>
-                ) : generatedPuzzle ? (
-                  <>
-                    <div className="flex justify-center mb-6">
-                      <CrosswordGrid
-                        grid={generatedPuzzle.grid}
-                        clues={generatedPuzzle.clues}
-                        theme="dark"
-                        cellSize="md"
-                        showControls={true}
-                        showNumbers={true}
-                        showLetters={true}
-                      />
-                    </div>
-
-                    <div className="flex justify-center">
-                      <Button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className="bg-[#4A90C2] hover:bg-[#5ba0d2] text-white px-6 transition-all hover:scale-105"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerate
-                      </Button>
-                    </div>
-
-                    <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
-                      <PuzzleStats statistics={generatedPuzzle.statistics} />
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/10 to-[#4A90C2]/10 border border-[#4A90C2]/20 flex items-center justify-center">
-                      <svg className="w-12 h-12 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 4v16M4 9h16" />
-                      </svg>
-                    </div>
-                    <h3 className="text-white text-xl mb-2 font-serif">
-                      Ready to Create
-                    </h3>
-                    <p className="text-[#8fc1e3] mb-6">
-                      {themeWords.length < 3
-                        ? `Add ${3 - themeWords.length} more word${3 - themeWords.length > 1 ? 's' : ''} to generate`
-                        : 'Click below to generate your 5×5 puzzle'}
-                    </p>
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={themeWords.length < 3}
-                      className={cn(
-                        'px-8 py-3 text-lg font-semibold transition-all',
-                        themeWords.length >= 3
-                          ? 'bg-gradient-to-r from-[#D4AF37] to-[#e5c86b] text-[#001a2c] hover:scale-105 animate-pulse'
-                          : 'bg-[#4A90C2]/30 text-[#6ba8d4]'
-                      )}
-                    >
-                      Generate Puzzle
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {generatedPuzzle?.fillerSuggestions && generatedPuzzle.fillerSuggestions.length > 0 && (
-              <FillerSuggestions
-                suggestions={generatedPuzzle.fillerSuggestions}
+            {/* Gap Fillers (for generated puzzle) */}
+            {generatedPuzzle && (
+              <GapFillers
+                suggestions={generatedPuzzle?.fillerSuggestions || []}
                 themeWords={themeWords}
+                puzzle={generatedPuzzle}
                 onSwapWord={swapWord}
-                onUseVariant={(id) => toggleSpelling(id)}
                 onRemoveWord={removeWord}
+                onAddWord={addWordFromSuggestion}
               />
             )}
+
+            {/* Detected Words Panel */}
+            {detectedWords.length > 0 && (
+              <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
+                <CardContent className="p-4">
+                  <h3 className="text-[#D4AF37] text-sm font-semibold mb-3 uppercase tracking-wider">
+                    Detected Words ({detectedWords.length})
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {detectedWords.map((word, i) => (
+                      <span
+                        key={`${word.word}-${word.direction}-${i}`}
+                        className={cn(
+                          'px-2 py-1 rounded text-xs font-mono',
+                          word.isValid
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        )}
+                      >
+                        {word.word}
+                        <span className="ml-1 opacity-60">
+                          {word.direction === 'across' ? '→' : '↓'}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  {detectedWords.some(w => !w.isValid) && (
+                    <p className="text-red-400 text-xs mt-2">
+                      Red words are not in the dictionary
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Center Column: Word Hub + Puzzle Grid */}
+          <div className="space-y-6">
+            {/* Word Hub - shown for prophets theme */}
+            {selectedTheme === 'prophets' && (
+              <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
+                <CardContent className="p-5">
+                  <WordHub
+                    onKeywordSelect={addProphetKeyword}
+                    onKeywordDeselect={removeProphetKeyword}
+                    onCustomWordAdd={addCustomWord}
+                    onWordRemove={removeWord}
+                    onWordSelect={setSelectedWordId}
+                    selectedWords={themeWords}
+                    selectedWordId={selectedWordId}
+                    puzzle={generatedPuzzle}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Always-On Editable Grid */}
+            <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex justify-center mb-4">
+                  <CrosswordGrid
+                    grid={toGeneratedPuzzleGrid(calculateCellNumbers(editableCells))}
+                    theme="dark"
+                    cellSize="lg"
+                    showControls={false}
+                    showNumbers={true}
+                    showLetters={true}
+                    editable={true}
+                    editableGrid={editableCells}
+                    editDirection={editDirection}
+                    selectedCell={selectedCell}
+                    onCellSelect={selectCell}
+                    onKeyDown={handleKeyDown}
+                    onContextMenu={handleContextMenu}
+                  />
+                </div>
+
+                {/* Grid Actions */}
+                <div className="flex justify-center gap-3 mt-4">
+                  <Button
+                    onClick={clearGrid}
+                    variant="outline"
+                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Clear Grid
+                  </Button>
+                  {themeWords.length >= 3 && (
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      className="bg-[#4A90C2] hover:bg-[#5ba0d2] text-white px-6 transition-all hover:scale-105"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Auto-Generate
+                    </Button>
+                  )}
+                </div>
+
+                {/* Stats for generated puzzle */}
+                {generatedPuzzle && (
+                  <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
+                    <PuzzleStats statistics={generatedPuzzle.statistics} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Generated Puzzle Preview (shows when auto-generated) */}
+            {generatedPuzzle && (
+              <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
+                <CardContent className="p-6">
+                  <h3 className="text-[#D4AF37] text-sm font-semibold mb-4 uppercase tracking-wider">
+                    Auto-Generated Preview
+                  </h3>
+                  <div className="flex justify-center">
+                    <CrosswordGrid
+                      grid={generatedPuzzle.grid}
+                      clues={generatedPuzzle.clues}
+                      theme="dark"
+                      cellSize="sm"
+                      showControls={false}
+                      showNumbers={true}
+                      showLetters={true}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           </div>
 
           {/* Right Column: Clue Editor */}
@@ -566,85 +633,123 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Clues Display - Crossword Format */}
+                {/* Clues Display - Clean Crossword Format */}
                 <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
                   {generatedPuzzle ? (
                     <>
                       {/* Across Clues */}
-                      <div className="mb-4">
-                        <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2">
-                          <span className="text-lg">→</span> ACROSS
+                      <div className="mb-5">
+                        <h4 className="text-[#D4AF37] font-semibold mb-3 flex items-center gap-2 uppercase tracking-wider text-sm">
+                          <span className="text-base">→</span> Across
                         </h4>
-                        <div className="space-y-1.5">
-                          {generatedPuzzle.clues.across.map((clue) => (
-                            <button
-                              key={`across-${clue.number}`}
-                              onClick={() => {
-                                const word = themeWords.find(w =>
-                                  w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                                );
-                                if (word) setSelectedWordId(word.id);
-                              }}
-                              className="w-full text-left p-2 rounded hover:bg-[#001a2c]/60 transition-colors"
-                            >
-                              <span className="text-amber-400 font-mono font-bold mr-2">{clue.number}.</span>
-                              <span className="text-white font-semibold mr-2">{clue.answer}</span>
-                              <span className="text-[#8fc1e3] text-sm">— {clue.clue}</span>
-                            </button>
-                          ))}
+                        <div className="space-y-2">
+                          {generatedPuzzle.clues.across.map((clue) => {
+                            const isSelected = themeWords.find(w =>
+                              w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                            )?.id === selectedWordId;
+                            return (
+                              <button
+                                key={`across-${clue.number}`}
+                                onClick={() => {
+                                  const word = themeWords.find(w =>
+                                    w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                                  );
+                                  if (word) setSelectedWordId(word.id);
+                                }}
+                                className={cn(
+                                  'w-full text-left px-3 py-2 rounded-lg transition-all group',
+                                  isSelected
+                                    ? 'bg-[#D4AF37]/20 border border-[#D4AF37]/40'
+                                    : 'hover:bg-[#001a2c]/60 border border-transparent'
+                                )}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <span className="text-[#D4AF37] font-mono font-bold text-sm min-w-[1.5rem]">
+                                    {clue.number}.
+                                  </span>
+                                  <div className="flex-1">
+                                    <span className="text-white text-sm">
+                                      {clue.clue || 'No clue yet'}
+                                    </span>
+                                    <span className="text-[#6ba8d4] text-xs ml-1.5">
+                                      ({clue.length})
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="ml-6 mt-1 text-[10px] text-[#4A90C2] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Answer: {clue.answer}
+                                </div>
+                              </button>
+                            );
+                          })}
+                          {generatedPuzzle.clues.across.length === 0 && (
+                            <p className="text-[#6ba8d4] text-xs italic px-3">No across clues</p>
+                          )}
                         </div>
                       </div>
 
                       {/* Down Clues */}
                       <div>
-                        <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2">
-                          <span className="text-lg">↓</span> DOWN
+                        <h4 className="text-[#D4AF37] font-semibold mb-3 flex items-center gap-2 uppercase tracking-wider text-sm">
+                          <span className="text-base">↓</span> Down
                         </h4>
-                        <div className="space-y-1.5">
-                          {generatedPuzzle.clues.down.map((clue) => (
-                            <button
-                              key={`down-${clue.number}`}
-                              onClick={() => {
-                                const word = themeWords.find(w =>
-                                  w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                                );
-                                if (word) setSelectedWordId(word.id);
-                              }}
-                              className="w-full text-left p-2 rounded hover:bg-[#001a2c]/60 transition-colors"
-                            >
-                              <span className="text-amber-400 font-mono font-bold mr-2">{clue.number}.</span>
-                              <span className="text-white font-semibold mr-2">{clue.answer}</span>
-                              <span className="text-[#8fc1e3] text-sm">— {clue.clue}</span>
-                            </button>
-                          ))}
+                        <div className="space-y-2">
+                          {generatedPuzzle.clues.down.map((clue) => {
+                            const isSelected = themeWords.find(w =>
+                              w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                            )?.id === selectedWordId;
+                            return (
+                              <button
+                                key={`down-${clue.number}`}
+                                onClick={() => {
+                                  const word = themeWords.find(w =>
+                                    w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                                  );
+                                  if (word) setSelectedWordId(word.id);
+                                }}
+                                className={cn(
+                                  'w-full text-left px-3 py-2 rounded-lg transition-all group',
+                                  isSelected
+                                    ? 'bg-[#D4AF37]/20 border border-[#D4AF37]/40'
+                                    : 'hover:bg-[#001a2c]/60 border border-transparent'
+                                )}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <span className="text-[#D4AF37] font-mono font-bold text-sm min-w-[1.5rem]">
+                                    {clue.number}.
+                                  </span>
+                                  <div className="flex-1">
+                                    <span className="text-white text-sm">
+                                      {clue.clue || 'No clue yet'}
+                                    </span>
+                                    <span className="text-[#6ba8d4] text-xs ml-1.5">
+                                      ({clue.length})
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="ml-6 mt-1 text-[10px] text-[#4A90C2] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Answer: {clue.answer}
+                                </div>
+                              </button>
+                            );
+                          })}
+                          {generatedPuzzle.clues.down.length === 0 && (
+                            <p className="text-[#6ba8d4] text-xs italic px-3">No down clues</p>
+                          )}
                         </div>
                       </div>
                     </>
                   ) : (
-                    <>
-                      <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">Selected Words</h4>
-                      <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2">
-                        {themeWords.map((word) => (
-                          <button
-                            key={word.id}
-                            onClick={() => setSelectedWordId(word.id)}
-                            className={cn(
-                              'w-full p-3 rounded-lg text-left transition-all border',
-                              selectedWordId === word.id
-                                ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40'
-                                : 'bg-[#001a2c]/40 border-transparent hover:border-[#4A90C2]/30'
-                            )}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-white font-semibold tracking-wide">{word.activeSpelling}</span>
-                            </div>
-                            <p className="text-[#8fc1e3] text-sm line-clamp-1">
-                              {clues[word.id] || word.clue || '(no clue)'}
-                            </p>
-                          </button>
-                        ))}
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-[#001a2c]/40 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h7" />
+                        </svg>
                       </div>
-                    </>
+                      <p className="text-[#8fc1e3] text-sm">
+                        Generate a puzzle to see clues
+                      </p>
+                    </div>
                   )}
                 </div>
               </CardContent>

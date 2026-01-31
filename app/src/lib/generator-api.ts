@@ -1,8 +1,10 @@
 import { ThemeWord, GeneratedPuzzle, PuzzleStatistics, FillerSuggestion } from './types';
 import { sampleWords } from './sample-data';
+import { convexClient } from './convex';
+import { api } from '../../convex/_generated/api';
 
-// Flag to use Convex generator (set to true when Convex is configured)
-const USE_CONVEX_GENERATOR = false;
+// Flag to use Convex generator
+const USE_CONVEX_GENERATOR = true;
 
 // Common English filler words that work well in crosswords
 const commonFillerWords: { word: string; clue: string; score: number }[] = [
@@ -45,32 +47,239 @@ interface GeneratePuzzleOptions {
   themeWords: ThemeWord[];
 }
 
+// Type for successful Convex generation result
+interface ConvexGenerationSuccess {
+  success: true;
+  grid: { type: 'empty' | 'black' | 'letter'; solution?: string; number?: number }[][];
+  placedWordIds: string[];
+  unplacedWordIds: string[];
+  clues: {
+    across: { number: number; clue: string; answer: string; row: number; col: number; length: number }[];
+    down: { number: number; clue: string; answer: string; row: number; col: number; length: number }[];
+  };
+  statistics: {
+    gridFillPercentage: number;
+    wordPlacementRate: number;
+    totalIntersections: number;
+    avgIntersectionsPerWord: number;
+    gridConnectivity: number;
+    totalCells: number;
+    filledCells: number;
+    placedWordCount: number;
+    totalWordCount: number;
+  };
+  score: number;
+}
+
+// Type for failed Convex generation result
+interface ConvexGenerationFailure {
+  success: false;
+  error: string;
+}
+
+type ConvexGenerationResult = ConvexGenerationSuccess | ConvexGenerationFailure;
+
+/**
+ * Convert Convex generation result to GeneratedPuzzle format
+ */
+function convertConvexResultToGeneratedPuzzle(
+  result: ConvexGenerationSuccess,
+  title: string,
+  author: string,
+  themeWords: ThemeWord[]
+): GeneratedPuzzle {
+  // Generate filler suggestions for unplaced words
+  const unplacedWords = themeWords.filter(w =>
+    result.unplacedWordIds.includes(w.id)
+  );
+  const placedWords = themeWords.filter(w =>
+    result.placedWordIds.includes(w.id)
+  );
+  const fillerSuggestions = generateFillerSuggestionsHelper(unplacedWords, placedWords);
+
+  return {
+    metadata: {
+      title,
+      author,
+      date: new Date().toISOString(),
+      rows: 5,
+      cols: 5,
+      wordCount: result.placedWordIds.length,
+    },
+    grid: result.grid,
+    clues: result.clues,
+    placedWordIds: result.placedWordIds,
+    unplacedWordIds: result.unplacedWordIds,
+    statistics: result.statistics,
+    fillerSuggestions,
+  };
+}
+
+/**
+ * Helper function for generating filler suggestions (used by both Convex and local)
+ */
+function generateFillerSuggestionsHelper(
+  unplacedWords: ThemeWord[],
+  placedWords: ThemeWord[]
+): FillerSuggestion[] {
+  const placedWordStrings = new Set(placedWords.map(w => w.activeSpelling.toUpperCase()));
+  const usedWordIds = new Set(placedWords.map(w => w.id));
+
+  return unplacedWords.map(unplacedWord => {
+    const originalLength = unplacedWord.activeSpelling.length;
+    const suggestions: FillerSuggestion['suggestions'] = [];
+
+    let reason: FillerSuggestion['reason'] = 'no_fit';
+    if (originalLength > 5) {
+      reason = 'too_long';
+    }
+
+    // Find Islamic word alternatives from sample data
+    const islamicAlternatives = sampleWords
+      .filter(w =>
+        !usedWordIds.has(w.id) &&
+        !placedWordStrings.has(w.word.toUpperCase()) &&
+        w.word.length >= originalLength - 2 &&
+        w.word.length <= originalLength + 2 &&
+        w.word.length <= 5
+      )
+      .slice(0, 3)
+      .map(w => ({
+        word: w.word,
+        clue: w.clue,
+        length: w.word.length,
+        score: w.score,
+        source: 'islamic' as const,
+        arabicScript: w.arabicScript,
+      }));
+
+    suggestions.push(...islamicAlternatives);
+
+    // Find common English alternatives
+    const commonAlternatives = commonFillerWords
+      .filter(w =>
+        !placedWordStrings.has(w.word.toUpperCase()) &&
+        w.word.length >= originalLength - 2 &&
+        w.word.length <= originalLength + 2 &&
+        w.word.length <= 5
+      )
+      .slice(0, 2)
+      .map(w => ({
+        word: w.word,
+        clue: w.clue,
+        length: w.word.length,
+        score: w.score,
+        source: 'common' as const,
+      }));
+
+    suggestions.push(...commonAlternatives);
+    suggestions.sort((a, b) => b.score - a.score);
+
+    const variants: FillerSuggestion['variants'] = [];
+    if (unplacedWord.spellingVariants && unplacedWord.spellingVariants.length > 1) {
+      unplacedWord.spellingVariants
+        .filter(v => v !== unplacedWord.activeSpelling && v.length < originalLength && v.length <= 5)
+        .forEach(v => {
+          variants.push({ word: v, length: v.length });
+        });
+    }
+
+    return {
+      wordId: unplacedWord.id,
+      originalWord: unplacedWord.activeSpelling,
+      originalLength,
+      suggestions: suggestions.slice(0, 5),
+      variants: variants.length > 0 ? variants : undefined,
+      reason,
+    };
+  });
+}
+
 /**
  * Calls the crossword generator with theme words.
  *
  * Generation modes:
  * 1. Convex action (USE_CONVEX_GENERATOR = true) - uses server-side 5x5 generator
  * 2. Local simulation (USE_CONVEX_GENERATOR = false) - client-side simulation
+ *
+ * NOTE: This now supports 0+ words. With 0-2 words, it creates a simple placement.
+ * With 3+ words, it uses the full intersection algorithm.
  */
 export async function generatePuzzle(options: GeneratePuzzleOptions): Promise<GeneratedPuzzle> {
   const { title = 'Islamic Crossword', author = 'myislam.org', themeWords, targetWords = 7 } = options;
 
   if (USE_CONVEX_GENERATOR) {
-    // TODO: Wire up to Convex action when ready
-    // const result = await convexClient.action(api.gridGenerator.generate5x5, {
-    //   words: themeWords.map(w => ({
-    //     id: w.id,
-    //     word: w.word,
-    //     clue: w.clue,
-    //     activeSpelling: w.activeSpelling,
-    //   })),
-    //   targetWords,
-    // });
-    // return convertConvexResultToGeneratedPuzzle(result, title, author);
+    try {
+      const result = await convexClient.action(api.gridGenerator.generate5x5, {
+        words: themeWords.map(w => ({
+          id: w.id,
+          word: w.word,
+          clue: w.clue || '',
+          activeSpelling: w.activeSpelling,
+        })),
+        targetWords,
+      }) as ConvexGenerationResult;
+
+      if (result.success) {
+        return convertConvexResultToGeneratedPuzzle(result, title, author, themeWords);
+      } else {
+        console.warn('Convex generator failed:', result.error);
+        // Fall through to local simulation
+      }
+    } catch (error) {
+      console.error('Convex action error:', error);
+      // Fall through to local simulation
+    }
   }
 
-  // Use local simulation for now
+  // Use local simulation for now (supports 0+ words)
   return simulateGeneration(title, author, themeWords, targetWords);
+}
+
+/**
+ * Generate an empty 5x5 puzzle grid.
+ */
+export function generateEmptyPuzzle(title: string = 'New Puzzle', author: string = 'myislam.org'): GeneratedPuzzle {
+  const grid: GeneratedPuzzle['grid'] = [];
+
+  // Initialize empty 5x5 grid
+  for (let r = 0; r < 5; r++) {
+    const row: GeneratedPuzzle['grid'][0] = [];
+    for (let c = 0; c < 5; c++) {
+      row.push({ type: 'empty' });
+    }
+    grid.push(row);
+  }
+
+  return {
+    metadata: {
+      title,
+      author,
+      date: new Date().toISOString(),
+      rows: 5,
+      cols: 5,
+      wordCount: 0,
+    },
+    grid,
+    clues: {
+      across: [],
+      down: [],
+    },
+    placedWordIds: [],
+    unplacedWordIds: [],
+    statistics: {
+      gridFillPercentage: 0,
+      wordPlacementRate: 0,
+      totalIntersections: 0,
+      avgIntersectionsPerWord: 0,
+      gridConnectivity: 0,
+      totalCells: 25,
+      filledCells: 0,
+      placedWordCount: 0,
+      totalWordCount: 0,
+    },
+    fillerSuggestions: [],
+  };
 }
 
 /**
