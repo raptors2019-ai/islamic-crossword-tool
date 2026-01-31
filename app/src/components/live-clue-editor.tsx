@@ -448,49 +448,48 @@ export function LiveClueEditor({
           </div>
         )}
 
-        {/* Word Alternatives toggle */}
-        <div className="ml-6 mt-2">
-          <button
-            onClick={() => setExpandedSection(isWordAltsExpanded ? null : `${word.word}-words`)}
-            className="text-[10px] text-[#6ba8d4] hover:text-[#D4AF37] transition-colors flex items-center gap-1"
-          >
-            <svg className={cn("w-3 h-3 transition-transform", isWordAltsExpanded && "rotate-90")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            Word Alternatives ({wordAlternatives.length})
-          </button>
+        {/* Word Alternatives toggle - only show if there are alternatives */}
+        {wordAlternatives.length > 0 && (
+          <div className="ml-6 mt-2">
+            <button
+              onClick={() => setExpandedSection(isWordAltsExpanded ? null : `${word.word}-words`)}
+              className="text-[10px] text-[#6ba8d4] hover:text-[#D4AF37] transition-colors flex items-center gap-1"
+            >
+              <svg className={cn("w-3 h-3 transition-transform", isWordAltsExpanded && "rotate-90")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Word Alternatives ({wordAlternatives.length})
+            </button>
 
-          {isWordAltsExpanded && (
-            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-              {wordAlternatives.map((alt) => {
-                const altInfo = getWordInfo(alt.word);
-                const altCategory = altInfo?.category;
-                return (
-                  <button
-                    key={alt.word}
-                    onClick={() => handleSwapWordAlt(word, alt.word, alt.clue)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-[#001a2c]/40 hover:bg-[#003B5C] border border-transparent hover:border-[#D4AF37]/40 transition-all text-left group"
-                  >
-                    <span className="text-white font-medium text-sm">{alt.word}</span>
-                    {altCategory && (
-                      <span className={cn(
-                        'px-1 py-0.5 rounded text-[8px] uppercase',
-                        categoryColors[altCategory] || 'bg-slate-500/20 text-slate-400'
-                      )}>
-                        {altCategory === 'names-of-allah' ? 'Allah' : altCategory}
-                      </span>
-                    )}
-                    <span className="text-[#6ba8d4] text-[10px] truncate flex-1">{alt.clue}</span>
-                    <span className="text-[#D4AF37] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">SWAP</span>
-                  </button>
-                );
-              })}
-              {wordAlternatives.length === 0 && (
-                <p className="text-[#6ba8d4] text-[10px] italic py-2">No word alternatives found</p>
-              )}
-            </div>
-          )}
-        </div>
+            {isWordAltsExpanded && (
+              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                {wordAlternatives.map((alt) => {
+                  const altInfo = getWordInfo(alt.word);
+                  const altCategory = altInfo?.category;
+                  return (
+                    <button
+                      key={alt.word}
+                      onClick={() => handleSwapWordAlt(word, alt.word, alt.clue)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-[#001a2c]/40 hover:bg-[#003B5C] border border-transparent hover:border-[#D4AF37]/40 transition-all text-left group"
+                    >
+                      <span className="text-white font-medium text-sm">{alt.word}</span>
+                      {altCategory && (
+                        <span className={cn(
+                          'px-1 py-0.5 rounded text-[8px] uppercase',
+                          categoryColors[altCategory] || 'bg-slate-500/20 text-slate-400'
+                        )}>
+                          {altCategory === 'names-of-allah' ? 'Allah' : altCategory}
+                        </span>
+                      )}
+                      <span className="text-[#6ba8d4] text-[10px] truncate flex-1">{alt.clue}</span>
+                      <span className="text-[#D4AF37] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">SWAP</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
