@@ -8,44 +8,39 @@ import { api, internal } from "./_generated/api";
  * Generates 7-10 clue options per word based on the cruciverbist prompt.
  */
 
-// Clue generation prompt template
+// Clue generation prompt template - categorized by difficulty
 const CLUE_PROMPT = `You are an expert cruciverbist (crossword puzzle creator) in the style of Patrick Barry and Will Shortz, specializing in Islamic-themed crossword puzzles.
 
-Generate 7-10 diverse clue options for the word: {word}
+Create clues for the word: {word}
 
-Context:
-- This is for a 5x5 Islamic crossword puzzle (simple format)
-- Target audience: Muslims of all ages
-- Clues should be challenging but not too obscure
-- Prioritize clues with Islamic connections when possible
-- Use "___" (three underscores) for blanks in clues
+IMPORTANT RULES:
+- The clue should be the SAME PART OF SPEECH as the entry word
+- Use "___" (three underscores) for blanks in fill-in-the-blank clues
+- If possible, create clues connected to Islamic themes, stories, companions, prophets
+- Can also use clever/general clues for English audience
 
 {islamicContext}
 
-Clue Types to Include:
-1. **Analogy clues** - Using "A:B::C:?" format or comparisons
-2. **Clever dictionary clues** - Wordplay on definitions
-3. **Simple straightforward clues** - Direct definitions
-4. **Familiar phrase clues** - "_____ in the morning" style
-5. **Idiom clues** - Based on common expressions
-6. **Sneaky clues** - Misdirection or double meanings
+Generate exactly 3 clues categorized by difficulty:
+
+**EASY** - Simple, straightforward definition or direct Islamic reference
+**MEDIUM** - Familiar phrase clue ("costs for living" for RANSOM), idiom ("she's a doll" for BARBIE), or clever dictionary clue
+**HARD** - Analogy clue, sneaky misdirection, double meaning, or wordplay
 
 Return EXACTLY this JSON format (no markdown, no extra text):
 {
   "word": "{word}",
-  "clues": [
-    {"clue": "clue text here", "type": "simple", "islamic": true},
-    {"clue": "another clue", "type": "analogy", "islamic": false}
-  ]
+  "easy": "simple straightforward clue here",
+  "medium": "familiar phrase or idiom clue here",
+  "hard": "sneaky or analogy clue here"
 }
 
 Requirements:
-- Generate exactly 7-10 clues
-- Each clue must be unique and different in approach
-- At least 3 clues should have Islamic connections if the word is Islamic
+- Each clue must be UNIQUE and different in approach
+- Prefer Islamic connections when the word is Islamic
 - Clues should be suitable for all ages
-- No offensive or controversial content
-- Keep clues concise (under 100 characters each)`;
+- Keep clues concise (under 80 characters each)
+- Make sure HARD is genuinely tricky/clever`;
 
 // Prophet names with context
 const PROPHET_CONTEXT: Record<string, string> = {
@@ -139,7 +134,9 @@ export const generateClues = action({
   },
   handler: async (ctx, args): Promise<{
     word: string;
-    clues: { clue: string; type: string; islamic: boolean }[];
+    easy: string;
+    medium: string;
+    hard: string;
     error?: string;
   }> => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -147,7 +144,9 @@ export const generateClues = action({
     if (!apiKey) {
       return {
         word: args.word,
-        clues: [],
+        easy: "",
+        medium: "",
+        hard: "",
         error: "ANTHROPIC_API_KEY not configured",
       };
     }
@@ -197,12 +196,16 @@ export const generateClues = action({
 
       return {
         word,
-        clues: parsedData.clues || [],
+        easy: parsedData.easy || "",
+        medium: parsedData.medium || "",
+        hard: parsedData.hard || "",
       };
     } catch (error) {
       return {
         word,
-        clues: [],
+        easy: "",
+        medium: "",
+        hard: "",
         error: String(error),
       };
     }

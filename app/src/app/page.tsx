@@ -73,13 +73,32 @@ export default function Home() {
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [placedInGridIds, setPlacedInGridIds] = useState<Set<string>>(new Set());
-  // Grid-based clues (word string -> clue text)
-  const [gridClues, setGridClues] = useState<Record<string, string>>({});
+
+  // Grid-based clues with difficulty levels (word -> { easy, medium, hard })
+  type Difficulty = 'easy' | 'medium' | 'hard';
+  interface DifficultyClues {
+    easy: string;
+    medium: string;
+    hard: string;
+  }
+  const [gridClues, setGridClues] = useState<Record<string, DifficultyClues>>({});
+  const [selectedDifficulties, setSelectedDifficulties] = useState<Record<string, Difficulty>>({});
   const [selectedGridWord, setSelectedGridWord] = useState<string | null>(null);
 
   // Handle clue change from LiveClueEditor
-  const handleGridClueChange = useCallback((word: string, clue: string) => {
-    setGridClues(prev => ({ ...prev, [word]: clue }));
+  const handleGridClueChange = useCallback((word: string, difficulty: Difficulty, clue: string) => {
+    setGridClues(prev => ({
+      ...prev,
+      [word]: {
+        ...(prev[word] || { easy: '', medium: '', hard: '' }),
+        [difficulty]: clue,
+      },
+    }));
+  }, []);
+
+  // Handle difficulty selection change
+  const handleDifficultyChange = useCallback((word: string, difficulty: Difficulty) => {
+    setSelectedDifficulties(prev => ({ ...prev, [word]: difficulty }));
   }, []);
 
   // Editable grid hook for always-on interactive grid
@@ -988,7 +1007,9 @@ export default function Home() {
                 <LiveClueEditor
                   cells={editableCells}
                   clues={gridClues}
+                  selectedDifficulties={selectedDifficulties}
                   onClueChange={handleGridClueChange}
+                  onDifficultyChange={handleDifficultyChange}
                   selectedWord={selectedGridWord}
                   onSelectWord={setSelectedGridWord}
                 />

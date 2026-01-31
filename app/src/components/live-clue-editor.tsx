@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { cn } from '@/lib/utils';
@@ -21,12 +21,6 @@ interface ClueWord {
   col: number;
 }
 
-interface AIClue {
-  clue: string;
-  type: string;
-  islamic: boolean;
-}
-
 interface DifficultyClues {
   easy: string;
   medium: string;
@@ -35,8 +29,10 @@ interface DifficultyClues {
 
 interface LiveClueEditorProps {
   cells: EditableCell[][];
-  clues: Record<string, string>;
-  onClueChange: (word: string, clue: string) => void;
+  clues: Record<string, DifficultyClues>;
+  selectedDifficulties: Record<string, Difficulty>;
+  onClueChange: (word: string, difficulty: Difficulty, clue: string) => void;
+  onDifficultyChange: (word: string, difficulty: Difficulty) => void;
   selectedWord?: string | null;
   onSelectWord?: (word: string | null) => void;
 }
@@ -123,13 +119,14 @@ function detectClueWords(cells: EditableCell[][]): ClueWord[] {
 export function LiveClueEditor({
   cells,
   clues,
+  selectedDifficulties,
   onClueChange,
+  onDifficultyChange,
   selectedWord,
   onSelectWord,
 }: LiveClueEditorProps) {
   const [editingWord, setEditingWord] = useState<string | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Record<string, Difficulty>>({});
-  const [aiClues, setAiClues] = useState<Record<string, DifficultyClues>>({});
+  const [editingDifficulty, setEditingDifficulty] = useState<Difficulty | null>(null);
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
 
   const generateClues = useAction(api.clueGeneration.generateClues);
@@ -150,29 +147,13 @@ export function LiveClueEditor({
     async (word: string) => {
       setLoadingAI(word);
       try {
-        const result = await generateClues({
-          word,
-          existingClue: clues[word] || undefined,
-        });
+        const result = await generateClues({ word });
 
-        if (result.clues && result.clues.length > 0) {
-          // Categorize clues by difficulty based on type
-          const easy = result.clues.find((c) => c.type === 'simple')?.clue
-            || result.clues[0]?.clue || '';
-          const medium = result.clues.find((c) => c.type === 'familiar_phrase' || c.type === 'idiom')?.clue
-            || result.clues[1]?.clue || easy;
-          const hard = result.clues.find((c) => c.type === 'sneaky' || c.type === 'analogy')?.clue
-            || result.clues[2]?.clue || medium;
-
-          setAiClues((prev) => ({
-            ...prev,
-            [word]: { easy, medium, hard },
-          }));
-
-          // Set to easy by default and apply it
-          const currentDiff = selectedDifficulty[word] || 'easy';
-          setSelectedDifficulty((prev) => ({ ...prev, [word]: currentDiff }));
-          onClueChange(word, currentDiff === 'easy' ? easy : currentDiff === 'medium' ? medium : hard);
+        if (result.easy || result.medium || result.hard) {
+          // Update all three difficulty clues
+          if (result.easy) onClueChange(word, 'easy', result.easy);
+          if (result.medium) onClueChange(word, 'medium', result.medium);
+          if (result.hard) onClueChange(word, 'hard', result.hard);
         }
       } catch (error) {
         console.error('Failed to generate clues:', error);
@@ -180,48 +161,53 @@ export function LiveClueEditor({
         setLoadingAI(null);
       }
     },
-    [generateClues, clues, onClueChange, selectedDifficulty]
+    [generateClues, onClueChange]
   );
 
-  const handleDifficultyChange = useCallback(
-    (word: string, difficulty: Difficulty) => {
-      setSelectedDifficulty((prev) => ({ ...prev, [word]: difficulty }));
-      const wordAiClues = aiClues[word];
-      if (wordAiClues) {
-        onClueChange(word, wordAiClues[difficulty]);
-      }
-    },
-    [aiClues, onClueChange]
-  );
+  const handleStartEdit = (word: string, difficulty: Difficulty) => {
+    setEditingWord(word);
+    setEditingDifficulty(difficulty);
+  };
+
+  const handleFinishEdit = () => {
+    setEditingWord(null);
+    setEditingDifficulty(null);
+  };
 
   const renderWordItem = (word: ClueWord) => {
-    const isEditing = editingWord === word.word;
     const isSelected = selectedWord === word.word;
     const dictInfo = getWordInfo(word.word);
-    const currentClue = clues[word.word] || dictInfo?.clue || '';
-    const isLoading = loadingAI === word.word;
     const category = dictInfo?.category;
-    const wordAiClues = aiClues[word.word];
-    const difficulty = selectedDifficulty[word.word] || 'easy';
+    const isLoading = loadingAI === word.word;
+
+    // Get clues for this word (from state or dictionary fallback)
+    const wordClues = clues[word.word] || {
+      easy: dictInfo?.clue || '',
+      medium: '',
+      hard: '',
+    };
+
+    const currentDifficulty = selectedDifficulties[word.word] || 'easy';
+    const currentClue = wordClues[currentDifficulty];
 
     return (
       <div
         key={`${word.direction}-${word.number}-${word.word}`}
         className={cn(
-          'px-3 py-2 rounded-lg transition-all border',
+          'px-3 py-2.5 rounded-lg transition-all border',
           isSelected
             ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40'
             : 'bg-[#001a2c]/30 border-transparent hover:border-[#4A90C2]/30'
         )}
       >
         {/* Word header row */}
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1.5">
           <span className="text-[#D4AF37] font-mono font-bold text-xs w-6">
             {word.number}{word.direction === 'across' ? 'A' : 'D'}
           </span>
           <button
             onClick={() => onSelectWord?.(isSelected ? null : word.word)}
-            className="text-white font-bold tracking-wider group-hover:text-[#D4AF37] transition-colors"
+            className="text-white font-bold tracking-wider hover:text-[#D4AF37] transition-colors"
           >
             {word.word}
           </button>
@@ -233,80 +219,86 @@ export function LiveClueEditor({
           )}
         </div>
 
-        {/* Clue row with AI button */}
-        {isEditing ? (
-          <div className="ml-6 mt-1">
-            <input
-              type="text"
-              value={currentClue}
-              onChange={(e) => onClueChange(word.word, e.target.value)}
-              onBlur={() => setEditingWord(null)}
-              onKeyDown={(e) => e.key === 'Enter' && setEditingWord(null)}
-              className="w-full bg-[#001a2c]/60 border border-[#4A90C2]/30 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4A90C2]/50"
-              placeholder="Enter clue..."
-              autoFocus
-            />
-          </div>
-        ) : (
-          <div className="ml-6 flex items-center gap-2">
-            <span
-              onClick={() => setEditingWord(word.word)}
-              className={cn(
-                'flex-1 text-sm cursor-pointer hover:text-[#D4AF37] transition-colors truncate',
-                currentClue ? 'text-[#c0d8e8]' : 'text-[#6ba8d4] italic'
-              )}
-            >
-              {currentClue || 'Click to add clue...'}
-            </span>
-            {!clues[word.word] && dictInfo?.clue && (
-              <span className="text-[9px] text-[#6ba8d4]/50 shrink-0">dict</span>
-            )}
-            <button
-              onClick={() => handleAskAI(word.word)}
-              disabled={isLoading}
-              className={cn(
-                'shrink-0 p-1 rounded transition-colors',
-                isLoading
-                  ? 'text-violet-400 animate-pulse'
-                  : 'text-[#6ba8d4] hover:text-violet-400 hover:bg-violet-500/10'
-              )}
-              title="Ask AI for clues"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                />
-              </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Difficulty tabs - only show when AI clues are available */}
-        {wordAiClues && (
-          <div className="ml-6 mt-2 flex gap-1">
-            {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => (
+        {/* Difficulty tabs - always visible */}
+        <div className="ml-6 flex items-center gap-1 mb-1.5">
+          {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => {
+            const hasClue = wordClues[diff] && wordClues[diff].length > 0;
+            const isActive = currentDifficulty === diff;
+            return (
               <button
                 key={diff}
-                onClick={() => handleDifficultyChange(word.word, diff)}
+                onClick={() => onDifficultyChange(word.word, diff)}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[10px] uppercase tracking-wider transition-colors',
-                  difficulty === diff
+                  'px-2 py-0.5 rounded text-[10px] uppercase tracking-wider transition-all',
+                  isActive
                     ? diff === 'easy'
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      ? 'bg-green-500/30 text-green-300 border border-green-500/40'
                       : diff === 'medium'
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-[#001a2c]/40 text-[#6ba8d4] hover:text-white border border-transparent'
+                      ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                      : 'bg-red-500/30 text-red-300 border border-red-500/40'
+                    : hasClue
+                    ? 'bg-[#001a2c]/60 text-[#8fc1e3] hover:text-white border border-[#4A90C2]/20'
+                    : 'bg-[#001a2c]/40 text-[#4A90C2] hover:text-[#6ba8d4] border border-transparent'
                 )}
               >
                 {diff}
+                {hasClue && !isActive && <span className="ml-0.5 text-[8px]">•</span>}
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+
+          {/* AI button */}
+          <button
+            onClick={() => handleAskAI(word.word)}
+            disabled={isLoading}
+            className={cn(
+              'ml-auto p-1 rounded transition-all',
+              isLoading
+                ? 'text-violet-400'
+                : 'text-[#6ba8d4] hover:text-violet-400 hover:bg-violet-500/10'
+            )}
+            title="Generate AI clues for all difficulties"
+          >
+            {isLoading ? (
+              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Clue display/edit */}
+        <div className="ml-6">
+          {editingWord === word.word && editingDifficulty === currentDifficulty ? (
+            <input
+              type="text"
+              value={currentClue}
+              onChange={(e) => onClueChange(word.word, currentDifficulty, e.target.value)}
+              onBlur={handleFinishEdit}
+              onKeyDown={(e) => e.key === 'Enter' && handleFinishEdit()}
+              className="w-full bg-[#001a2c]/60 border border-[#4A90C2]/40 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/50"
+              placeholder={`Enter ${currentDifficulty} clue...`}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleStartEdit(word.word, currentDifficulty)}
+              className={cn(
+                'text-sm cursor-pointer rounded px-2 py-1 -mx-2 transition-colors',
+                currentClue
+                  ? 'text-[#c0d8e8] hover:bg-[#4A90C2]/10'
+                  : 'text-[#6ba8d4] italic hover:bg-[#4A90C2]/10'
+              )}
+            >
+              {currentClue || `Click to add ${currentDifficulty} clue...`}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -332,7 +324,7 @@ export function LiveClueEditor({
           <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2 uppercase tracking-wider text-xs">
             <span>→</span> Across
           </h4>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {acrossWords.map(renderWordItem)}
           </div>
         </div>
@@ -344,7 +336,7 @@ export function LiveClueEditor({
           <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2 uppercase tracking-wider text-xs">
             <span>↓</span> Down
           </h4>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {downWords.map(renderWordItem)}
           </div>
         </div>
@@ -353,7 +345,9 @@ export function LiveClueEditor({
       {/* Summary */}
       <div className="pt-3 border-t border-[#4A90C2]/20 text-[10px] text-[#6ba8d4] flex justify-between">
         <span>{acrossWords.length + downWords.length} words</span>
-        <span>{Object.keys(clues).filter((k) => clues[k]).length} clues</span>
+        <span>
+          {Object.values(clues).filter(c => c.easy || c.medium || c.hard).length} with clues
+        </span>
       </div>
     </div>
   );
