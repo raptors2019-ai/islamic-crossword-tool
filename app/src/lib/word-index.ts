@@ -21,6 +21,50 @@ export const WORD_SCORE = {
   CROSSWORDESE: 10,      // EEL, QUA, etc. - last resort
 } as const;
 
+/**
+ * Letter friendliness scores (0-100) based on crossword letter frequency.
+ * Higher = easier to find perpendicular words containing this letter.
+ */
+export const LETTER_FRIENDLINESS: Record<string, number> = {
+  // Tier 1: Very friendly (most common in crosswords)
+  'E': 100, 'A': 95, 'R': 90, 'I': 88, 'O': 85, 'T': 82, 'N': 80, 'S': 78,
+  // Tier 2: Friendly
+  'L': 70, 'C': 65, 'U': 62, 'D': 60, 'P': 58, 'M': 55, 'H': 52,
+  // Tier 3: Moderate
+  'G': 45, 'B': 42, 'F': 40, 'Y': 38, 'W': 35, 'K': 32, 'V': 30,
+  // Tier 4: Difficult (rare letters)
+  'X': 15, 'Z': 12, 'J': 10, 'Q': 5,
+};
+
+/**
+ * Calculate word friendliness score (0-100).
+ * Higher = easier to find perpendicular words.
+ * Middle letters weighted more heavily (they create more constraints).
+ */
+export function calculateWordFriendliness(word: string): number {
+  const upper = word.toUpperCase();
+  const len = upper.length;
+  if (len === 0) return 0;
+
+  let totalScore = 0;
+  let totalWeight = 0;
+
+  for (let i = 0; i < len; i++) {
+    const letter = upper[i];
+    const letterScore = LETTER_FRIENDLINESS[letter] ?? 30;
+
+    // Weight middle positions higher (0.6 at edges, 1.0 at center)
+    const distFromCenter = Math.abs(i - (len - 1) / 2);
+    const maxDist = (len - 1) / 2 || 1;
+    const weight = 1.0 - (distFromCenter / maxDist) * 0.4;
+
+    totalScore += letterScore * weight;
+    totalWeight += weight;
+  }
+
+  return totalScore / totalWeight;
+}
+
 /** Islamic filler words (themed for Islamic crosswords) */
 export const ISLAMIC_FILLER_WORDS = new Set([
   // Original set

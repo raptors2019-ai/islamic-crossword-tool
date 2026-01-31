@@ -74,16 +74,16 @@ export default function Home() {
 
   // Grid-based clues with difficulty levels (word -> { easy, medium, hard })
   type Difficulty = 'easy' | 'medium' | 'hard';
-  interface ClueOptions {
-    easy: string[];
-    medium: string[];
-    hard: string[];
+  interface ClueAlternatives {
+    easy: string[];    // Alternative clues for easy difficulty
+    medium: string[];  // Alternative clues for medium difficulty
+    hard: string[];    // Alternative clues for hard difficulty
   }
   interface DifficultyClues {
-    easy: string;
-    medium: string;
-    hard: string;
-    options?: ClueOptions;  // All generated options for popover display
+    easy: string;      // Currently selected easy clue
+    medium: string;    // Currently selected medium clue
+    hard: string;      // Currently selected hard clue
+    alternatives?: ClueAlternatives;  // Other generated clue options
   }
   const [gridClues, setGridClues] = useState<Record<string, DifficultyClues>>({});
   const [selectedDifficulties, setSelectedDifficulties] = useState<Record<string, Difficulty>>({});
@@ -100,27 +100,82 @@ export default function Home() {
     }));
   }, []);
 
-  // Handle storing AI-generated clue options
-  const handleClueOptionsUpdate = useCallback((word: string, options: ClueOptions) => {
-    console.log('[handleClueOptionsUpdate] word:', word, 'options:', options);
+  // Handle storing AI-generated clue options (first becomes selected, rest go to alternatives)
+  const handleClueOptionsUpdate = useCallback((word: string, newOptions: { easy: string[]; medium: string[]; hard: string[] }) => {
+    console.log('[handleClueOptionsUpdate] Called with word:', word, 'options:', newOptions);
 
     // Ensure all options are arrays
-    const safeOptions: ClueOptions = {
-      easy: Array.isArray(options.easy) ? options.easy : (options.easy ? [options.easy] : []),
-      medium: Array.isArray(options.medium) ? options.medium : (options.medium ? [options.medium] : []),
-      hard: Array.isArray(options.hard) ? options.hard : (options.hard ? [options.hard] : []),
+    const safeOptions = {
+      easy: Array.isArray(newOptions.easy) ? newOptions.easy : (newOptions.easy ? [String(newOptions.easy)] : []),
+      medium: Array.isArray(newOptions.medium) ? newOptions.medium : (newOptions.medium ? [String(newOptions.medium)] : []),
+      hard: Array.isArray(newOptions.hard) ? newOptions.hard : (newOptions.hard ? [String(newOptions.hard)] : []),
     };
+    console.log('[handleClueOptionsUpdate] safeOptions:', safeOptions);
 
     setGridClues(prev => {
       const existing = prev[word] || { easy: '', medium: '', hard: '' };
-      return {
+      const existingAlts = existing.alternatives || { easy: [], medium: [], hard: [] };
+
+      // For each difficulty: first option becomes selected (if no current), rest go to alternatives
+      // Also add any new options to alternatives (avoiding duplicates)
+      const mergeAlternatives = (difficulty: Difficulty): string[] => {
+        const currentClue = existing[difficulty];
+        const newClues = safeOptions[difficulty];
+        const existingAltList = existingAlts[difficulty] || [];
+
+        // All new clues except the one that will become selected
+        const selectedClue = currentClue || newClues[0] || '';
+        const allAlts = [
+          ...existingAltList,
+          ...newClues.filter(c => c !== selectedClue),
+        ];
+
+        // Remove duplicates and the current selected clue
+        return [...new Set(allAlts)].filter(c => c && c !== selectedClue);
+      };
+
+      const newState = {
         ...prev,
         [word]: {
-          // Set the first option as the default selected clue if no clue exists
           easy: existing.easy || safeOptions.easy[0] || '',
           medium: existing.medium || safeOptions.medium[0] || '',
           hard: existing.hard || safeOptions.hard[0] || '',
-          options: safeOptions,
+          alternatives: {
+            easy: mergeAlternatives('easy'),
+            medium: mergeAlternatives('medium'),
+            hard: mergeAlternatives('hard'),
+          },
+        },
+      };
+      console.log('[handleClueOptionsUpdate] New state for word:', word, newState[word]);
+      return newState;
+    });
+  }, []);
+
+  // Handle swapping a clue with an alternative
+  const handleSwapClueAlternative = useCallback((word: string, difficulty: Difficulty, alternativeClue: string) => {
+    setGridClues(prev => {
+      const existing = prev[word];
+      if (!existing) return prev;
+
+      const currentClue = existing[difficulty];
+      const currentAlts = existing.alternatives?.[difficulty] || [];
+
+      // Remove the alternative from the list and add the current clue
+      const newAlts = currentAlts.filter(c => c !== alternativeClue);
+      if (currentClue) {
+        newAlts.push(currentClue);
+      }
+
+      return {
+        ...prev,
+        [word]: {
+          ...existing,
+          [difficulty]: alternativeClue,
+          alternatives: {
+            ...(existing.alternatives || { easy: [], medium: [], hard: [] }),
+            [difficulty]: newAlts,
+          },
         },
       };
     });
@@ -561,7 +616,9 @@ export default function Home() {
     setPlacedInGridIds(newPlacedIds);
 
     // Apply the generated grid to the editable grid
-    if (result.success) {
+    // Show partial results even if success=false (user can use Auto-Complete)
+    const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
+    if (hasContent) {
       setCells(result.grid);
     }
 
@@ -1087,6 +1144,7 @@ export default function Home() {
                   onClueChange={handleGridClueChange}
                   onDifficultyChange={handleDifficultyChange}
                   onClueOptionsUpdate={handleClueOptionsUpdate}
+                  onSwapClueAlternative={handleSwapClueAlternative}
                   onSwapWord={handleSwapWord}
                   selectedWord={selectedGridWord}
                   onSelectWord={setSelectedGridWord}

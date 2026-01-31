@@ -116,18 +116,22 @@ export function getPerpendicularSlots(
     const r = direction === 'down' ? wordStart.row + i : wordStart.row;
     const c = direction === 'across' ? wordStart.col + i : wordStart.col;
 
+    // Bounds check before accessing cells
+    if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) continue;
+    if (!cells[r] || !cells[r][c]) continue;
+
     // Find the start of the perpendicular slot
     let startR = r;
     let startC = c;
 
     if (perpDirection === 'down') {
       // Walk up to find the start of the down slot
-      while (startR > 0 && !cells[startR - 1][c].isBlack) {
+      while (startR > 0 && cells[startR - 1] && cells[startR - 1][c] && !cells[startR - 1][c].isBlack) {
         startR--;
       }
     } else {
       // Walk left to find the start of the across slot
-      while (startC > 0 && !cells[r][startC - 1].isBlack) {
+      while (startC > 0 && cells[r] && cells[r][startC - 1] && !cells[r][startC - 1].isBlack) {
         startC--;
       }
     }
@@ -347,6 +351,55 @@ export function checkArcConsistency(
   );
 
   return validations.every(v => v.isValid);
+}
+
+/**
+ * Options for relaxed arc consistency checking
+ */
+export interface RelaxedArcOptions {
+  /** Minimum % of perpendicular slots that must have candidates (0-1) */
+  minValidPercent: number;
+  /** Allow slots of this length or less to have 0 candidates */
+  allowEmptySlotsUnderLength: number;
+}
+
+/**
+ * Relaxed arc consistency - allows theme word placement even if
+ * some perpendicular slots are risky. CSP can handle failures later.
+ *
+ * This is less strict than checkArcConsistency() and is designed
+ * for theme word placement where we want to maximize coverage.
+ */
+export function checkRelaxedArcConsistency(
+  cells: EditableCell[][],
+  word: string,
+  wordStart: { row: number; col: number },
+  direction: 'across' | 'down',
+  wordIndex: WordIndex,
+  options: RelaxedArcOptions = { minValidPercent: 0.5, allowEmptySlotsUnderLength: 2 }
+): boolean {
+  const validations = validatePlacementPerpendicularSlots(
+    cells,
+    word,
+    wordStart,
+    direction,
+    wordIndex
+  );
+
+  if (validations.length === 0) return true;
+
+  let validCount = 0;
+
+  for (const v of validations) {
+    if (v.isValid) {
+      validCount++;
+    } else if (v.slot.length <= options.allowEmptySlotsUnderLength) {
+      // Short slots with no candidates are acceptable (can become black)
+      validCount++;
+    }
+  }
+
+  return (validCount / validations.length) >= options.minValidPercent;
 }
 
 /**

@@ -29,6 +29,8 @@ import {
 } from './csp-filler';
 import {
   checkArcConsistency,
+  checkRelaxedArcConsistency,
+  RelaxedArcOptions,
   getAllSlots,
 } from './perpendicular-validator';
 import {
@@ -37,6 +39,7 @@ import {
   getScore,
   WORD_SCORE,
   ISLAMIC_FILLER_WORDS,
+  calculateWordFriendliness,
 } from './word-index';
 import { ISLAMIC_WORDS_SET } from './word-list-full';
 
@@ -108,7 +111,8 @@ export interface GeneratorOptions {
 function findIntersection(
   cells: EditableCell[][],
   word: string,
-  wordIndex: WordIndex
+  wordIndex: WordIndex,
+  relaxedOptions?: RelaxedArcOptions
 ): { row: number; col: number; direction: 'across' | 'down' } | null {
   const upperWord = word.toUpperCase();
   const results: {
@@ -130,8 +134,11 @@ function findIntersection(
         const acrossCol = c - wi;
         if (acrossCol >= 0 && acrossCol + upperWord.length <= GRID_SIZE) {
           if (canPlaceWord(cells, upperWord, r, acrossCol, 'across')) {
-            // Check arc consistency
-            if (checkArcConsistency(cells, upperWord, { row: r, col: acrossCol }, 'across', wordIndex)) {
+            // Check arc consistency (relaxed or strict)
+            const arcCheck = relaxedOptions
+              ? checkRelaxedArcConsistency(cells, upperWord, { row: r, col: acrossCol }, 'across', wordIndex, relaxedOptions)
+              : checkArcConsistency(cells, upperWord, { row: r, col: acrossCol }, 'across', wordIndex);
+            if (arcCheck) {
               const score = scorePosition(cells, r, acrossCol, 'across', upperWord.length);
               results.push({ row: r, col: acrossCol, direction: 'across', score });
             }
@@ -142,7 +149,10 @@ function findIntersection(
         const downRow = r - wi;
         if (downRow >= 0 && downRow + upperWord.length <= GRID_SIZE) {
           if (canPlaceWord(cells, upperWord, downRow, c, 'down')) {
-            if (checkArcConsistency(cells, upperWord, { row: downRow, col: c }, 'down', wordIndex)) {
+            const arcCheck = relaxedOptions
+              ? checkRelaxedArcConsistency(cells, upperWord, { row: downRow, col: c }, 'down', wordIndex, relaxedOptions)
+              : checkArcConsistency(cells, upperWord, { row: downRow, col: c }, 'down', wordIndex);
+            if (arcCheck) {
               const score = scorePosition(cells, downRow, c, 'down', upperWord.length);
               results.push({ row: downRow, col: c, direction: 'down', score });
             }
@@ -218,6 +228,34 @@ function scorePosition(
 }
 
 /**
+ * Sort theme words by placeability (friendliness - length penalty).
+ * Friendlier letters + shorter words = easier to place.
+ *
+ * Strategy: Place easy words first to establish a grid foundation,
+ * then attempt harder words that can leverage existing intersections.
+ */
+function sortThemeWordsByPlaceability(themeWords: ThemeWord[]): ThemeWord[] {
+  return [...themeWords].sort((a, b) => {
+    const friendA = calculateWordFriendliness(a.word);
+    const friendB = calculateWordFriendliness(b.word);
+
+    // Length penalty: longer words are harder (-5 per letter over 3)
+    const penaltyA = Math.max(0, (a.word.length - 3) * 5);
+    const penaltyB = Math.max(0, (b.word.length - 3) * 5);
+
+    const scoreA = friendA - penaltyA;
+    const scoreB = friendB - penaltyB;
+
+    // Primary: placeability score (higher first)
+    if (Math.abs(scoreA - scoreB) > 5) {
+      return scoreB - scoreA;
+    }
+    // Tiebreaker: prefer longer words (harder, so place first when scores similar)
+    return b.word.length - a.word.length;
+  });
+}
+
+/**
  * Find an open position for the first word - CENTERED in the grid
  *
  * Centering the first word maximizes intersection opportunities because:
@@ -228,7 +266,8 @@ function findOpenPosition(
   cells: EditableCell[][],
   word: string,
   wordIndex: WordIndex,
-  preferredDirection: 'across' | 'down' = 'across'
+  preferredDirection: 'across' | 'down' = 'across',
+  relaxedOptions?: RelaxedArcOptions
 ): { row: number; col: number; direction: 'across' | 'down' } | null {
   const upperWord = word.toUpperCase();
   const length = upperWord.length;
@@ -246,30 +285,36 @@ function findOpenPosition(
   const acrossStartCol = Math.max(0, Math.min(centerCol - Math.floor(length / 2), GRID_SIZE - length));
   const downStartRow = Math.max(0, Math.min(centerRow - Math.floor(length / 2), GRID_SIZE - length));
 
+  // Helper function for arc consistency check (relaxed or strict)
+  const checkArc = (row: number, col: number, dir: 'across' | 'down') =>
+    relaxedOptions
+      ? checkRelaxedArcConsistency(cells, upperWord, { row, col }, dir, wordIndex, relaxedOptions)
+      : checkArcConsistency(cells, upperWord, { row, col }, dir, wordIndex);
+
   // Try preferred direction first, centered
   if (preferredDirection === 'across') {
     // Try centered across first
     if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
-      if (checkArcConsistency(cells, upperWord, { row: centerRow, col: acrossStartCol }, 'across', wordIndex)) {
+      if (checkArc(centerRow, acrossStartCol, 'across')) {
         return { row: centerRow, col: acrossStartCol, direction: 'across' };
       }
     }
     // Try centered down
     if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
-      if (checkArcConsistency(cells, upperWord, { row: downStartRow, col: centerCol }, 'down', wordIndex)) {
+      if (checkArc(downStartRow, centerCol, 'down')) {
         return { row: downStartRow, col: centerCol, direction: 'down' };
       }
     }
   } else {
     // Try centered down first
     if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
-      if (checkArcConsistency(cells, upperWord, { row: downStartRow, col: centerCol }, 'down', wordIndex)) {
+      if (checkArc(downStartRow, centerCol, 'down')) {
         return { row: downStartRow, col: centerCol, direction: 'down' };
       }
     }
     // Try centered across
     if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
-      if (checkArcConsistency(cells, upperWord, { row: centerRow, col: acrossStartCol }, 'across', wordIndex)) {
+      if (checkArc(centerRow, acrossStartCol, 'across')) {
         return { row: centerRow, col: acrossStartCol, direction: 'across' };
       }
     }
@@ -286,12 +331,12 @@ function findOpenPosition(
       const downDist = Math.abs(r + length / 2 - centerRow) + Math.abs(c - centerCol);
 
       if (canPlaceWord(cells, upperWord, r, c, 'across')) {
-        if (checkArcConsistency(cells, upperWord, { row: r, col: c }, 'across', wordIndex)) {
+        if (checkArc(r, c, 'across')) {
           positions.push({ row: r, col: c, direction: 'across', dist: acrossDist });
         }
       }
       if (canPlaceWord(cells, upperWord, r, c, 'down')) {
-        if (checkArcConsistency(cells, upperWord, { row: r, col: c }, 'down', wordIndex)) {
+        if (checkArc(r, c, 'down')) {
           positions.push({ row: r, col: c, direction: 'down', dist: downDist });
         }
       }
@@ -307,19 +352,25 @@ function findOpenPosition(
 
 /**
  * Place theme words in the grid with improved strategy:
- * 1. First word is centered (across or down based on length)
- * 2. Subsequent words alternate directions when possible
- * 3. Prioritize placements that leave room for more intersections
+ * 1. Sort by "placeability" (letter friendliness - length penalty)
+ * 2. First word is centered (across or down based on length)
+ * 3. Subsequent words alternate directions when possible
+ * 4. Use relaxed arc consistency to allow more theme words
  */
 function placeThemeWords(
   cells: EditableCell[][],
   themeWords: ThemeWord[],
   wordIndex: WordIndex
 ): { grid: EditableCell[][]; placed: PlacedWord[]; unplaced: ThemeWord[] } {
-  // Sort by length (longest first) - longer words are harder to place
-  const sortedWords = [...themeWords].sort(
-    (a, b) => b.word.length - a.word.length
-  );
+  // Relaxed arc consistency options for theme words
+  // Allow placement even if some perpendicular slots are risky
+  const relaxedOptions: RelaxedArcOptions = {
+    minValidPercent: 0.5,         // Only 50% of perpendiculars need candidates
+    allowEmptySlotsUnderLength: 2, // 2-letter slots can be empty
+  };
+
+  // Sort by placeability (friendlier letters + shorter = easier to place first)
+  const sortedWords = sortThemeWordsByPlaceability(themeWords);
 
   let grid = cells.map((row) => row.map((cell) => ({ ...cell })));
   const placed: PlacedWord[] = [];
@@ -348,16 +399,16 @@ function placeThemeWords(
       // For first word, prefer across if it's a 5-letter word (spans full row)
       // Otherwise prefer down to leave horizontal space for intersections
       const firstWordPrefer = word.length === 5 ? 'across' : preferDirection;
-      position = findOpenPosition(grid, word, wordIndex, firstWordPrefer);
+      position = findOpenPosition(grid, word, wordIndex, firstWordPrefer, relaxedOptions);
     } else {
       // Try to find intersection with existing words
       // findIntersection already scores by intersections and centrality
-      position = findIntersection(grid, word, wordIndex);
+      position = findIntersection(grid, word, wordIndex, relaxedOptions);
 
       // If no intersection found, try placing near the center anyway
       // This can still connect via CSP filling later
       if (!position) {
-        position = findOpenPosition(grid, word, wordIndex, preferDirection);
+        position = findOpenPosition(grid, word, wordIndex, preferDirection, relaxedOptions);
       }
     }
 
@@ -406,6 +457,7 @@ function tryGenerateWithPattern(
   maxTimeMs: number
 ): GenerationResult | null {
   const startTime = Date.now();
+  const patternName = BLACK_SQUARE_PATTERNS[patternIndex]?.name || `pattern-${patternIndex}`;
 
   // Create grid with pattern
   let grid = createEmptyGrid();
@@ -426,6 +478,7 @@ function tryGenerateWithPattern(
   // Fill remaining slots with CSP
   const remainingTime = maxTimeMs - (Date.now() - startTime);
   if (remainingTime <= 0) {
+    console.log(`[tryGenerate] Pattern ${patternName}: timeout before CSP`);
     return null;
   }
 
@@ -434,11 +487,7 @@ function tryGenerateWithPattern(
 
   const cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime, placedThemeWordSet);
 
-  if (!cspResult.success) {
-    return null;
-  }
-
-  // Combine placed words
+  // Combine placed words (even for partial results)
   const fillerWords: PlacedWord[] = cspResult.placedWords.map((pw) => ({
     word: pw.word,
     clue: '', // Filler words don't have clues yet
@@ -450,6 +499,36 @@ function tryGenerateWithPattern(
 
   // Calculate stats
   const allWords = [...themeWordsPlaced, ...fillerWords];
+
+  // If CSP failed but we have theme words placed, return a partial result
+  // This allows the UI to show what was placed and let user use Auto-Complete
+  if (!cspResult.success) {
+
+    // Only return partial if we placed at least some theme words
+    if (themeWordsPlaced.length > 0) {
+      const gridStats = getGridStats(themedGrid);
+      return {
+        success: false, // Mark as not fully successful
+        grid: themedGrid, // Return grid with theme words placed
+        placedWords: themeWordsPlaced, // Only theme words, no fillers
+        unplacedThemeWords: unplaced,
+        stats: {
+          totalSlots: getAllSlots(themedGrid).length,
+          themeWordsPlaced: themeWordsPlaced.length,
+          fillerWordsPlaced: 0,
+          islamicPercentage: 100, // All placed words are theme/Islamic
+          avgWordScore: 100,
+          gridFillPercentage: gridStats.whiteCells > 0
+            ? (gridStats.filledCells / gridStats.whiteCells) * 100
+            : 0,
+          timeTakenMs: Date.now() - startTime,
+          attemptsUsed: 1,
+          patternUsed: patternName,
+        },
+      };
+    }
+    return null;
+  }
   let islamicCount = 0;
   let totalScore = 0;
 
@@ -556,7 +635,12 @@ export function generatePuzzle(
         }
       } else {
         // Track best partial result as fallback
-        if (!bestPartialResult || result.stats.gridFillPercentage > bestPartialResult.stats.gridFillPercentage) {
+        // Prioritize: theme words placed > grid fill percentage
+        const isBetter = !bestPartialResult ||
+          result.stats.themeWordsPlaced > bestPartialResult.stats.themeWordsPlaced ||
+          (result.stats.themeWordsPlaced === bestPartialResult.stats.themeWordsPlaced &&
+           result.stats.gridFillPercentage > bestPartialResult.stats.gridFillPercentage);
+        if (isBetter) {
           bestPartialResult = result;
         }
       }
