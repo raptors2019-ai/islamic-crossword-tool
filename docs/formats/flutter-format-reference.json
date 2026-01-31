@@ -1,0 +1,95 @@
+{
+      "code": "PUZ_CROSSWORD_PROPHETS_001",
+      "type": "CROSSWORD",
+      "title": "Prophets Crossword",
+      "description": "Complete the crossword with names and terms related to the prophets of Islam.",
+      "theme": "prophets",
+      "difficulty": "MEDIUM",
+      "data": {
+        "grid": {
+          "rows": 10,
+          "cols": 8,
+          "cells": [
+            ["M", "U", "S", "A", "#", "#", "#", "#"],
+            ["#", "#", "#", "#", "I", "S", "A", "#"],
+            ["#", "S", "#", "#", "B", "#", "D", "#"],
+            ["N", "U", "H", "#", "R", "#", "A", "#"],
+            ["#", "L", "#", "#", "A", "#", "M", "#"],
+            ["#", "A", "Y", "A", "H", "#", "#", "#"],
+            ["#", "I", "#", "#", "I", "#", "#", "#"],
+            ["#", "M", "#", "#", "M", "#", "#", "#"],
+            ["#", "A", "#", "#", "#", "#", "#", "#"],
+            ["#", "N", "#", "#", "#", "#", "#", "#"]
+          ]
+        },
+        "clues": {
+          "across": [
+            {
+              "number": 1,
+              "clue": "Prophet who received the Torah and parted the sea",
+              "answer": "MUSA",
+              "startPosition": {"row": 0, "col": 0},
+              "length": 4
+            },
+            {
+              "number": 4,
+              "clue": "Prophet born to Maryam without a father",
+              "answer": "ISA",
+              "startPosition": {"row": 1, "col": 4},
+              "length": 3
+            },
+            {
+              "number": 5,
+              "clue": "Prophet who built the ark",
+              "answer": "NUH",
+              "startPosition": {"row": 3, "col": 0},
+              "length": 3
+            },
+            {
+              "number": 6,
+              "clue": "A verse from the Quran",
+              "answer": "AYAH",
+              "startPosition": {"row": 5, "col": 1},
+              "length": 4
+            }
+          ],
+          "down": [
+            {
+              "number": 2,
+              "clue": "Prophet given wisdom and control over jinn and animals",
+              "answer": "SULAIMAN",
+              "startPosition": {"row": 2, "col": 1},
+              "length": 8
+            },
+            {
+              "number": 3,
+              "clue": "Father of the prophets, known for monotheism",
+              "answer": "IBRAHIM",
+              "startPosition": {"row": 1, "col": 4},
+              "length": 7
+            },
+            {
+              "number": 7,
+              "clue": "First man and first prophet",
+              "answer": "ADAM",
+              "startPosition": {"row": 1, "col": 6},
+              "length": 4
+            }
+          ]
+        },
+        "cellNumbers": [
+          {"row": 0, "col": 0, "number": 1},
+          {"row": 2, "col": 1, "number": 2},
+          {"row": 1, "col": 4, "number": 3},
+          {"row": 1, "col": 6, "number": 7},
+          {"row": 3, "col": 0, "number": 5},
+          {"row": 5, "col": 1, "number": 6}
+        ]
+      },
+      "metadata": {
+        "estimatedTime": 300,
+        "pointsPerWord": 15,
+        "bonusForCompletion": 50,
+        "hintsAllowed": 3
+      }
+    }

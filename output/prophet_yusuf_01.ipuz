@@ -1,0 +1,118 @@
+{
+  "version": "http://ipuz.org/v2",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Prophet Yusuf 01",
+  "author": "Ahmed",
+  "copyright": "My Islam",
+  "notes": "",
+  "dimensions": {
+    "width": 5,
+    "height": 5
+  },
+  "puzzle": [
+    [
+      "1",
+      "0",
+      "2",
+      "0",
+      "0"
+    ],
+    [
+      "#",
+      "#",
+      "0",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "0",
+      "#",
+      "#"
+    ],
+    [
+      "6",
+      "#",
+      "3",
+      "0",
+      "4"
+    ],
+    [
+      "5",
+      "0",
+      "0",
+      "#",
+      "0"
+    ]
+  ],
+  "solution": [
+    [
+      "Y",
+      "U",
+      "S",
+      "U",
+      "F"
+    ],
+    [
+      null,
+      null,
+      "A",
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      "L",
+      null,
+      null
+    ],
+    [
+      "A",
+      null,
+      "A",
+      "Z",
+      "M"
+    ],
+    [
+      "R",
+      "U",
+      "H",
+      null,
+      "O"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Man who was given half the world's beauty (S.M #162a)"
+      ],
+      [
+        3,
+        "Ulul '_ \"Prophet's of Resolve"
+      ],
+      [
+        5,
+        "The Arabic name for the Spirit (Gabriel)"
+      ]
+    ],
+    "Down": [
+      [
+        2,
+        "Fajr, Dhuhr, Asr, Maghrib, Isha"
+      ],
+      [
+        4,
+        "Popular western abbr. name for Mohammed"
+      ],
+      [
+        6,
+        "ISO code for Argentina or Arabic"
+      ]
+    ]
+  }
+}

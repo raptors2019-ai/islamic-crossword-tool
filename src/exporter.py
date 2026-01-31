@@ -1,6 +1,9 @@
 """
 Export crossword puzzles to various formats.
-Supports JSON, HTML, and print-friendly formats.
+Supports JSON, HTML, IPUZ, Flutter JSON, and print-friendly formats.
+
+IPUZ format reference: http://www.ipuz.org/
+Flutter JSON: Custom format for My Islam Flutter app
 """
 
 import json
@@ -14,10 +17,17 @@ from .grid import Grid, Direction
 class CrosswordExporter:
     """Export crossword puzzles to different formats."""
 
-    def __init__(self, grid: Grid, title: str = "Islamic Crossword", author: str = ""):
+    def __init__(
+        self,
+        grid: Grid,
+        title: str = "Islamic Crossword",
+        author: str = "",
+        copyright: str = "My Islam"
+    ):
         self.grid = grid.compact() if grid else grid
         self.title = title
         self.author = author
+        self.copyright = copyright
         self.date = datetime.now().isoformat()
 
     def to_json(self, pretty: bool = True) -> str:
@@ -136,6 +146,170 @@ class CrosswordExporter:
         }
 
         return json.dumps(data, indent=2, ensure_ascii=False)
+
+    def to_ipuz(self, pretty: bool = True) -> str:
+        """
+        Export to IPUZ format.
+
+        IPUZ is an open format for crossword puzzles.
+        Reference: http://www.ipuz.org/
+
+        This matches the format used by Azmat's Prophet Stories puzzles.
+        """
+        min_row, min_col, max_row, max_col = self.grid.get_bounds()
+        rows = max_row - min_row + 1
+        cols = max_col - min_col + 1
+
+        # Build puzzle grid (cell numbers or "#" for black)
+        # Format: "1", "2", "0" for numbered/unnumbered cells, "#" for black
+        puzzle_grid = []
+        for r in range(rows):
+            row_data = []
+            for c in range(cols):
+                cell = self.grid.get_cell(r, c)
+                if cell is None or cell.is_black:
+                    row_data.append("#")
+                elif cell.letter is None:
+                    row_data.append("#")  # Empty cells treated as black
+                elif cell.number:
+                    row_data.append(str(cell.number))
+                else:
+                    row_data.append("0")
+            puzzle_grid.append(row_data)
+
+        # Build solution grid (letters or null for black)
+        solution_grid = []
+        for r in range(rows):
+            row_data = []
+            for c in range(cols):
+                cell = self.grid.get_cell(r, c)
+                if cell is None or cell.is_black or cell.letter is None:
+                    row_data.append(None)
+                else:
+                    row_data.append(cell.letter)
+            solution_grid.append(row_data)
+
+        # Build clues in IPUZ format: [[number, "clue text"], ...]
+        across_clues = [
+            [w.number, w.clue] for w in self.grid.get_across_words()
+        ]
+        down_clues = [
+            [w.number, w.clue] for w in self.grid.get_down_words()
+        ]
+
+        ipuz = {
+            "version": "http://ipuz.org/v2",
+            "kind": ["http://ipuz.org/crossword#1"],
+            "title": self.title,
+            "author": self.author,
+            "copyright": self.copyright,
+            "notes": "",
+            "dimensions": {"width": cols, "height": rows},
+            "puzzle": puzzle_grid,
+            "solution": solution_grid,
+            "clues": {
+                "Across": across_clues,
+                "Down": down_clues
+            }
+        }
+
+        if pretty:
+            return json.dumps(ipuz, indent=2, ensure_ascii=False)
+        return json.dumps(ipuz, ensure_ascii=False)
+
+    def to_flutter_json(self, theme: str = "prophets", puzzle_code: Optional[str] = None) -> str:
+        """
+        Export to Flutter JSON format for My Islam app.
+
+        This format includes:
+        - Grid with cells array
+        - Clues with answer, position, and length
+        - Cell numbers array
+        - Game metadata (points, hints, estimated time)
+        """
+        min_row, min_col, max_row, max_col = self.grid.get_bounds()
+        rows = max_row - min_row + 1
+        cols = max_col - min_col + 1
+
+        # Build cells array (letters or "#" for black)
+        cells = []
+        for r in range(rows):
+            row_data = []
+            for c in range(cols):
+                cell = self.grid.get_cell(r, c)
+                if cell is None or cell.is_black or cell.letter is None:
+                    row_data.append("#")
+                else:
+                    row_data.append(cell.letter)
+            cells.append(row_data)
+
+        # Build across clues
+        across_clues = []
+        for w in self.grid.get_across_words():
+            across_clues.append({
+                "number": w.number,
+                "clue": w.clue,
+                "answer": w.word,
+                "startPosition": {"row": w.row, "col": w.col},
+                "length": len(w.word)
+            })
+
+        # Build down clues
+        down_clues = []
+        for w in self.grid.get_down_words():
+            down_clues.append({
+                "number": w.number,
+                "clue": w.clue,
+                "answer": w.word,
+                "startPosition": {"row": w.row, "col": w.col},
+                "length": len(w.word)
+            })
+
+        # Build cell numbers
+        cell_numbers = []
+        numbered_cells = set()
+        for w in self.grid.placed_words:
+            if (w.row, w.col) not in numbered_cells:
+                cell_numbers.append({
+                    "row": w.row,
+                    "col": w.col,
+                    "number": w.number
+                })
+                numbered_cells.add((w.row, w.col))
+
+        # Generate puzzle code
+        if puzzle_code is None:
+            theme_code = theme.upper().replace(" ", "_").replace("-", "_")
+            puzzle_code = f"PUZ_CROSSWORD_{theme_code}_{len(self.grid.placed_words):03d}"
+
+        flutter_json = {
+            "code": puzzle_code,
+            "type": "CROSSWORD",
+            "title": self.title,
+            "description": f"Complete the crossword about {theme}.",
+            "theme": theme.lower().replace(" ", "-"),
+            "difficulty": "MEDIUM",
+            "data": {
+                "grid": {
+                    "rows": rows,
+                    "cols": cols,
+                    "cells": cells
+                },
+                "clues": {
+                    "across": across_clues,
+                    "down": down_clues
+                },
+                "cellNumbers": cell_numbers
+            },
+            "metadata": {
+                "estimatedTime": 300,
+                "pointsPerWord": 15,
+                "bonusForCompletion": 50,
+                "hintsAllowed": 3
+            }
+        }
+
+        return json.dumps(flutter_json, indent=2, ensure_ascii=False)
 
     def to_html(self, include_solution: bool = False) -> str:
         """
@@ -428,14 +602,25 @@ class CrosswordExporter:
         lines.append(f"{'=' * 50}")
         return "\n".join(lines)
 
-    def save(self, filepath: str, format: str = "json"):
-        """Save puzzle to file."""
+    def save(self, filepath: str, format: str = "json", **kwargs):
+        """
+        Save puzzle to file.
+
+        Args:
+            filepath: Path to save file
+            format: One of: json, puz_json, ipuz, flutter, html, html_solution, text
+            **kwargs: Additional arguments for specific formats (e.g., theme for flutter)
+        """
         os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
 
         if format == "json":
             content = self.to_json()
         elif format == "puz_json":
             content = self.to_puz_json()
+        elif format == "ipuz":
+            content = self.to_ipuz()
+        elif format == "flutter":
+            content = self.to_flutter_json(**kwargs)
         elif format == "html":
             content = self.to_html()
         elif format == "html_solution":

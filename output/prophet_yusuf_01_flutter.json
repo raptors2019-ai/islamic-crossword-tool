@@ -1,0 +1,155 @@
+{
+  "code": "PUZ_CROSSWORD_PROPHET_STORIES_006",
+  "type": "CROSSWORD",
+  "title": "Prophet Yusuf 01",
+  "description": "Complete the crossword about Prophet Stories.",
+  "theme": "prophet-stories",
+  "difficulty": "MEDIUM",
+  "data": {
+    "grid": {
+      "rows": 5,
+      "cols": 5,
+      "cells": [
+        [
+          "Y",
+          "U",
+          "S",
+          "U",
+          "F"
+        ],
+        [
+          "#",
+          "#",
+          "A",
+          "#",
+          "#"
+        ],
+        [
+          "#",
+          "#",
+          "L",
+          "#",
+          "#"
+        ],
+        [
+          "A",
+          "#",
+          "A",
+          "Z",
+          "M"
+        ],
+        [
+          "R",
+          "U",
+          "H",
+          "#",
+          "O"
+        ]
+      ]
+    },
+    "clues": {
+      "across": [
+        {
+          "number": 1,
+          "clue": "Man who was given half the world's beauty (S.M #162a)",
+          "answer": "YUSUF",
+          "startPosition": {
+            "row": 0,
+            "col": 0
+          },
+          "length": 5
+        },
+        {
+          "number": 3,
+          "clue": "Ulul '_ \"Prophet's of Resolve",
+          "answer": "AZM",
+          "startPosition": {
+            "row": 3,
+            "col": 2
+          },
+          "length": 3
+        },
+        {
+          "number": 5,
+          "clue": "The Arabic name for the Spirit (Gabriel)",
+          "answer": "RUH",
+          "startPosition": {
+            "row": 4,
+            "col": 0
+          },
+          "length": 3
+        }
+      ],
+      "down": [
+        {
+          "number": 2,
+          "clue": "Fajr, Dhuhr, Asr, Maghrib, Isha",
+          "answer": "SALAH",
+          "startPosition": {
+            "row": 0,
+            "col": 2
+          },
+          "length": 5
+        },
+        {
+          "number": 4,
+          "clue": "Popular western abbr. name for Mohammed",
+          "answer": "MO",
+          "startPosition": {
+            "row": 3,
+            "col": 4
+          },
+          "length": 2
+        },
+        {
+          "number": 6,
+          "clue": "ISO code for Argentina or Arabic",
+          "answer": "AR",
+          "startPosition": {
+            "row": 3,
+            "col": 0
+          },
+          "length": 2
+        }
+      ]
+    },
+    "cellNumbers": [
+      {
+        "row": 0,
+        "col": 0,
+        "number": 1
+      },
+      {
+        "row": 0,
+        "col": 2,
+        "number": 2
+      },
+      {
+        "row": 3,
+        "col": 2,
+        "number": 3
+      },
+      {
+        "row": 3,
+        "col": 4,
+        "number": 4
+      },
+      {
+        "row": 4,
+        "col": 0,
+        "number": 5
+      },
+      {
+        "row": 3,
+        "col": 0,
+        "number": 6
+      }
+    ]
+  },
+  "metadata": {
+    "estimatedTime": 300,
+    "pointsPerWord": 15,
+    "bonusForCompletion": 50,
+    "hintsAllowed": 3
+  }
+}
