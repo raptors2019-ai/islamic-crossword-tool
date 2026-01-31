@@ -1,0 +1,408 @@
+'use client';
+
+import { useState, useCallback, useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import {
+  PROPHET_KEYWORDS,
+  PROPHET_IDS,
+  getKeywordsForProphet,
+  ProphetKeyword,
+  KeywordSource,
+} from '@/lib/prophet-keywords';
+import { GeneratedPuzzle, ThemeWord } from '@/lib/types';
+import {
+  scoreKeywords,
+  ScoredKeyword,
+  getFitIndicatorStyle,
+  getScoredKeywordTooltip,
+} from '@/lib/keyword-scorer';
+import {
+  SlotValidation,
+  validatePlacementPerpendicularSlots,
+} from '@/lib/perpendicular-validator';
+import { EditableCell, findBestPlacement } from '@/lib/editable-grid';
+import { WordIndex } from '@/lib/word-index';
+
+interface WordHubProps {
+  onKeywordSelect: (keyword: ProphetKeyword) => void;
+  onKeywordDeselect?: (word: string) => void;
+  onCustomWordAdd: (word: string) => void;
+  onWordRemove: (wordId: string) => void;
+  onWordSelect: (wordId: string) => void;
+  selectedWords: ThemeWord[];
+  selectedWordId: string | null;
+  puzzle: GeneratedPuzzle | null;
+  placedInGridIds?: Set<string>; // Words actually placed in the editable grid
+  className?: string;
+  // Perpendicular validation props (optional - for keyword click validation)
+  editableCells?: EditableCell[][];
+  wordIndex?: WordIndex;
+  onInvalidPlacement?: (word: string, invalidSlots: SlotValidation[]) => void;
+}
+
+// Source badge colors - more visible
+const SOURCE_STYLES: Record<KeywordSource, { bg: string; text: string; label: string }> = {
+  'puzzle-archive': { bg: 'bg-amber-500', text: 'text-amber-950', label: 'Proven' },
+  'word-list': { bg: 'bg-sky-500', text: 'text-sky-950', label: 'Curated' },
+  'scraped': { bg: 'bg-violet-500', text: 'text-violet-950', label: 'AI' },
+  'local': { bg: 'bg-slate-500', text: 'text-slate-950', label: 'Local' },
+};
+
+export function WordHub({
+  onKeywordSelect,
+  onKeywordDeselect,
+  onCustomWordAdd,
+  onWordRemove,
+  onWordSelect,
+  selectedWords,
+  selectedWordId,
+  puzzle,
+  placedInGridIds,
+  className,
+  editableCells,
+  wordIndex,
+  onInvalidPlacement,
+}: WordHubProps) {
+  const [selectedProphet, setSelectedProphet] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [customWordInput, setCustomWordInput] = useState('');
+
+  // Query Convex for keywords when a prophet is selected
+  const convexKeywords = useQuery(
+    api.prophetKeywords.listByProphet,
+    selectedProphet ? { prophetId: selectedProphet } : 'skip'
+  );
+
+  const handleProphetChange = useCallback((prophetId: string) => {
+    setSelectedProphet(prophetId);
+    setShowAll(false);
+  }, []);
+
+  const handleAddCustomWord = useCallback(() => {
+    const word = customWordInput.trim().toUpperCase();
+    if (!word || word.length > 5 || word.length < 2) return;
+    onCustomWordAdd(word);
+    setCustomWordInput('');
+  }, [customWordInput, onCustomWordAdd]);
+
+  // Use Convex keywords if available, fall back to local data
+  const keywords: ProphetKeyword[] = useMemo(() => {
+    if (convexKeywords && convexKeywords.length > 0) {
+      return convexKeywords.map((kw) => ({
+        word: kw.word,
+        clue: kw.clue,
+        relevance: kw.relevance,
+        source: kw.source as KeywordSource,
+        sourceDetails: kw.sourceDetails,
+        isApproved: kw.isApproved,
+      }));
+    }
+    return selectedProphet
+      ? getKeywordsForProphet(selectedProphet).map((kw) => ({
+          ...kw,
+          source: 'local' as KeywordSource,
+        }))
+      : [];
+  }, [convexKeywords, selectedProphet]);
+
+  // Score and sort keywords based on grid fit (including perpendicular feasibility)
+  const scoredKeywords: ScoredKeyword[] = useMemo(() => {
+    if (keywords.length === 0) return [];
+    return scoreKeywords(keywords, puzzle, selectedWords, {
+      editableCells,
+      wordIndex,
+    });
+  }, [keywords, puzzle, selectedWords, editableCells, wordIndex]);
+
+  const prophetData = selectedProphet
+    ? PROPHET_KEYWORDS[selectedProphet]
+    : null;
+
+  const selectedWordStrings = selectedWords.map((w) => w.activeSpelling.toUpperCase());
+
+  // Show more keywords when expanded
+  const visibleCount = showAll ? scoredKeywords.length : 20;
+  const visibleKeywords = scoredKeywords.slice(0, visibleCount);
+  const hasMore = scoredKeywords.length > visibleCount;
+
+  return (
+    <div className={cn('space-y-5', className)}>
+      {/* Header with word count */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-[#D4AF37] text-lg font-serif font-semibold tracking-wide">
+          Build Your Puzzle
+        </h3>
+        <span className="text-white font-bold bg-[#4A90C2]/30 px-3 py-1 rounded-full text-sm">
+          {selectedWords.length}/12 words
+        </span>
+      </div>
+
+      {/* Prophet Dropdown */}
+      <div className="flex items-center gap-2">
+        <span className="text-[#8fc1e3] text-sm">Prophet:</span>
+        <Select
+          value={selectedProphet || ''}
+          onValueChange={handleProphetChange}
+        >
+          <SelectTrigger className="flex-1 bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors h-10">
+            <SelectValue placeholder="Choose a Prophet..." />
+          </SelectTrigger>
+          <SelectContent className="bg-[#002a42] border-[#4A90C2]/30 max-h-[400px]">
+            {PROPHET_IDS.map((prophetId) => {
+              const prophet = PROPHET_KEYWORDS[prophetId];
+              return (
+                <SelectItem
+                  key={prophetId}
+                  value={prophetId}
+                  className="text-white hover:bg-[#003B5C] focus:bg-[#003B5C] py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{prophet.displayName}</span>
+                    {prophet.arabicName && (
+                      <span className="text-[#D4AF37] text-base">
+                        {prophet.arabicName}
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Keywords Display - MOVED UP above Your Words */}
+      {selectedProphet && prophetData && (
+        <div className="bg-[#001a2c]/60 rounded-xl p-4 border border-[#4A90C2]/20">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">
+              Keywords (sorted by fit)
+            </span>
+            <span className="text-[#6ba8d4] text-xs">
+              {scoredKeywords.length} available
+            </span>
+          </div>
+
+          {/* Keywords Grid */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {visibleKeywords.map((scored) => {
+              const { keyword, fitResult, hasPerpendicularConflict } = scored;
+              const isSelected = selectedWordStrings.includes(keyword.word.toUpperCase());
+              const sourceStyle = SOURCE_STYLES[keyword.source || 'local'];
+              const fitStyle = getFitIndicatorStyle(fitResult.quality, hasPerpendicularConflict);
+              const tooltipText = getScoredKeywordTooltip(scored);
+
+              const handleClick = () => {
+                if (isSelected && onKeywordDeselect) {
+                  onKeywordDeselect(keyword.word);
+                } else if (!isSelected && fitResult.canFit) {
+                  // If we have editable cells and word index, validate perpendicular slots
+                  if (editableCells && wordIndex && onInvalidPlacement) {
+                    // Find the best placement position
+                    const placement = findBestPlacement(editableCells, keyword.word);
+                    if (placement) {
+                      // Validate perpendicular slots for this placement
+                      const validations = validatePlacementPerpendicularSlots(
+                        editableCells,
+                        keyword.word,
+                        { row: placement.row, col: placement.col },
+                        placement.direction,
+                        wordIndex
+                      );
+                      const invalidSlots = validations.filter(v => !v.isValid);
+
+                      if (invalidSlots.length > 0) {
+                        // Block placement and show modal
+                        onInvalidPlacement(keyword.word, invalidSlots);
+                        return;
+                      }
+                    }
+                  }
+                  // Placement is valid or no validation available
+                  onKeywordSelect(keyword);
+                }
+              };
+
+              // Skip showing keywords that are already in "Your Words"
+              if (isSelected) return null;
+
+              return (
+                <button
+                  key={`${keyword.word}-${keyword.source}`}
+                  onClick={handleClick}
+                  disabled={!fitResult.canFit}
+                  className={cn(
+                    'group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    fitResult.canFit
+                      ? 'bg-[#002a42] text-white hover:bg-[#003B5C] hover:scale-105 cursor-pointer border border-[#4A90C2]/30 hover:border-[#D4AF37]/50'
+                      : 'bg-[#002a42]/50 text-white/40 cursor-not-allowed border border-[#4A90C2]/10',
+                    !fitResult.canFit && fitStyle.opacity
+                  )}
+                >
+                  {/* Fit indicator dot */}
+                  {fitResult.canFit && fitStyle.dotColor && (
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full flex-shrink-0',
+                        fitStyle.dotColor
+                      )}
+                    />
+                  )}
+
+                  {/* Word */}
+                  <span className="font-mono tracking-wide">{keyword.word}</span>
+
+                  {/* Source indicator */}
+                  {keyword.source && keyword.source !== 'local' && fitResult.canFit && (
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold px-1 py-0.5 rounded',
+                        sourceStyle.bg,
+                        sourceStyle.text
+                      )}
+                    >
+                      {keyword.source === 'puzzle-archive' ? 'P' : keyword.source === 'word-list' ? 'W' : 'AI'}
+                    </span>
+                  )}
+
+                  {/* Tooltip with clue and fit info */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-[#001a2c] border border-[#4A90C2]/30 shadow-xl text-xs text-[#b3d4ed] max-w-[250px] text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none whitespace-normal">
+                    {tooltipText}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Show more button */}
+          {hasMore && !showAll && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="w-full py-2 text-sm text-[#D4AF37] hover:text-[#e5c86b] transition-colors"
+            >
+              Show {scoredKeywords.length - visibleCount} more...
+            </button>
+          )}
+
+          {/* Legend */}
+          <div className="pt-3 border-t border-[#4A90C2]/20">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-[#8fc1e3]">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>2+ shared</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                <span>1 shared</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span>Standalone</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-white/40">Dim</span>
+                <span>= Wrong length</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state for keywords - shown when no prophet selected */}
+      {!selectedProphet && (
+        <div className="bg-[#001a2c]/40 rounded-xl p-6 border border-[#4A90C2]/20 text-center">
+          <div className="text-3xl mb-2">📖</div>
+          <p className="text-[#8fc1e3] text-sm">Select a prophet above to see story keywords</p>
+        </div>
+      )}
+
+      {/* Your Words Section - MOVED DOWN below Keywords */}
+      <div className="bg-[#001a2c]/60 rounded-xl p-4 border border-[#4A90C2]/20">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">Your Words</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-3">
+          {selectedWords.map((word) => {
+            // Use placedInGridIds for editable grid, fall back to puzzle for generated
+            const isPlaced = placedInGridIds?.has(word.id) || puzzle?.placedWordIds.includes(word.id);
+            const isSelected = selectedWordId === word.id;
+            const couldNotPlace = !isPlaced && selectedWords.length > 0;
+
+            return (
+              <button
+                key={word.id}
+                onClick={() => onWordSelect(word.id)}
+                className={cn(
+                  'group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                  isSelected
+                    ? 'bg-[#D4AF37] text-[#001a2c] shadow-lg shadow-[#D4AF37]/20'
+                    : isPlaced
+                    ? 'bg-[#D4AF37]/80 text-[#001a2c] hover:bg-[#D4AF37]'
+                    : couldNotPlace
+                    ? 'bg-red-500/30 text-white hover:bg-red-500/40 border border-red-500/50'
+                    : 'bg-[#D4AF37]/40 text-white hover:bg-[#D4AF37]/60 border border-[#D4AF37]/30'
+                )}
+                title={couldNotPlace ? 'Could not place in grid - no valid position' : undefined}
+              >
+                {isPlaced ? (
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                  </svg>
+                ) : couldNotPlace ? (
+                  <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : null}
+                <span className="font-mono tracking-wide">{word.activeSpelling}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); onWordRemove(word.id); }}
+                  className="opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  ×
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Inline custom word input */}
+          <div className="flex items-center gap-1">
+            <Input
+              placeholder="+custom"
+              value={customWordInput}
+              onChange={(e) => setCustomWordInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCustomWord()}
+              maxLength={5}
+              className="w-24 h-8 px-2 text-sm bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest focus:ring-2 focus:ring-[#D4AF37]/30"
+            />
+            {customWordInput.trim() && customWordInput.length >= 2 && customWordInput.length <= 5 && (
+              <button
+                onClick={handleAddCustomWord}
+                className="w-8 h-8 rounded-lg bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] font-bold flex items-center justify-center transition-colors"
+              >
+                +
+              </button>
+            )}
+          </div>
+        </div>
+
+        {selectedWords.length === 0 && (
+          <p className="text-[#6ba8d4] text-sm">Select keywords above or add custom words</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default WordHub;

@@ -205,8 +205,14 @@ export function SlotStats({ cells, themeWords, className }: SlotStatsProps) {
                   const words = wordsByLength.get(length);
                   if (!words || words.length === 0) return null;
 
-                  const slotInfo = slotsByLength.get(length) || { across: 0, down: 0 };
-                  const slotsAvailable = slotInfo.across + slotInfo.down;
+                  // A word of length N can fit in any slot of length >= N
+                  // Count all slots that can accommodate this word length
+                  let slotsAvailable = 0;
+                  slotsByLength.forEach((slotInfo, slotLength) => {
+                    if (slotLength >= length) {
+                      slotsAvailable += slotInfo.across + slotInfo.down;
+                    }
+                  });
                   const canFit = slotsAvailable >= words.length;
 
                   return (

@@ -19,9 +19,16 @@ import {
   KeywordSource,
 } from '@/lib/prophet-keywords';
 import { GeneratedPuzzle, ThemeWord } from '@/lib/types';
+import {
+  scoreKeywords,
+  ScoredKeyword,
+  getFitIndicatorStyle,
+  getScoredKeywordTooltip,
+} from '@/lib/keyword-scorer';
 
 interface ProphetSelectorProps {
   onKeywordSelect: (keyword: ProphetKeyword) => void;
+  onKeywordDeselect?: (word: string) => void;
   selectedWords: ThemeWord[];
   puzzle: GeneratedPuzzle | null;
   className?: string;
@@ -37,6 +44,7 @@ const SOURCE_STYLES: Record<KeywordSource, { bg: string; text: string; label: st
 
 export function ProphetSelector({
   onKeywordSelect,
+  onKeywordDeselect,
   selectedWords,
   puzzle,
   className,
@@ -75,6 +83,12 @@ export function ProphetSelector({
       : [];
   }, [convexKeywords, selectedProphet]);
 
+  // Score and sort keywords based on grid fit
+  const scoredKeywords: ScoredKeyword[] = useMemo(() => {
+    if (keywords.length === 0) return [];
+    return scoreKeywords(keywords, puzzle, selectedWords);
+  }, [keywords, puzzle, selectedWords]);
+
   const prophetData = selectedProphet
     ? PROPHET_KEYWORDS[selectedProphet]
     : null;
@@ -82,33 +96,33 @@ export function ProphetSelector({
   const selectedWordStrings = selectedWords.map((w) => w.activeSpelling.toUpperCase());
 
   // Show more keywords when expanded
-  const visibleCount = showAll ? keywords.length : 20;
-  const visibleKeywords = keywords.slice(0, visibleCount);
-  const hasMore = keywords.length > visibleCount;
+  const visibleCount = showAll ? scoredKeywords.length : 20;
+  const visibleKeywords = scoredKeywords.slice(0, visibleCount);
+  const hasMore = scoredKeywords.length > visibleCount;
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Prophet Dropdown - Cleaner design */}
+      {/* Prophet Dropdown */}
       <Select
         value={selectedProphet || ''}
         onValueChange={handleProphetChange}
       >
-        <SelectTrigger className="w-full bg-slate-800 border-slate-600 text-white hover:border-amber-500/50 transition-colors h-12 text-base">
+        <SelectTrigger className="w-full bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors h-12 text-base">
           <SelectValue placeholder="Choose a Prophet to see keywords..." />
         </SelectTrigger>
-        <SelectContent className="bg-slate-800 border-slate-600 max-h-[400px]">
+        <SelectContent className="bg-[#002a42] border-[#4A90C2]/30 max-h-[400px]">
           {PROPHET_IDS.map((prophetId) => {
             const prophet = PROPHET_KEYWORDS[prophetId];
             return (
               <SelectItem
                 key={prophetId}
                 value={prophetId}
-                className="text-white hover:bg-slate-700 focus:bg-slate-700 py-3"
+                className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c] py-3"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-medium">{prophet.displayName}</span>
                   {prophet.arabicName && (
-                    <span className="text-amber-400 text-lg">
+                    <span className="text-[#D4AF37] text-lg">
                       {prophet.arabicName}
                     </span>
                   )}
@@ -121,45 +135,69 @@ export function ProphetSelector({
 
       {/* Keywords Display */}
       {selectedProphet && prophetData && (
-        <div className="bg-slate-800/80 rounded-xl p-5 border border-slate-700">
+        <div className="bg-[#001a2c]/60 rounded-xl p-5 border border-[#4A90C2]/20">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <h4 className="text-amber-400 font-semibold text-lg">
+              <h4 className="text-[#D4AF37] font-semibold text-lg font-serif">
                 {prophetData.displayName}
               </h4>
               {prophetData.arabicName && (
-                <span className="text-2xl text-amber-300">{prophetData.arabicName}</span>
+                <span className="text-2xl text-[#D4AF37]/80">{prophetData.arabicName}</span>
               )}
             </div>
-            <span className="text-slate-400 text-sm bg-slate-700/50 px-3 py-1 rounded-full">
-              {keywords.length} keywords
+            <span className="text-[#8fc1e3] text-sm bg-[#4A90C2]/20 px-3 py-1 rounded-full">
+              {scoredKeywords.length} keywords
             </span>
           </div>
 
           {/* Keywords Grid */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {visibleKeywords.map((keyword) => {
+            {visibleKeywords.map((scored) => {
+              const { keyword, fitResult } = scored;
               const isSelected = selectedWordStrings.includes(keyword.word.toUpperCase());
               const sourceStyle = SOURCE_STYLES[keyword.source || 'local'];
+              const fitStyle = getFitIndicatorStyle(fitResult.quality);
+              const tooltipText = getScoredKeywordTooltip(scored);
+
+              const handleClick = () => {
+                if (isSelected && onKeywordDeselect) {
+                  onKeywordDeselect(keyword.word);
+                } else if (!isSelected && fitResult.canFit) {
+                  onKeywordSelect(keyword);
+                }
+              };
 
               return (
                 <button
                   key={`${keyword.word}-${keyword.source}`}
-                  onClick={() => !isSelected && onKeywordSelect(keyword)}
-                  disabled={isSelected}
+                  onClick={handleClick}
+                  disabled={!isSelected && !fitResult.canFit}
                   className={cn(
                     'group relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                     isSelected
-                      ? 'bg-amber-500 text-amber-950 cursor-default'
-                      : 'bg-slate-700 text-slate-100 hover:bg-slate-600 hover:scale-105 cursor-pointer border border-slate-600 hover:border-amber-500/50'
+                      ? 'bg-[#D4AF37] text-[#001a2c] cursor-pointer hover:bg-[#e5c86b]'
+                      : fitResult.canFit
+                        ? 'bg-[#002a42] text-white hover:bg-[#003B5C] hover:scale-105 cursor-pointer border border-[#4A90C2]/30 hover:border-[#D4AF37]/50'
+                        : 'bg-[#002a42]/50 text-white/40 cursor-not-allowed border border-[#4A90C2]/10',
+                    !isSelected && fitStyle.opacity
                   )}
                 >
+                  {/* Fit indicator dot */}
+                  {!isSelected && fitResult.canFit && fitStyle.dotColor && (
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full flex-shrink-0',
+                        fitStyle.dotColor
+                      )}
+                    />
+                  )}
+
                   {/* Word */}
                   <span className="font-mono font-bold tracking-wide">{keyword.word}</span>
 
                   {/* Source indicator */}
-                  {keyword.source && keyword.source !== 'local' && !isSelected && (
+                  {keyword.source && keyword.source !== 'local' && !isSelected && fitResult.canFit && (
                     <span
                       className={cn(
                         'text-[10px] font-bold px-1.5 py-0.5 rounded',
@@ -178,10 +216,10 @@ export function ProphetSelector({
                     </svg>
                   )}
 
-                  {/* Tooltip with clue */}
+                  {/* Tooltip with clue and fit info */}
                   {!isSelected && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 shadow-xl text-xs text-slate-200 max-w-[250px] text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none whitespace-normal">
-                      {keyword.clue}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-[#001a2c] border border-[#4A90C2]/30 shadow-xl text-xs text-[#b3d4ed] max-w-[250px] text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none whitespace-normal">
+                      {tooltipText}
                     </div>
                   )}
                 </button>
@@ -193,26 +231,49 @@ export function ProphetSelector({
           {hasMore && !showAll && (
             <button
               onClick={() => setShowAll(true)}
-              className="w-full py-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+              className="w-full py-2 text-sm text-[#D4AF37] hover:text-[#e5c86b] transition-colors"
             >
-              Show {keywords.length - visibleCount} more keywords...
+              Show {scoredKeywords.length - visibleCount} more keywords...
             </button>
           )}
 
           {/* Legend */}
-          <div className="pt-4 border-t border-slate-700 flex flex-wrap items-center gap-4 text-xs text-slate-400">
-            <span>Source:</span>
-            <div className="flex items-center gap-1">
-              <span className="bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded font-bold">P</span>
-              <span>Proven</span>
+          <div className="pt-4 border-t border-[#4A90C2]/20 space-y-2">
+            {/* Fit indicators legend */}
+            <div className="flex flex-wrap items-center gap-4 text-xs text-[#8fc1e3]">
+              <span>Fit:</span>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Perfect</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                <span>Good</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span>Possible</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-white/40">Dimmed</span>
+                <span>= Cannot fit</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="bg-sky-500 text-sky-950 px-1.5 py-0.5 rounded font-bold">W</span>
-              <span>Curated</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="bg-violet-500 text-violet-950 px-1.5 py-0.5 rounded font-bold">AI</span>
-              <span>AI-Generated</span>
+            {/* Source indicators legend */}
+            <div className="flex flex-wrap items-center gap-4 text-xs text-[#8fc1e3]">
+              <span>Source:</span>
+              <div className="flex items-center gap-1">
+                <span className="bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded font-bold">P</span>
+                <span>Proven</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="bg-sky-500 text-sky-950 px-1.5 py-0.5 rounded font-bold">W</span>
+                <span>Curated</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="bg-violet-500 text-violet-950 px-1.5 py-0.5 rounded font-bold">AI</span>
+                <span>AI-Generated</span>
+              </div>
             </div>
           </div>
         </div>
@@ -220,9 +281,9 @@ export function ProphetSelector({
 
       {/* Empty state */}
       {!selectedProphet && (
-        <div className="bg-slate-800/50 rounded-xl p-8 border border-slate-700/50 text-center">
+        <div className="bg-[#001a2c]/40 rounded-xl p-8 border border-[#4A90C2]/20 text-center">
           <div className="text-4xl mb-3">📖</div>
-          <p className="text-slate-400">Select a prophet above to see story keywords</p>
+          <p className="text-[#8fc1e3]">Select a prophet above to see story keywords</p>
         </div>
       )}
     </div>
@@ -246,14 +307,14 @@ export function ProphetSelectorCompact({
     >
       <SelectTrigger
         className={cn(
-          'bg-slate-800 border-slate-600 text-white hover:border-amber-500/50 transition-colors',
+          'bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors',
           className
         )}
       >
         <SelectValue placeholder="Select Prophet..." />
       </SelectTrigger>
-      <SelectContent className="bg-slate-800 border-slate-600 max-h-[250px]">
-        <SelectItem value="" className="text-slate-400 hover:bg-slate-700">
+      <SelectContent className="bg-[#002a42] border-[#4A90C2]/30 max-h-[250px]">
+        <SelectItem value="" className="text-[#8fc1e3] data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]">
           All Prophets
         </SelectItem>
         {PROPHET_IDS.map((prophetId) => {
@@ -262,7 +323,7 @@ export function ProphetSelectorCompact({
             <SelectItem
               key={prophetId}
               value={prophetId}
-              className="text-white hover:bg-slate-700"
+              className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]"
             >
               {prophet.displayName}
             </SelectItem>

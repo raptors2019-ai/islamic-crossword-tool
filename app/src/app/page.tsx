@@ -26,6 +26,13 @@ import { ConstraintSuggestions } from '@/components/constraint-suggestions';
 import { SlotStats } from '@/components/slot-stats';
 import { useEditableGrid } from '@/hooks/use-editable-grid';
 import { detectWords, DetectedWord } from '@/lib/word-detector';
+import { SlotWarningsPanel } from '@/components/slot-warnings-panel';
+import {
+  InvalidPlacementModal,
+  PlacementSuggestion,
+  generatePlacementSuggestions,
+} from '@/components/invalid-placement-modal';
+import { SlotValidation } from '@/lib/perpendicular-validator';
 import {
   toGeneratedPuzzleGrid,
   placeWord,
@@ -52,6 +59,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
+  const [placedInGridIds, setPlacedInGridIds] = useState<Set<string>>(new Set());
 
   // Editable grid hook for always-on interactive grid
   const {
@@ -59,12 +67,22 @@ export default function Home() {
     selectedCell,
     direction: editDirection,
     currentPattern,
+    slotWarnings,
+    wordIndex,
     selectCell,
     handleKeyDown,
     handleContextMenu,
     setCells,
     clearGrid,
+    toggleBlackCell,
   } = useEditableGrid();
+
+  // Invalid placement modal state
+  const [invalidPlacementData, setInvalidPlacementData] = useState<{
+    word: string;
+    invalidSlots: SlotValidation[];
+    suggestions: PlacementSuggestion[];
+  } | null>(null);
 
   // Detect words in the editable grid
   const detectedWords = useMemo(() => {
@@ -107,6 +125,8 @@ export default function Home() {
     setClues({});
     setGeneratedPuzzle(null);
     setSelectedWordId(null);
+    setPlacedInGridIds(new Set());
+    clearGrid();
   };
 
   const islamicPercentage = useMemo(() => {
@@ -137,6 +157,7 @@ export default function Home() {
     const result = placeWordAtBestPosition(editableCells, upperWord, preferDirection);
     if (result) {
       setCells(result.cells);
+      setPlacedInGridIds(prev => new Set([...prev, id]));
     }
 
     // Auto-generate puzzle if we have enough words
@@ -185,7 +206,11 @@ export default function Home() {
     const result = placeWordAtBestPosition(editableCells, keyword.word, preferDirection);
     if (result) {
       setCells(result.cells);
+      // Track that this word was successfully placed in the grid
+      setPlacedInGridIds(prev => new Set([...prev, id]));
     }
+    // If placement fails, word is still in themeWords but not in grid
+    // The UI will show it as "not placed"
 
     // Auto-generate puzzle if we have enough words
     if (newThemeWords.length >= 3) {
@@ -297,6 +322,7 @@ export default function Home() {
     const result = placeWordAtBestPosition(editableCells, upperWord, preferDirection);
     if (result) {
       setCells(result.cells);
+      setPlacedInGridIds(prev => new Set([...prev, id]));
     }
 
     // Auto-generate puzzle if we have enough words
@@ -331,6 +357,124 @@ export default function Home() {
     }
   }, [puzzleTitle, themeWords]);
 
+  // Handle invalid placement from WordHub
+  const handleInvalidPlacement = useCallback((word: string, invalidSlots: SlotValidation[]) => {
+    // Get placed words for suggestion generation
+    const placedWords = themeWords
+      .filter(w => placedInGridIds.has(w.id))
+      .map(w => {
+        // Find position in grid (simplified - just use first match)
+        for (let r = 0; r < editableCells.length; r++) {
+          for (let c = 0; c < editableCells[r].length; c++) {
+            const cell = editableCells[r][c];
+            if (cell.letter === w.activeSpelling[0].toUpperCase()) {
+              // Check across
+              let match = true;
+              for (let i = 0; i < w.activeSpelling.length && match; i++) {
+                if (editableCells[r]?.[c + i]?.letter !== w.activeSpelling[i].toUpperCase()) {
+                  match = false;
+                }
+              }
+              if (match) {
+                return { word: w.activeSpelling, position: { row: r, col: c }, direction: 'across' as const };
+              }
+              // Check down
+              match = true;
+              for (let i = 0; i < w.activeSpelling.length && match; i++) {
+                if (editableCells[r + i]?.[c]?.letter !== w.activeSpelling[i].toUpperCase()) {
+                  match = false;
+                }
+              }
+              if (match) {
+                return { word: w.activeSpelling, position: { row: r, col: c }, direction: 'down' as const };
+              }
+            }
+          }
+        }
+        return null;
+      })
+      .filter((w): w is NonNullable<typeof w> => w !== null);
+
+    const suggestions = generatePlacementSuggestions(word, invalidSlots, placedWords);
+    setInvalidPlacementData({ word, invalidSlots, suggestions });
+  }, [themeWords, placedInGridIds, editableCells]);
+
+  // Apply suggestion from invalid placement modal
+  const handleApplySuggestion = useCallback((suggestion: PlacementSuggestion) => {
+    switch (suggestion.type) {
+      case 'remove':
+        // Find and remove the word
+        const wordToRemove = themeWords.find(
+          w => w.activeSpelling.toUpperCase() === suggestion.word.toUpperCase()
+        );
+        if (wordToRemove) {
+          removeProphetKeyword(suggestion.word);
+        }
+        break;
+      case 'blackbox':
+        // Add black box at the suggested position
+        toggleBlackCell(suggestion.position.row, suggestion.position.col);
+        break;
+      case 'replace':
+        // For now, just remove the old word (user can add new one)
+        const oldWord = themeWords.find(
+          w => w.activeSpelling.toUpperCase() === suggestion.oldWord.toUpperCase()
+        );
+        if (oldWord) {
+          removeProphetKeyword(suggestion.oldWord);
+        }
+        break;
+    }
+    setInvalidPlacementData(null);
+  }, [themeWords, removeProphetKeyword, toggleBlackCell]);
+
+  // Handle black box from warnings panel
+  const handleApplyBlackBox = useCallback((pos: { row: number; col: number }) => {
+    toggleBlackCell(pos.row, pos.col);
+  }, [toggleBlackCell]);
+
+  // Compute slot warning cells for grid overlay
+  const slotWarningCells = useMemo(() => {
+    const cells: { row: number; col: number; isWarning: boolean; isSuggestedBlackBox: boolean }[] = [];
+    const addedCells = new Set<string>();
+
+    for (const validation of slotWarnings) {
+      // Add all cells in the invalid slot as warnings
+      for (let i = 0; i < validation.slot.length; i++) {
+        const row = validation.slot.direction === 'down'
+          ? validation.slot.start.row + i
+          : validation.slot.start.row;
+        const col = validation.slot.direction === 'across'
+          ? validation.slot.start.col + i
+          : validation.slot.start.col;
+        const key = `${row}-${col}`;
+
+        if (!addedCells.has(key)) {
+          cells.push({ row, col, isWarning: true, isSuggestedBlackBox: false });
+          addedCells.add(key);
+        }
+      }
+
+      // Add suggested black box position
+      if (validation.suggestedBlackBox) {
+        const { row, col } = validation.suggestedBlackBox;
+        const key = `${row}-${col}-suggest`;
+        if (!addedCells.has(key)) {
+          // Check if this cell is already marked
+          const existingIdx = cells.findIndex(c => c.row === row && c.col === col);
+          if (existingIdx >= 0) {
+            cells[existingIdx].isSuggestedBlackBox = true;
+          } else {
+            cells.push({ row, col, isWarning: false, isSuggestedBlackBox: true });
+          }
+          addedCells.add(key);
+        }
+      }
+    }
+
+    return cells;
+  }, [slotWarnings]);
+
   const selectedWord = themeWords.find(w => w.id === selectedWordId);
 
   return (
@@ -360,7 +504,7 @@ export default function Home() {
                 </SelectTrigger>
                 <SelectContent className="bg-[#002a42] border-[#4A90C2]/30">
                   {themePresets.map(t => (
-                    <SelectItem key={t.id} value={t.id} className="text-white hover:bg-[#003B5C]">
+                    <SelectItem key={t.id} value={t.id} className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]">
                       <span className="flex items-center gap-2">
                         <span>{t.icon}</span>
                         <span>{t.name}</span>
@@ -431,6 +575,14 @@ export default function Home() {
               />
             )}
 
+            {/* Slot Warnings Panel (for perpendicular validation) */}
+            {slotWarnings.length > 0 && (
+              <SlotWarningsPanel
+                validations={slotWarnings}
+                onApplyBlackBox={handleApplyBlackBox}
+              />
+            )}
+
             {/* Detected Words Panel */}
             {detectedWords.length > 0 && (
               <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
@@ -481,6 +633,10 @@ export default function Home() {
                     selectedWords={themeWords}
                     selectedWordId={selectedWordId}
                     puzzle={generatedPuzzle}
+                    placedInGridIds={placedInGridIds}
+                    editableCells={editableCells}
+                    wordIndex={wordIndex}
+                    onInvalidPlacement={handleInvalidPlacement}
                   />
                 </CardContent>
               </Card>
@@ -504,6 +660,7 @@ export default function Home() {
                     onCellSelect={selectCell}
                     onKeyDown={handleKeyDown}
                     onContextMenu={handleContextMenu}
+                    slotWarningCells={slotWarningCells}
                   />
                 </div>
 
@@ -819,6 +976,17 @@ export default function Home() {
       </footer>
 
       <div className="h-24" />
+
+      {/* Invalid Placement Modal */}
+      {invalidPlacementData && (
+        <InvalidPlacementModal
+          word={invalidPlacementData.word}
+          invalidSlots={invalidPlacementData.invalidSlots}
+          suggestions={invalidPlacementData.suggestions}
+          onClose={() => setInvalidPlacementData(null)}
+          onApplySuggestion={handleApplySuggestion}
+        />
+      )}
     </div>
   );
 }

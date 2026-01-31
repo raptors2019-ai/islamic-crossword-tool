@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { RotateCw, FlipHorizontal, FlipVertical, RotateCcw, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Cell } from '@/lib/types';
+import { EditableCell } from '@/lib/editable-grid';
 
 // Grid cell from generated puzzle (new format)
 interface GridCell {
@@ -47,6 +48,14 @@ interface Clue {
   length: number;
 }
 
+// Slot warning info for visual overlay
+interface SlotWarningCell {
+  row: number;
+  col: number;
+  isWarning: boolean;
+  isSuggestedBlackBox: boolean;
+}
+
 interface CrosswordGridProps {
   grid: AnyGrid;
   clues?: {
@@ -69,6 +78,17 @@ interface CrosswordGridProps {
   selectedCell?: { row: number; col: number } | null;
   highlightedClue?: { direction: 'across' | 'down'; number: number } | null;
   className?: string;
+  // Edit mode props
+  editable?: boolean;
+  editableGrid?: EditableCell[][];
+  editDirection?: 'across' | 'down';
+  onCellChange?: (row: number, col: number, letter: string) => void;
+  onCellToggleBlack?: (row: number, col: number) => void;
+  onCellSelect?: (row: number, col: number) => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onContextMenu?: (e: React.MouseEvent, row: number, col: number) => void;
+  // Slot validation props
+  slotWarningCells?: SlotWarningCell[];
 }
 
 type Rotation = 0 | 90 | 180 | 270;
@@ -244,7 +264,18 @@ export function CrosswordGrid({
   selectedCell,
   highlightedClue,
   className,
+  // Edit mode props
+  editable = false,
+  editableGrid,
+  editDirection = 'across',
+  onCellChange,
+  onCellToggleBlack,
+  onCellSelect,
+  onKeyDown,
+  onContextMenu,
+  slotWarningCells = [],
 }: CrosswordGridProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState<Rotation>(0);
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
@@ -276,6 +307,16 @@ export function CrosswordGrid({
 
     return cells;
   }, [highlightedClue, clues]);
+
+  // Build warning and suggestion maps for quick lookup
+  const warningCellMap = useMemo(() => {
+    const map = new Map<string, { isWarning: boolean; isSuggestedBlackBox: boolean }>();
+    for (const cell of slotWarningCells) {
+      const key = `${cell.row}-${cell.col}`;
+      map.set(key, { isWarning: cell.isWarning, isSuggestedBlackBox: cell.isSuggestedBlackBox });
+    }
+    return map;
+  }, [slotWarningCells]);
 
   const handleRotateRight = useCallback(() => {
     setRotation(prev => ((prev + 90) % 360) as Rotation);
@@ -422,16 +463,134 @@ export function CrosswordGrid({
 
       {/* Grid Container */}
       <div
-        className="overflow-auto max-w-full transition-transform duration-200"
+        ref={gridRef}
+        className={cn(
+          'overflow-auto max-w-full transition-transform duration-200',
+          editable && 'outline-none'
+        )}
         style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+        tabIndex={editable ? 0 : undefined}
+        onKeyDown={editable ? onKeyDown : undefined}
       >
+        {/* Direction indicator for editable mode */}
+        {editable && selectedCell && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-[#8fc1e3] text-xs uppercase tracking-wider">Direction:</span>
+            <span className={cn(
+              'px-2 py-1 rounded text-xs font-bold',
+              editDirection === 'across'
+                ? 'bg-[#D4AF37] text-[#001a2c]'
+                : 'bg-[#4A90C2] text-white'
+            )}>
+              {editDirection === 'across' ? '→ Across' : '↓ Down'}
+            </span>
+            <span className="text-[#6ba8d4] text-xs">(Tab to toggle)</span>
+          </div>
+        )}
+
         <div className={cn('inline-grid', themeStyles.container, themeStyles.gap)}>
-          {transformedGrid.map((row, r) => (
+          {/* Use editable grid if in edit mode, otherwise use transformed grid */}
+          {(editable && editableGrid ? editableGrid : transformedGrid).map((row, r) => (
             <div key={r} className={cn('flex', themeStyles.gap)}>
-              {row.map((cell, c) => {
+              {row.map((cellData, c) => {
                 const cellKey = `${r}-${c}`;
                 const isSelected = selectedCell?.row === r && selectedCell?.col === c;
                 const isHighlighted = highlightedCells.has(cellKey);
+
+                // Handle editable cells differently
+                if (editable && editableGrid) {
+                  const editCell = cellData as EditableCell;
+                  const isBlack = editCell.isBlack;
+                  const hasLetter = !!editCell.letter;
+                  const isUserTyped = editCell.source === 'user';
+                  const isAutoPlaced = editCell.source === 'auto';
+
+                  // Check for slot warnings on this cell
+                  const warningInfo = warningCellMap.get(cellKey);
+                  const hasWarning = warningInfo?.isWarning && !isBlack;
+                  const isSuggestedBlackBox = warningInfo?.isSuggestedBlackBox && !isBlack;
+
+                  return (
+                    <div
+                      key={c}
+                      onClick={() => {
+                        if (!isBlack && onCellSelect) {
+                          onCellSelect(r, c);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        if (onContextMenu) {
+                          onContextMenu(e, r, c);
+                        }
+                      }}
+                      className={cn(
+                        sizeStyles.cell,
+                        'flex items-center justify-center font-bold relative transition-all duration-150 cursor-pointer',
+                        // Cell type styling
+                        isBlack && themeStyles.blackCell,
+                        !isBlack && hasLetter && themeStyles.letterCell,
+                        !isBlack && !hasLetter && 'bg-white/90 border border-gray-300 hover:bg-blue-50',
+                        // Selection state
+                        isSelected && !isBlack && 'ring-2 ring-[#D4AF37] ring-inset bg-[#D4AF37]/20',
+                        // Warning state - orange highlight for invalid slots
+                        hasWarning && !isSelected && 'ring-2 ring-orange-500 ring-inset bg-orange-500/10',
+                        // Suggested black box - dashed red outline
+                        isSuggestedBlackBox && !hasWarning && !isSelected && 'ring-2 ring-dashed ring-red-400 bg-red-500/5',
+                        // User vs auto styling
+                        isUserTyped && 'text-[#001a2c]',
+                        isAutoPlaced && 'text-[#4A90C2]',
+                        // Text styling
+                        sizeStyles.text,
+                      )}
+                    >
+                      {/* Black cell pattern overlay */}
+                      {isBlack && themeStyles.blackPattern !== 'classic' && themeStyles.blackPattern !== 'solid' && themeStyles.blackPattern !== 'newspaper' && (
+                        <BlackCellPattern pattern={themeStyles.blackPattern} cellKey={cellKey} />
+                      )}
+
+                      {/* Warning indicator dot */}
+                      {hasWarning && (
+                        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orange-500" />
+                      )}
+
+                      {/* Suggested black box indicator */}
+                      {isSuggestedBlackBox && !hasWarning && (
+                        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-sm bg-red-400/60" />
+                      )}
+
+                      {/* Cell number */}
+                      {showNumbers && editCell.number && (
+                        <span
+                          className={cn(
+                            'absolute top-0.5 left-0.5 font-semibold leading-none text-gray-600',
+                            sizeStyles.number,
+                          )}
+                        >
+                          {editCell.number}
+                        </span>
+                      )}
+
+                      {/* Letter */}
+                      {showLetters && editCell.letter && (
+                        <span className={cn(
+                          'uppercase select-none',
+                          isUserTyped && 'font-bold',
+                          isAutoPlaced && 'font-normal opacity-80'
+                        )}>
+                          {editCell.letter}
+                        </span>
+                      )}
+
+                      {/* Empty cell indicator when selected */}
+                      {isSelected && !hasLetter && !isBlack && (
+                        <span className="text-[#D4AF37]/50 animate-pulse">|</span>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Non-editable cell rendering (original behavior)
+                const cell = cellData as GridCell;
                 const isClickable = cell.type === 'letter' && (onCellClick || interactive);
                 const isBlack = cell.type === 'black';
 
@@ -490,6 +649,24 @@ export function CrosswordGrid({
           ))}
         </div>
       </div>
+
+      {/* Edit mode instructions */}
+      {editable && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-[#8fc1e3]">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Type</kbd>
+            to fill letters
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Tab</kbd>
+            toggle direction
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Right-click</kbd>
+            toggle black cell
+          </span>
+        </div>
+      )}
 
       {/* Transform indicator */}
       {showControls && !compact && isTransformed && (

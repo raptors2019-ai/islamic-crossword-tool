@@ -138,14 +138,14 @@ export function KeywordReview({ className }: KeywordReviewProps) {
               <SelectValue placeholder="Filter by prophet" />
             </SelectTrigger>
             <SelectContent className="bg-[#002a42] border-[#4A90C2]/30">
-              <SelectItem value="all" className="text-white hover:bg-[#003B5C]">
+              <SelectItem value="all" className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]">
                 All Prophets
               </SelectItem>
               {prophets?.map((prophetId) => (
                 <SelectItem
                   key={prophetId}
                   value={prophetId}
-                  className="text-white hover:bg-[#003B5C]"
+                  className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]"
                 >
                   {prophetId}
                 </SelectItem>

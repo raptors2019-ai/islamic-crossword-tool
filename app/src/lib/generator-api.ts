@@ -2,6 +2,17 @@ import { ThemeWord, GeneratedPuzzle, PuzzleStatistics, FillerSuggestion } from '
 import { sampleWords } from './sample-data';
 import { convexClient } from './convex';
 import { api } from '../../convex/_generated/api';
+import { buildWordIndex, hasMatch, WordIndex } from './word-index';
+import { ALL_WORDS_2_5 } from './word-list-full';
+
+// Lazy-loaded word index for arc consistency checking
+let cachedWordIndex: WordIndex | null = null;
+function getWordIndex(): WordIndex {
+  if (!cachedWordIndex) {
+    cachedWordIndex = buildWordIndex(ALL_WORDS_2_5);
+  }
+  return cachedWordIndex;
+}
 
 // Flag to use Convex generator
 const USE_CONVEX_GENERATOR = true;
@@ -39,6 +50,80 @@ const commonFillerWords: { word: string; clue: string; score: number }[] = [
   { word: 'KINGDOM', clue: 'Dominion; Allah\'s mulk', score: 85 },
   { word: 'MERCIFUL', clue: 'Full of compassion; Ar-Rahim', score: 95 },
 ];
+
+/**
+ * Check arc consistency for a word placement in the local simulation.
+ * Returns true if all perpendicular slots have valid word candidates.
+ */
+function checkLocalArcConsistency(
+  grid: GeneratedPuzzle['grid'],
+  word: string,
+  row: number,
+  col: number,
+  direction: 'across' | 'down',
+  wordIndex: WordIndex
+): boolean {
+  const perpDirection = direction === 'across' ? 'down' : 'across';
+
+  for (let i = 0; i < word.length; i++) {
+    const r = direction === 'across' ? row : row + i;
+    const c = direction === 'across' ? col + i : col;
+
+    // Build the perpendicular pattern at this position
+    let pattern = '';
+    let startR = r;
+    let startC = c;
+
+    if (perpDirection === 'down') {
+      // Find start of vertical word
+      while (startR > 0 && grid[startR - 1]?.[c]?.type === 'letter') {
+        startR--;
+      }
+      // Build pattern going down
+      let currR = startR;
+      while (currR < grid.length) {
+        if (currR === r) {
+          pattern += word[i];
+        } else if (grid[currR]?.[c]?.type === 'letter' && grid[currR][c].solution) {
+          pattern += grid[currR][c].solution;
+        } else if (grid[currR]?.[c]?.type === 'empty') {
+          pattern += '.';
+        } else {
+          break; // Hit black or edge
+        }
+        currR++;
+      }
+    } else {
+      // Find start of horizontal word
+      while (startC > 0 && grid[r]?.[startC - 1]?.type === 'letter') {
+        startC--;
+      }
+      // Build pattern going across
+      let currC = startC;
+      while (currC < (grid[r]?.length || 0)) {
+        if (currC === c) {
+          pattern += word[i];
+        } else if (grid[r]?.[currC]?.type === 'letter' && grid[r][currC].solution) {
+          pattern += grid[r][currC].solution;
+        } else if (grid[r]?.[currC]?.type === 'empty') {
+          pattern += '.';
+        } else {
+          break; // Hit black or edge
+        }
+        currC++;
+      }
+    }
+
+    // Check if pattern has at least one valid match (skip single-letter patterns)
+    if (pattern.length >= 2 && pattern.includes('.')) {
+      if (!hasMatch(pattern, wordIndex)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
 
 interface GeneratePuzzleOptions {
   title?: string;

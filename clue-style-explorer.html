@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Islamic Crossword Clue Style Explorer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+    }
+
+    .controls {
+      background: #1a1a1a;
+      padding: 24px;
+      border-right: 1px solid #2a2a2a;
+      overflow-y: auto;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+    }
+
+    .control-group {
+      margin-bottom: 24px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #252525;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .radio-option:hover {
+      background: #303030;
+    }
+
+    .radio-option.selected {
+      background: #2d4a3e;
+      border: 1px solid #3d6a5e;
+    }
+
+    .radio-option input {
+      display: none;
+    }
+
+    .radio-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radio-option.selected .radio-dot {
+      border-color: #5cb85c;
+    }
+
+    .radio-option.selected .radio-dot::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #5cb85c;
+      border-radius: 50%;
+    }
+
+    .radio-label {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #252525;
+      border-radius: 6px;
+    }
+
+    .toggle-label {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .toggle.active {
+      background: #5cb85c;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    .presets {
+      margin-bottom: 24px;
+    }
+
+    .presets label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      padding: 8px 12px;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      background: #333;
+      border-color: #444;
+    }
+
+    .preview {
+      flex: 1;
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .preview h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
+    }
+
+    .clue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .clue-item {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 16px;
+      padding: 16px;
+      background: #252525;
+      border-radius: 8px;
+      align-items: start;
+    }
+
+    .clue-word {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: #5cb85c;
+      letter-spacing: 2px;
+    }
+
+    .clue-text {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #ddd;
+    }
+
+    .clue-arabic {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .prompt-section {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .prompt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .prompt-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .copy-btn {
+      padding: 8px 16px;
+      background: #2d4a3e;
+      border: 1px solid #3d6a5e;
+      border-radius: 6px;
+      color: #8fc;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: #3d5a4e;
+    }
+
+    .copy-btn.copied {
+      background: #5cb85c;
+      color: white;
+    }
+
+    .prompt-text {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
+      background: #151515;
+      padding: 16px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <h1>Clue Style Explorer</h1>
+
+      <div class="presets">
+        <label>Presets</label>
+        <div class="preset-buttons">
+          <button class="preset-btn" onclick="applyPreset('kids')">Kids</button>
+          <button class="preset-btn" onclick="applyPreset('educational')">Educational</button>
+          <button class="preset-btn" onclick="applyPreset('scholarly')">Scholarly</button>
+          <button class="preset-btn" onclick="applyPreset('poetic')">Poetic</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Tone</label>
+        <div class="radio-group" id="tone-group">
+          <div class="radio-option" data-value="formal">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Formal</span>
+          </div>
+          <div class="radio-option selected" data-value="educational">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Educational</span>
+          </div>
+          <div class="radio-option" data-value="playful">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Playful</span>
+          </div>
+          <div class="radio-option" data-value="poetic">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Poetic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Difficulty</label>
+        <div class="radio-group" id="difficulty-group">
+          <div class="radio-option selected" data-value="easy">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Easy</span>
+          </div>
+          <div class="radio-option" data-value="medium">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Medium</span>
+          </div>
+          <div class="radio-option" data-value="hard">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Hard</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Clue Length</label>
+        <div class="radio-group" id="length-group">
+          <div class="radio-option" data-value="short">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Short (3-5 words)</span>
+          </div>
+          <div class="radio-option selected" data-value="medium">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Medium (6-10 words)</span>
+          </div>
+          <div class="radio-option" data-value="long">
+            <span class="radio-dot"></span>
+            <span class="radio-label">Long (11+ words)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Options</label>
+        <div class="toggle-row">
+          <span class="toggle-label">Include Arabic terms</span>
+          <div class="toggle" id="arabic-toggle" onclick="toggleArabic()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="preview">
+        <h2>Preview Clues</h2>
+        <div class="clue-list" id="clue-list"></div>
+      </div>
+
+      <div class="prompt-section">
+        <div class="prompt-header">
+          <h2>Generated Prompt</h2>
+          <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">Copy Prompt</button>
+        </div>
+        <div class="prompt-text" id="prompt-output"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULTS = {
+      tone: 'educational',
+      difficulty: 'easy',
+      length: 'medium',
+      includeArabic: false
+    };
+
+    const state = {
+      tone: 'educational',
+      difficulty: 'easy',
+      length: 'medium',
+      includeArabic: false
+    };
+
+    const clueData = {
+      QURAN: {
+        formal: {
+          easy: { short: "Muslim holy book", medium: "The sacred scripture revealed to Prophet Muhammad", long: "The holy scripture of Islam, believed to be the word of Allah revealed to Prophet Muhammad over 23 years" },
+          medium: { short: "Divine revelation to Muhammad", medium: "Scripture revealed in Arabic to the final Prophet", long: "The central religious text of Islam, containing 114 surahs revealed to Prophet Muhammad through Angel Jibreel" },
+          hard: { short: "Umm al-Kitab", medium: "The furqan distinguishing truth from falsehood", long: "The miraculous Arabic scripture whose inimitability (i'jaz) has challenged humanity since its revelation" }
+        },
+        educational: {
+          easy: { short: "Muslim holy book", medium: "The book Muslims read and memorize", long: "The special book that Muslims believe contains Allah's words, often memorized by children" },
+          medium: { short: "Islam's holy scripture", medium: "The book revealed to Prophet Muhammad containing guidance", long: "Muslims believe this book contains Allah's actual words, revealed to Prophet Muhammad over many years" },
+          hard: { short: "Revelation in 114 chapters", medium: "Scripture preserved in its original Arabic language", long: "This book contains 114 surahs and is the only scripture Muslims believe has been preserved unchanged" }
+        },
+        playful: {
+          easy: { short: "Muslims' favorite book!", medium: "The amazing book Muslims love to recite", long: "The wonderful book that Muslims read every day - some people memorize the whole thing!" },
+          medium: { short: "Allah's special message", medium: "The book with 114 chapters of amazing guidance", long: "This incredible book was revealed to Prophet Muhammad bit by bit - imagine getting messages from Allah!" },
+          hard: { short: "114 surahs of wisdom", medium: "The book that came down over 23 exciting years", long: "Angel Jibreel delivered this book piece by piece to Prophet Muhammad - talk about special delivery!" }
+        },
+        poetic: {
+          easy: { short: "Words of the Divine", medium: "Light sent down for humanity's path", long: "The luminous words that descended like rain upon the heart of the beloved Prophet" },
+          medium: { short: "Heaven's timeless song", medium: "The eternal words that guide souls home", long: "Like stars illuminating the night sky, these verses light the path for wandering hearts" },
+          hard: { short: "The speaking silence", medium: "Where the infinite speaks in finite words", long: "The ocean of meaning contained in an arabesque of letters, each verse a universe unto itself" }
+        }
+      },
+      MOSES: {
+        formal: {
+          easy: { short: "Prophet who parted the sea", medium: "Prophet who led Israelites out of Egypt", long: "The Prophet who received the Torah and confronted Pharaoh to free the Children of Israel" },
+          medium: { short: "Prophet given the Torah", medium: "Kalimullah, the one who spoke with Allah", long: "The Prophet who spoke directly with Allah on Mount Sinai and received the tablets of guidance" },
+          hard: { short: "Kalimullah, speaker to God", medium: "Prophet whose staff became a serpent before Pharaoh", long: "The Prophet mentioned most frequently in the Quran, whose confrontation with Pharaoh exemplifies truth against tyranny" }
+        },
+        educational: {
+          easy: { short: "Prophet with a special staff", medium: "The baby found in a basket by a river", long: "This Prophet was found as a baby in a basket and later freed his people from Pharaoh" },
+          medium: { short: "Led his people to freedom", medium: "Prophet who showed Pharaoh amazing miracles", long: "This Prophet turned his staff into a snake and parted the Red Sea to save his people" },
+          hard: { short: "Given Torah on the mountain", medium: "Prophet who spoke directly with Allah on Sinai", long: "Muslims call him Musa - he's mentioned more times in the Quran than any other prophet!" }
+        },
+        playful: {
+          easy: { short: "Baby in a basket!", medium: "The Prophet who floated down a river as a baby", long: "Imagine floating in a basket as a baby and ending up in a palace - that's this Prophet's story!" },
+          medium: { short: "Staff-into-snake guy", medium: "His walking stick did some amazing tricks!", long: "This Prophet's staff could turn into a snake and part entire seas - now that's a cool stick!" },
+          hard: { short: "Pharaoh's worst nightmare", medium: "The Prophet who had a chat with Allah on a mountain", long: "He grew up in Pharaoh's palace, then came back to say 'Let my people go!' - what a twist!" }
+        },
+        poetic: {
+          easy: { short: "River child, mountain sage", medium: "From basket on the waves to tablets of light", long: "Cradled by waters, raised in palaces, called by flames to free a nation from chains" },
+          medium: { short: "Voice in the burning bush", medium: "The one whose staff swallowed serpents of deceit", long: "From the rushes of the Nile to the thunder of Sinai, his journey carved freedom's path" },
+          hard: { short: "Kalimullah, friend of fire", medium: "Where flame spoke truth and seas bowed aside", long: "The orphan who became liberator, the shepherd who spoke with the Shepherd of all souls" }
+        }
+      },
+      HAJJ: {
+        formal: {
+          easy: { short: "Pilgrimage to Mecca", medium: "The annual Islamic pilgrimage to Mecca", long: "The fifth pillar of Islam requiring Muslims to journey to Mecca at least once if able" },
+          medium: { short: "Fifth pillar of Islam", medium: "Obligatory pilgrimage performed in Dhul Hijjah", long: "The sacred journey to Mecca involving Tawaf, Sa'i, and standing at Arafat during the twelfth month" },
+          hard: { short: "Ritual journey to Kaaba", medium: "Pilgrimage retracing Ibrahimi rites at sacred sites", long: "The culmination of Islamic worship, where millions don ihram to perform rites established by Prophet Ibrahim" }
+        },
+        educational: {
+          easy: { short: "Trip to Mecca", medium: "The special journey Muslims make to Mecca", long: "Once in their life, Muslims try to visit Mecca and walk around the Kaaba - it's called this" },
+          medium: { short: "Mecca pilgrimage duty", medium: "One of Islam's five pillars involving travel to Mecca", long: "Muslims wear special white clothes and travel to Mecca to perform this important religious duty" },
+          hard: { short: "Fifth pillar journey", medium: "Pilgrimage including Tawaf around the Kaaba", long: "During this pilgrimage, Muslims walk around the Kaaba seven times and visit Mount Arafat" }
+        },
+        playful: {
+          easy: { short: "Mecca road trip!", medium: "The biggest gathering of Muslims in the world", long: "Imagine millions of people all wearing white and walking around a big cube together!" },
+          medium: { short: "Ultimate Muslim meetup", medium: "Walk around the Kaaba seven times? Count me in!", long: "Every year millions of Muslims take this special trip where everyone wears matching white outfits" },
+          hard: { short: "Circle the Kaaba time", medium: "The journey where you run between two hills", long: "Running between Safa and Marwa, throwing pebbles, and camping under the stars - some adventure!" }
+        },
+        poetic: {
+          easy: { short: "Journey of the heart", medium: "Where all roads lead to the Sacred House", long: "The voyage where the soul sheds its colors and walks in white toward the center of the world" },
+          medium: { short: "Return to the source", medium: "Where millions become one in circling devotion", long: "A river of white flowing around the ancient House, each heart a drop in the ocean of surrender" },
+          hard: { short: "Circle of eternity", medium: "Where footsteps trace Ibrahim's ancient path", long: "The desert blooms with pilgrims, each step a prayer, each circle a lifetime's longing fulfilled" }
+        }
+      },
+      MECCA: {
+        formal: {
+          easy: { short: "Islam's holiest city", medium: "The city containing the Sacred Mosque and Kaaba", long: "The birthplace of Prophet Muhammad and site of the Masjid al-Haram, toward which Muslims pray" },
+          medium: { short: "Qibla direction city", medium: "Sacred city in Saudi Arabia where Muslims face in prayer", long: "The holiest city in Islam, birthplace of Prophet Muhammad, containing the Kaaba within Masjid al-Haram" },
+          hard: { short: "Umm al-Qura, Mother of Cities", medium: "Site of the Kaaba and annual Hajj pilgrimage", long: "The blessed city mentioned in the Quran as Bakkah, center of the Islamic world and forbidden to non-Muslims" }
+        },
+        educational: {
+          easy: { short: "Kaaba's home city", medium: "The city where Muslims go for pilgrimage", long: "This city in Saudi Arabia has the Kaaba - the black cube building Muslims face when they pray" },
+          medium: { short: "Prophet's birthplace", medium: "The city Muslims face when praying five times daily", long: "Prophet Muhammad was born here, and all Muslims around the world face this city when they pray" },
+          hard: { short: "Site of Masjid al-Haram", medium: "Saudi Arabian city containing Islam's holiest sites", long: "This city contains the Kaaba, Zamzam well, and is where millions perform Hajj every year" }
+        },
+        playful: {
+          easy: { short: "Where the Kaaba lives!", medium: "The city everyone faces when praying", long: "Imagine a city so special that over a billion people turn toward it every single day!" },
+          medium: { short: "Prayer GPS destination", medium: "Muslims everywhere point toward this city to pray", long: "This Saudi Arabian city is like a spiritual magnet - everyone faces it five times a day!" },
+          hard: { short: "The ultimate destination", medium: "Home to the world's largest annual gathering", long: "Birthplace of Prophet Muhammad and home to a cube that's been the center of worship for thousands of years" }
+        },
+        poetic: {
+          easy: { short: "Heart of the faithful", medium: "The city where a billion hearts turn daily", long: "Like flowers turning toward the sun, a billion souls bow toward this blessed valley" },
+          medium: { short: "Valley of answered prayers", medium: "Where heaven kissed the earth at creation's dawn", long: "The compass point of every prostrating heart, where Ismail's tears became a well of life" },
+          hard: { short: "Navel of the world", medium: "Where stone became sanctuary and sand became sacred", long: "The ancient valley where Ibrahim raised walls of faith and Muhammad's light first entered the world" }
+        }
+      },
+      ANGEL: {
+        formal: {
+          easy: { short: "Heavenly messenger", medium: "A celestial being who serves and worships Allah", long: "A spiritual being created from light who carries out Allah's commands and delivers divine messages" },
+          medium: { short: "Being created from light", medium: "Celestial creature who serves Allah without free will", long: "A spiritual being made from nur (light) who faithfully executes divine commands without the ability to disobey" },
+          hard: { short: "Malaika in Arabic", medium: "Luminous beings including Jibreel and Mikail", long: "Beings of light who form the celestial hierarchy, from Jibreel who delivers revelation to Israfil who will blow the trumpet" }
+        },
+        educational: {
+          easy: { short: "Made of light", medium: "Beings who bring messages from Allah", long: "These special beings are made of light and help carry out Allah's commands - like Jibreel who brought the Quran" },
+          medium: { short: "Allah's light messengers", medium: "Beings created from light who obey Allah perfectly", long: "Unlike humans, these beings can't choose to disobey Allah - they're made of light and always do what they're told" },
+          hard: { short: "Jibreel's kind", medium: "Creatures made from nur who record our deeds", long: "Some bring revelation, some record your good and bad deeds, and one will blow the trumpet on the Last Day" }
+        },
+        playful: {
+          easy: { short: "Light beings!", medium: "Made of light and super good at their jobs", long: "Imagine beings made of actual light who never make mistakes - they're Allah's ultimate helpers!" },
+          medium: { short: "Glowing messengers", medium: "They delivered the Quran and write down everything!", long: "Two of them sit on your shoulders right now writing down everything you do - no pressure!" },
+          hard: { short: "Heavenly workforce", medium: "From message delivery to deed recording - they do it all", long: "Jibreel for revelations, Mikail for nature, Israfil for the big trumpet finale - quite a team!" }
+        },
+        poetic: {
+          easy: { short: "Wings of light", medium: "Beings woven from the first light of creation", long: "Radiant servants of the Most High, their wings spanning the distance between heaven and earth" },
+          medium: { short: "Heaven's luminous servants", medium: "Neither shadow nor doubt dims their eternal service", long: "Pure light given form and purpose, they move between worlds carrying whispers of the Divine" },
+          hard: { short: "The light before light", medium: "Witnesses to creation, heralds of resurrection", long: "From the first 'Be' to the final trumpet's call, they move through existence as living praise" }
+        }
+      }
+    };
+
+    const arabicTerms = {
+      QURAN: "القرآن (Al-Qur'an)",
+      MOSES: "موسى (Musa)",
+      HAJJ: "الحج (Al-Hajj)",
+      MECCA: "مكة (Makkah)",
+      ANGEL: "ملائكة (Malaika)"
+    };
+
+    const presets = {
+      kids: { tone: 'playful', difficulty: 'easy', length: 'medium', includeArabic: false },
+      educational: { tone: 'educational', difficulty: 'medium', length: 'medium', includeArabic: true },
+      scholarly: { tone: 'formal', difficulty: 'hard', length: 'long', includeArabic: true },
+      poetic: { tone: 'poetic', difficulty: 'medium', length: 'long', includeArabic: false }
+    };
+
+    function applyPreset(name) {
+      const preset = presets[name];
+      state.tone = preset.tone;
+      state.difficulty = preset.difficulty;
+      state.length = preset.length;
+      state.includeArabic = preset.includeArabic;
+      updateControlsUI();
+      updateAll();
+    }
+
+    function updateControlsUI() {
+      // Update tone
+      document.querySelectorAll('#tone-group .radio-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.value === state.tone);
+      });
+      // Update difficulty
+      document.querySelectorAll('#difficulty-group .radio-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.value === state.difficulty);
+      });
+      // Update length
+      document.querySelectorAll('#length-group .radio-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.value === state.length);
+      });
+      // Update arabic toggle
+      document.getElementById('arabic-toggle').classList.toggle('active', state.includeArabic);
+    }
+
+    function setupRadioGroup(groupId, stateKey) {
+      document.querySelectorAll(`#${groupId} .radio-option`).forEach(opt => {
+        opt.addEventListener('click', () => {
+          document.querySelectorAll(`#${groupId} .radio-option`).forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          state[stateKey] = opt.dataset.value;
+          updateAll();
+        });
+      });
+    }
+
+    function toggleArabic() {
+      state.includeArabic = !state.includeArabic;
+      document.getElementById('arabic-toggle').classList.toggle('active', state.includeArabic);
+      updateAll();
+    }
+
+    function renderPreview() {
+      const list = document.getElementById('clue-list');
+      const words = ['QURAN', 'MOSES', 'HAJJ', 'MECCA', 'ANGEL'];
+
+      list.innerHTML = words.map(word => {
+        const clue = clueData[word][state.tone][state.difficulty][state.length];
+        const arabic = state.includeArabic ? `<div class="clue-arabic">${arabicTerms[word]}</div>` : '';
+        return `
+          <div class="clue-item">
+            <div class="clue-word">${word}</div>
+            <div>
+              <div class="clue-text">${clue}</div>
+              ${arabic}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updatePrompt() {
+      const parts = [];
+
+      // Always include tone
+      const toneDescriptions = {
+        formal: 'formal and reverent',
+        educational: 'educational and informative',
+        playful: 'playful and engaging',
+        poetic: 'poetic and evocative'
+      };
+      parts.push(`Use a ${toneDescriptions[state.tone]} tone`);
+
+      // Difficulty
+      if (state.difficulty !== DEFAULTS.difficulty) {
+        const diffDescriptions = {
+          easy: 'suitable for beginners or children',
+          medium: 'appropriate for general audiences with some Islamic knowledge',
+          hard: 'challenging, using Arabic terminology and deeper references'
+        };
+        parts.push(diffDescriptions[state.difficulty]);
+      }
+
+      // Length
+      if (state.length !== DEFAULTS.length) {
+        const lengthDescriptions = {
+          short: 'Keep clues very brief (3-5 words)',
+          medium: 'Use moderate length clues (6-10 words)',
+          long: 'Write detailed, descriptive clues (11+ words)'
+        };
+        parts.push(lengthDescriptions[state.length]);
+      }
+
+      // Arabic
+      if (state.includeArabic) {
+        parts.push('Include Arabic terms with transliteration where appropriate');
+      }
+
+      const prompt = `Generate crossword clues for Islamic terms with the following style:
+
+${parts.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+
+The clues should be accurate to Islamic teachings while being accessible to the target audience.`;
+
+      document.getElementById('prompt-output').textContent = prompt;
+    }
+
+    function copyPrompt() {
+      const text = document.getElementById('prompt-output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Prompt';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function updateAll() {
+      renderPreview();
+      updatePrompt();
+    }
+
+    // Initialize
+    setupRadioGroup('tone-group', 'tone');
+    setupRadioGroup('difficulty-group', 'difficulty');
+    setupRadioGroup('length-group', 'length');
+    updateAll();
+  </script>
+</body>
+</html>

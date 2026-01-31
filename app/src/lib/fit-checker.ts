@@ -22,7 +22,7 @@ export type FitQuality = 'perfect' | 'good' | 'possible' | 'unlikely' | 'cannot_
 export interface FitResult {
   canFit: boolean;
   quality: FitQuality;
-  reason?: 'too_long' | 'too_short' | 'no_intersections' | 'conflicts' | 'grid_full';
+  reason?: 'too_long' | 'too_short' | 'conflicts' | 'grid_full' | 'perpendicular_conflict';
   intersections?: number;
   potentialPositions?: number;
 }
@@ -91,7 +91,8 @@ export function checkWordFit(
         intersections,
       };
     } else {
-      // No intersections but might still fit in empty spaces
+      // Zero intersections - still selectable, generator will handle placement
+      // (may result in black boxes or disconnected regions that generator resolves)
       return {
         canFit: true,
         quality: 'possible',
@@ -148,7 +149,7 @@ export function checkWordFit(
  * Count potential intersections between a word and a list of other words.
  * An intersection occurs when two words share a common letter.
  */
-function countPotentialIntersections(word: string, otherWords: string[]): number {
+export function countPotentialIntersections(word: string, otherWords: string[]): number {
   const wordLetters = new Set(word.toUpperCase().split(''));
   let totalIntersections = 0;
 
@@ -324,7 +325,9 @@ export function getFitDescription(result: FitResult): string {
         ? `${result.intersections} intersection`
         : 'Good fit';
     case 'possible':
-      return 'May fit';
+      return result.intersections === 0
+        ? 'No shared letters yet'
+        : 'May fit';
     default:
       return 'Unknown';
   }
