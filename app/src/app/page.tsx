@@ -102,16 +102,25 @@ export default function Home() {
 
   // Handle storing AI-generated clue options
   const handleClueOptionsUpdate = useCallback((word: string, options: ClueOptions) => {
+    console.log('[handleClueOptionsUpdate] word:', word, 'options:', options);
+
+    // Ensure all options are arrays
+    const safeOptions: ClueOptions = {
+      easy: Array.isArray(options.easy) ? options.easy : (options.easy ? [options.easy] : []),
+      medium: Array.isArray(options.medium) ? options.medium : (options.medium ? [options.medium] : []),
+      hard: Array.isArray(options.hard) ? options.hard : (options.hard ? [options.hard] : []),
+    };
+
     setGridClues(prev => {
       const existing = prev[word] || { easy: '', medium: '', hard: '' };
       return {
         ...prev,
         [word]: {
           // Set the first option as the default selected clue if no clue exists
-          easy: existing.easy || options.easy[0] || '',
-          medium: existing.medium || options.medium[0] || '',
-          hard: existing.hard || options.hard[0] || '',
-          options,
+          easy: existing.easy || safeOptions.easy[0] || '',
+          medium: existing.medium || safeOptions.medium[0] || '',
+          hard: existing.hard || safeOptions.hard[0] || '',
+          options: safeOptions,
         },
       };
     });
