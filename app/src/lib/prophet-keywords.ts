@@ -6,6 +6,12 @@
  * - Keywords can appear under multiple prophets where stories overlap
  *
  * Each prophet has associated keywords from their stories.
+ *
+ * NOTE: This file now serves as fallback data. The primary source
+ * is the Convex prophetKeywords table, which aggregates data from:
+ * - puzzle-archive: Proven clues from 34 existing puzzles
+ * - word-list: Curated entries from prophet stories word list
+ * - scraped: AI-extracted from myislam.org (needs review)
  */
 
 import { GRID_5X5_CONSTRAINTS } from './types';
@@ -14,10 +20,16 @@ import { GRID_5X5_CONSTRAINTS } from './types';
 const MAX_LENGTH = GRID_5X5_CONSTRAINTS.maxWordLength; // 5
 const MIN_LENGTH = GRID_5X5_CONSTRAINTS.minWordLength; // 2
 
+// Source types for keywords
+export type KeywordSource = 'puzzle-archive' | 'word-list' | 'scraped' | 'local';
+
 export interface ProphetKeyword {
   word: string;
   clue: string;
   relevance: number; // 100 = directly related, 80 = related, 60 = tangentially related
+  source?: KeywordSource; // Where this keyword came from
+  sourceDetails?: string; // Additional source info (e.g., puzzle name)
+  isApproved?: boolean; // For scraped keywords that need review
 }
 
 export interface ProphetData {

@@ -22,6 +22,7 @@ import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
 import { ProphetSelector } from '@/components/prophet-selector';
 import { ProphetKeyword } from '@/lib/prophet-keywords';
+import { KeywordReview } from '@/components/keyword-review';
 
 const themePresets = [
   { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
@@ -43,6 +44,7 @@ export default function Home() {
   const [generatedPuzzle, setGeneratedPuzzle] = useState<GeneratedPuzzle | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
 
   useEffect(() => {
     if (themeWords.length === 0) {
@@ -564,40 +566,111 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* All Clues */}
+                {/* Clues Display - Crossword Format */}
                 <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
-                  <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">All Clues</h4>
-                  <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2">
-                    {themeWords.map((word) => {
-                      const isPlaced = generatedPuzzle?.placedWordIds.includes(word.id);
-                      return (
-                        <button
-                          key={word.id}
-                          onClick={() => setSelectedWordId(word.id)}
-                          className={cn(
-                            'w-full p-3 rounded-lg text-left transition-all border',
-                            selectedWordId === word.id
-                              ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40'
-                              : 'bg-[#001a2c]/40 border-transparent hover:border-[#4A90C2]/30',
-                            !isPlaced && generatedPuzzle && 'opacity-50'
-                          )}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-white font-semibold tracking-wide">{word.activeSpelling}</span>
-                            {!isPlaced && generatedPuzzle && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-300">unplaced</span>
+                  {generatedPuzzle ? (
+                    <>
+                      {/* Across Clues */}
+                      <div className="mb-4">
+                        <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2">
+                          <span className="text-lg">→</span> ACROSS
+                        </h4>
+                        <div className="space-y-1.5">
+                          {generatedPuzzle.clues.across.map((clue) => (
+                            <button
+                              key={`across-${clue.number}`}
+                              onClick={() => {
+                                const word = themeWords.find(w =>
+                                  w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                                );
+                                if (word) setSelectedWordId(word.id);
+                              }}
+                              className="w-full text-left p-2 rounded hover:bg-[#001a2c]/60 transition-colors"
+                            >
+                              <span className="text-amber-400 font-mono font-bold mr-2">{clue.number}.</span>
+                              <span className="text-white font-semibold mr-2">{clue.answer}</span>
+                              <span className="text-[#8fc1e3] text-sm">— {clue.clue}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Down Clues */}
+                      <div>
+                        <h4 className="text-[#D4AF37] font-semibold mb-2 flex items-center gap-2">
+                          <span className="text-lg">↓</span> DOWN
+                        </h4>
+                        <div className="space-y-1.5">
+                          {generatedPuzzle.clues.down.map((clue) => (
+                            <button
+                              key={`down-${clue.number}`}
+                              onClick={() => {
+                                const word = themeWords.find(w =>
+                                  w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
+                                );
+                                if (word) setSelectedWordId(word.id);
+                              }}
+                              className="w-full text-left p-2 rounded hover:bg-[#001a2c]/60 transition-colors"
+                            >
+                              <span className="text-amber-400 font-mono font-bold mr-2">{clue.number}.</span>
+                              <span className="text-white font-semibold mr-2">{clue.answer}</span>
+                              <span className="text-[#8fc1e3] text-sm">— {clue.clue}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-[#8fc1e3] text-xs uppercase tracking-widest mb-3">Selected Words</h4>
+                      <div className="max-h-[280px] overflow-y-auto space-y-2 pr-2">
+                        {themeWords.map((word) => (
+                          <button
+                            key={word.id}
+                            onClick={() => setSelectedWordId(word.id)}
+                            className={cn(
+                              'w-full p-3 rounded-lg text-left transition-all border',
+                              selectedWordId === word.id
+                                ? 'bg-[#D4AF37]/20 border-[#D4AF37]/40'
+                                : 'bg-[#001a2c]/40 border-transparent hover:border-[#4A90C2]/30'
                             )}
-                          </div>
-                          <p className="text-[#8fc1e3] text-sm line-clamp-1">
-                            {clues[word.id] || word.clue || '(no clue)'}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-white font-semibold tracking-wide">{word.activeSpelling}</span>
+                            </div>
+                            <p className="text-[#8fc1e3] text-sm line-clamp-1">
+                              {clues[word.id] || word.clue || '(no clue)'}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Keyword Review Toggle */}
+            <button
+              onClick={() => setShowReviewPanel(!showReviewPanel)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-[#004d77]/40 border border-[#4A90C2]/20 hover:border-[#D4AF37]/30 transition-colors"
+            >
+              <span className="text-[#8fc1e3] text-sm">Review AI Keywords</span>
+              <svg
+                className={cn(
+                  'w-4 h-4 text-[#8fc1e3] transition-transform',
+                  showReviewPanel && 'rotate-180'
+                )}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Keyword Review Panel */}
+            {showReviewPanel && <KeywordReview />}
           </div>
         </div>
       </main>

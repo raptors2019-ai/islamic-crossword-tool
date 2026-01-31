@@ -105,4 +105,20 @@ export default defineSchema({
   })
     .index("by_clue", ["clueId"])
     .index("by_puzzle", ["puzzleId"]),
+
+  // Prophet keywords - aggregated from multiple sources
+  prophetKeywords: defineTable({
+    word: v.string(), // e.g., "STAFF" - always uppercase
+    prophetId: v.string(), // e.g., "MUSA" - prophet identifier
+    clue: v.string(), // the clue text
+    source: v.string(), // "puzzle-archive" | "word-list" | "scraped"
+    sourceDetails: v.optional(v.string()), // e.g., "Puzzle 19 - Prophet Yusuf 01"
+    relevance: v.number(), // 100 = direct, 80 = related, 60 = tangential
+    isApproved: v.boolean(), // scraped items need review
+  })
+    .index("by_prophet", ["prophetId"])
+    .index("by_word", ["word"])
+    .index("by_source", ["source"])
+    .index("by_approved", ["isApproved"])
+    .index("by_prophet_approved", ["prophetId", "isApproved"]),
 });

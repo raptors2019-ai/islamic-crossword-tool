@@ -9,7 +9,11 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "import:puzzles": "npx tsx scripts/import-puzzle-archive.ts",
+    "import:wordlist": "npx tsx scripts/import-word-list.ts",
+    "import:scrape": "npx tsx scripts/scrape-prophet-stories.ts",
+    "import:ai": "npx tsx scripts/generate-ai-keywords.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -27,7 +31,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.4.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "@anthropic-ai/sdk": "^0.52.0",
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

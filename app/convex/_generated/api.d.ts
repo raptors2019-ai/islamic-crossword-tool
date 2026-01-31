@@ -10,6 +10,9 @@
 
 import type * as clueGeneration from "../clueGeneration.js";
 import type * as clues from "../clues.js";
+import type * as dataImport from "../dataImport.js";
+import type * as gridGenerator from "../gridGenerator.js";
+import type * as prophetKeywords from "../prophetKeywords.js";
 import type * as puzzles from "../puzzles.js";
 import type * as themeKeywords from "../themeKeywords.js";
 import type * as words from "../words.js";
@@ -23,6 +26,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   clueGeneration: typeof clueGeneration;
   clues: typeof clues;
+  dataImport: typeof dataImport;
+  gridGenerator: typeof gridGenerator;
+  prophetKeywords: typeof prophetKeywords;
   puzzles: typeof puzzles;
   themeKeywords: typeof themeKeywords;
   words: typeof words;

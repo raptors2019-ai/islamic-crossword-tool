@@ -2,9 +2,17 @@
 
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { ProphetKeyword } from '@/lib/prophet-keywords';
-import { checkWordFit, getFitQualityColor, FitResult } from '@/lib/fit-checker';
+import { ProphetKeyword, KeywordSource } from '@/lib/prophet-keywords';
+import { checkWordFit, FitResult } from '@/lib/fit-checker';
 import { GeneratedPuzzle } from '@/lib/types';
+
+// Source badge styling
+const SOURCE_BADGES: Record<KeywordSource, { color: string; short: string }> = {
+  'puzzle-archive': { color: 'bg-amber-500/60', short: 'P' },
+  'word-list': { color: 'bg-blue-500/60', short: 'W' },
+  'scraped': { color: 'bg-slate-500/60', short: 'A' },
+  'local': { color: 'bg-purple-500/60', short: 'L' },
+};
 
 interface KeywordPillsProps {
   keywords: ProphetKeyword[];
@@ -126,6 +134,19 @@ function KeywordPill({
 
       {/* Word */}
       <span>{keyword.word}</span>
+
+      {/* Source badge */}
+      {keyword.source && keyword.source !== 'local' && (
+        <span
+          className={cn(
+            'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white',
+            SOURCE_BADGES[keyword.source]?.color || 'bg-slate-500/60'
+          )}
+          title={`Source: ${keyword.source}${keyword.sourceDetails ? ` (${keyword.sourceDetails})` : ''}`}
+        >
+          {SOURCE_BADGES[keyword.source]?.short || '?'}
+        </span>
+      )}
 
       {/* Selected checkmark */}
       {isSelected && (
