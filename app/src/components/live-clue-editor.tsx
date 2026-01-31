@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import {
   calculateCellNumbers,
 } from '@/lib/editable-grid';
 import { getWordInfo } from '@/lib/word-detector';
+import { findMatchingWords, WordSuggestion } from '@/lib/constraint-suggester';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -33,6 +34,7 @@ interface LiveClueEditorProps {
   selectedDifficulties: Record<string, Difficulty>;
   onClueChange: (word: string, difficulty: Difficulty, clue: string) => void;
   onDifficultyChange: (word: string, difficulty: Difficulty) => void;
+  onSwapWord?: (oldWord: string, newWord: string, newClue: string, row: number, col: number, direction: 'across' | 'down') => void;
   selectedWord?: string | null;
   onSelectWord?: (word: string | null) => void;
 }
@@ -122,12 +124,14 @@ export function LiveClueEditor({
   selectedDifficulties,
   onClueChange,
   onDifficultyChange,
+  onSwapWord,
   selectedWord,
   onSelectWord,
 }: LiveClueEditorProps) {
   const [editingWord, setEditingWord] = useState<string | null>(null);
   const [editingDifficulty, setEditingDifficulty] = useState<Difficulty | null>(null);
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
+  const [showAlternatives, setShowAlternatives] = useState<string | null>(null);
 
   const generateClues = useAction(api.clueGeneration.generateClues);
 
@@ -174,11 +178,41 @@ export function LiveClueEditor({
     setEditingDifficulty(null);
   };
 
+  // Get alternative words that could fit in the same slot
+  const getAlternatives = useCallback((wordInfo: ClueWord): WordSuggestion[] => {
+    // Build a pattern based on the word length with all wildcards
+    // Then find words of the same length (excluding the current word)
+    const pattern = '_'.repeat(wordInfo.word.length);
+    const matches = findMatchingWords(pattern, 12);
+    // Filter out the current word
+    return matches.filter(m => m.word.toUpperCase() !== wordInfo.word.toUpperCase());
+  }, []);
+
+  const handleSwap = useCallback((
+    oldWord: ClueWord,
+    newWord: string,
+    newClue: string
+  ) => {
+    if (onSwapWord) {
+      onSwapWord(oldWord.word, newWord, newClue, oldWord.row, oldWord.col, oldWord.direction);
+      setShowAlternatives(null);
+    }
+  }, [onSwapWord]);
+
   const renderWordItem = (word: ClueWord) => {
     const isSelected = selectedWord === word.word;
     const dictInfo = getWordInfo(word.word);
     const category = dictInfo?.category;
     const isLoading = loadingAI === word.word;
+    const isIslamic = !!dictInfo; // Word exists in Islamic dictionary
+
+    // Determine if word is likely Arabic transliteration vs English
+    // Arabic transliterations often have these patterns
+    const arabicPatterns = /^(AL|EL|ABU|IBN|BINT|UMM)|[AEIOU]{2}$|^[A-Z]{2,5}$/i;
+    const commonEnglish = ['THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'HAD', 'HAS', 'HIS', 'HOW', 'ITS', 'MAY', 'NEW', 'NOW', 'OLD', 'SEE', 'WAY', 'WHO', 'BOY', 'DID', 'GET', 'HIM', 'LET', 'PUT', 'SAY', 'SHE', 'TOO', 'USE', 'ARK', 'AXE', 'CALF', 'CLAY', 'CROW', 'FIRE', 'FISH', 'IRON', 'WELL', 'WIND', 'STAFF', 'WHALE', 'WATER', 'EARTH'];
+    const isArabicWord = category && !commonEnglish.includes(word.word.toUpperCase()) &&
+      (category === 'names-of-allah' || category === 'quran' ||
+       (category === 'prophets' && !['ARK', 'AXE', 'CALF', 'CLAY', 'CROW', 'FIRE', 'FISH', 'IRON', 'WELL', 'WIND', 'STAFF', 'WHALE', 'NILE', 'MANNA', 'AARON', 'SARAH', 'TORAH'].includes(word.word.toUpperCase())));
 
     // Get clues for this word (from state or dictionary fallback)
     const wordClues = clues[word.word] || {
@@ -189,6 +223,15 @@ export function LiveClueEditor({
 
     const currentDifficulty = selectedDifficulties[word.word] || 'easy';
     const currentClue = wordClues[currentDifficulty];
+
+    // Category colors
+    const categoryColors: Record<string, string> = {
+      'prophets': 'bg-emerald-500/20 text-emerald-400',
+      'names-of-allah': 'bg-violet-500/20 text-violet-400',
+      'quran': 'bg-amber-500/20 text-amber-400',
+      'companions': 'bg-blue-500/20 text-blue-400',
+      'general': 'bg-slate-500/20 text-slate-400',
+    };
 
     return (
       <div
@@ -212,11 +255,36 @@ export function LiveClueEditor({
             {word.word}
           </button>
           <span className="text-[#6ba8d4] text-[10px]">({word.word.length})</span>
-          {category && (
-            <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-500/20 text-emerald-400">
-              {category}
-            </span>
-          )}
+
+          {/* Tags container */}
+          <div className="ml-auto flex items-center gap-1">
+            {/* Language tag */}
+            {isIslamic && (
+              <span className={cn(
+                'px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider',
+                isArabicWord
+                  ? 'bg-cyan-500/20 text-cyan-400'
+                  : 'bg-gray-500/20 text-gray-400'
+              )}>
+                {isArabicWord ? 'AR' : 'EN'}
+              </span>
+            )}
+            {/* Category tag */}
+            {category && (
+              <span className={cn(
+                'px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider',
+                categoryColors[category] || 'bg-slate-500/20 text-slate-400'
+              )}>
+                {category === 'names-of-allah' ? 'ALLAH' : category}
+              </span>
+            )}
+            {/* Non-Islamic indicator */}
+            {!isIslamic && (
+              <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider bg-orange-500/20 text-orange-400">
+                FILLER
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Difficulty tabs - always visible */}
@@ -296,6 +364,58 @@ export function LiveClueEditor({
               )}
             >
               {currentClue || `Click to add ${currentDifficulty} clue...`}
+            </div>
+          )}
+        </div>
+
+        {/* Alternatives toggle */}
+        <div className="ml-6 mt-2">
+          <button
+            onClick={() => setShowAlternatives(showAlternatives === word.word ? null : word.word)}
+            className="text-[10px] text-[#6ba8d4] hover:text-[#D4AF37] transition-colors flex items-center gap-1"
+          >
+            <svg className={cn("w-3 h-3 transition-transform", showAlternatives === word.word && "rotate-90")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Alternatives ({getAlternatives(word).length})
+          </button>
+
+          {/* Alternatives list */}
+          {showAlternatives === word.word && (
+            <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+              {getAlternatives(word).map((alt) => {
+                const altInfo = getWordInfo(alt.word);
+                const altCategory = altInfo?.category;
+                const categoryColors: Record<string, string> = {
+                  'prophets': 'bg-emerald-500/20 text-emerald-400',
+                  'names-of-allah': 'bg-violet-500/20 text-violet-400',
+                  'quran': 'bg-amber-500/20 text-amber-400',
+                  'companions': 'bg-blue-500/20 text-blue-400',
+                  'general': 'bg-slate-500/20 text-slate-400',
+                };
+                return (
+                  <button
+                    key={alt.word}
+                    onClick={() => handleSwap(word, alt.word, alt.clue)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-[#001a2c]/40 hover:bg-[#003B5C] border border-transparent hover:border-[#D4AF37]/40 transition-all text-left group"
+                  >
+                    <span className="text-white font-medium text-sm">{alt.word}</span>
+                    {altCategory && (
+                      <span className={cn(
+                        'px-1 py-0.5 rounded text-[8px] uppercase',
+                        categoryColors[altCategory] || 'bg-slate-500/20 text-slate-400'
+                      )}>
+                        {altCategory === 'names-of-allah' ? 'Allah' : altCategory}
+                      </span>
+                    )}
+                    <span className="text-[#6ba8d4] text-[10px] truncate flex-1">{alt.clue}</span>
+                    <span className="text-[#D4AF37] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">SWAP</span>
+                  </button>
+                );
+              })}
+              {getAlternatives(word).length === 0 && (
+                <p className="text-[#6ba8d4] text-[10px] italic py-2">No alternatives found</p>
+              )}
             </div>
           )}
         </div>

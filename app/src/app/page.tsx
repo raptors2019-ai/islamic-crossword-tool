@@ -109,6 +109,8 @@ export default function Home() {
     currentPattern,
     slotWarnings,
     wordIndex,
+    canUndo,
+    undo,
     selectCell,
     handleKeyDown,
     handleContextMenu,
@@ -116,6 +118,38 @@ export default function Home() {
     clearGrid,
     toggleBlackCell,
   } = useEditableGrid();
+
+  // Handle word swap from LiveClueEditor
+  const handleSwapWord = useCallback((
+    oldWord: string,
+    newWord: string,
+    newClue: string,
+    row: number,
+    col: number,
+    direction: 'across' | 'down'
+  ) => {
+    // Place the new word in the grid at the same position
+    const newCells = placeWord(editableCells, newWord, row, col, direction, 'user');
+    if (newCells) {
+      setCells(newCells);
+      // Add the clue for the new word
+      setGridClues(prev => ({
+        ...prev,
+        [newWord.toUpperCase()]: {
+          easy: newClue,
+          medium: '',
+          hard: '',
+        },
+      }));
+      // Remove old word's clues if different
+      if (oldWord.toUpperCase() !== newWord.toUpperCase()) {
+        setGridClues(prev => {
+          const { [oldWord.toUpperCase()]: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    }
+  }, [editableCells, setCells]);
 
   // Invalid placement modal state
   const [invalidPlacementData, setInvalidPlacementData] = useState<{
@@ -869,6 +903,18 @@ export default function Home() {
                 {/* Grid Actions */}
                 <div className="flex flex-wrap justify-center gap-3 mt-4">
                   <Button
+                    onClick={undo}
+                    disabled={!canUndo}
+                    variant="outline"
+                    size="icon"
+                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white disabled:opacity-30"
+                    title="Undo (Ctrl+Z)"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </Button>
+                  <Button
                     onClick={clearGrid}
                     variant="outline"
                     className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white"
@@ -1010,6 +1056,7 @@ export default function Home() {
                   selectedDifficulties={selectedDifficulties}
                   onClueChange={handleGridClueChange}
                   onDifficultyChange={handleDifficultyChange}
+                  onSwapWord={handleSwapWord}
                   selectedWord={selectedGridWord}
                   onSelectWord={setSelectedGridWord}
                 />

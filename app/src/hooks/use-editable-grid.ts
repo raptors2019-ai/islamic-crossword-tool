@@ -33,6 +33,10 @@ export interface UseEditableGridReturn {
   slotWarnings: SlotValidation[];
   wordIndex: WordIndex;
 
+  // Undo state
+  canUndo: boolean;
+  undo: () => void;
+
   // Actions
   selectCell: (row: number, col: number) => void;
   typeLetter: (letter: string) => void;
@@ -49,11 +53,42 @@ export interface UseEditableGridReturn {
   handleContextMenu: (e: React.MouseEvent, row: number, col: number) => void;
 }
 
+const MAX_UNDO_HISTORY = 50;
+
 export function useEditableGrid(): UseEditableGridReturn {
   const [grid, setGrid] = useState<EditableGrid>(createEditableGrid);
   const [slotWarnings, setSlotWarnings] = useState<SlotValidation[]>([]);
+  const [undoHistory, setUndoHistory] = useState<EditableCell[][][]>([]);
   const lastTypedRef = useRef<number>(0);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper to save current state to undo history
+  const saveToHistory = useCallback((cells: EditableCell[][]) => {
+    setUndoHistory(prev => {
+      const newHistory = [...prev, cells.map(row => row.map(cell => ({ ...cell })))];
+      // Keep only the last MAX_UNDO_HISTORY states
+      if (newHistory.length > MAX_UNDO_HISTORY) {
+        return newHistory.slice(-MAX_UNDO_HISTORY);
+      }
+      return newHistory;
+    });
+  }, []);
+
+  // Undo function
+  const undo = useCallback(() => {
+    if (undoHistory.length === 0) return;
+
+    setUndoHistory(prev => {
+      const newHistory = [...prev];
+      const previousState = newHistory.pop();
+      if (previousState) {
+        setGrid(g => ({ ...g, cells: previousState }));
+      }
+      return newHistory;
+    });
+  }, [undoHistory.length]);
+
+  const canUndo = undoHistory.length > 0;
 
   // Build word index once at startup (memoized)
   const wordIndex = useMemo(() => buildWordIndex(ALL_WORDS_2_5), []);
@@ -96,6 +131,9 @@ export function useEditableGrid(): UseEditableGridReturn {
       const { row, col } = prev.selectedCell;
       if (prev.cells[row][col].isBlack) return prev;
 
+      // Save to history before modifying
+      saveToHistory(prev.cells);
+
       const newCells = setLetter(prev.cells, row, col, upperLetter, 'user');
       const nextCell = getNextCell(row, col, prev.direction, newCells);
 
@@ -107,7 +145,7 @@ export function useEditableGrid(): UseEditableGridReturn {
     });
 
     lastTypedRef.current = Date.now();
-  }, []);
+  }, [saveToHistory]);
 
   const deleteLetter = useCallback(() => {
     setGrid(prev => {
@@ -118,6 +156,7 @@ export function useEditableGrid(): UseEditableGridReturn {
 
       // If current cell has a letter, clear it and stay
       if (cell.letter && !cell.isBlack) {
+        saveToHistory(prev.cells);
         return {
           ...prev,
           cells: clearCell(prev.cells, row, col),
@@ -127,6 +166,7 @@ export function useEditableGrid(): UseEditableGridReturn {
       // Otherwise, move back and clear that cell
       const prevCell = getPrevCell(row, col, prev.direction, prev.cells);
       if (prevCell) {
+        saveToHistory(prev.cells);
         return {
           ...prev,
           cells: clearCell(prev.cells, prevCell.row, prevCell.col),
@@ -136,14 +176,17 @@ export function useEditableGrid(): UseEditableGridReturn {
 
       return prev;
     });
-  }, []);
+  }, [saveToHistory]);
 
   const toggleBlackCell = useCallback((row: number, col: number) => {
-    setGrid(prev => ({
-      ...prev,
-      cells: toggleBlack(prev.cells, row, col),
-    }));
-  }, []);
+    setGrid(prev => {
+      saveToHistory(prev.cells);
+      return {
+        ...prev,
+        cells: toggleBlack(prev.cells, row, col),
+      };
+    });
+  }, [saveToHistory]);
 
   const toggleDirection = useCallback(() => {
     setGrid(prev => ({
@@ -182,13 +225,19 @@ export function useEditableGrid(): UseEditableGridReturn {
   }, []);
 
   const setCells = useCallback((cells: EditableCell[][]) => {
-    setGrid(prev => ({ ...prev, cells }));
-  }, []);
+    setGrid(prev => {
+      saveToHistory(prev.cells);
+      return { ...prev, cells };
+    });
+  }, [saveToHistory]);
 
   const clearGrid = useCallback(() => {
-    setGrid(createEditableGrid());
+    setGrid(prev => {
+      saveToHistory(prev.cells);
+      return createEditableGrid();
+    });
     setSlotWarnings([]);
-  }, []);
+  }, [saveToHistory]);
 
   // Validate all slots and set warnings
   const validateCurrentSlots = useCallback(() => {
@@ -218,6 +267,13 @@ export function useEditableGrid(): UseEditableGridReturn {
   }, [grid.cells, scheduleValidation]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Handle Ctrl+Z / Cmd+Z for undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undo();
+      return;
+    }
+
     // Handle letter input
     if (e.key.length === 1 && /^[a-zA-Z]$/.test(e.key)) {
       e.preventDefault();
@@ -248,7 +304,7 @@ export function useEditableGrid(): UseEditableGridReturn {
         setGrid(prev => ({ ...prev, selectedCell: null }));
         break;
     }
-  }, [typeLetter, deleteLetter, toggleDirection, moveSelection]);
+  }, [typeLetter, deleteLetter, toggleDirection, moveSelection, undo]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
@@ -263,6 +319,8 @@ export function useEditableGrid(): UseEditableGridReturn {
     currentPattern,
     slotWarnings,
     wordIndex,
+    canUndo,
+    undo,
     selectCell,
     typeLetter,
     deleteLetter,
