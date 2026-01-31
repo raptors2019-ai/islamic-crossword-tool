@@ -1,6 +1,9 @@
 import { ThemeWord, GeneratedPuzzle, PuzzleStatistics, FillerSuggestion } from './types';
 import { sampleWords } from './sample-data';
 
+// Flag to use Convex generator (set to true when Convex is configured)
+const USE_CONVEX_GENERATOR = false;
+
 // Common English filler words that work well in crosswords
 const commonFillerWords: { word: string; clue: string; score: number }[] = [
   { word: 'PEACE', clue: 'Tranquility; what Salam means', score: 95 },
@@ -43,15 +46,30 @@ interface GeneratePuzzleOptions {
 }
 
 /**
- * Calls the Python crossword generator with theme words.
- * In development, this simulates the API call.
- * In production, this would call a backend API or serverless function.
+ * Calls the crossword generator with theme words.
+ *
+ * Generation modes:
+ * 1. Convex action (USE_CONVEX_GENERATOR = true) - uses server-side 5x5 generator
+ * 2. Local simulation (USE_CONVEX_GENERATOR = false) - client-side simulation
  */
 export async function generatePuzzle(options: GeneratePuzzleOptions): Promise<GeneratedPuzzle> {
   const { title = 'Islamic Crossword', author = 'myislam.org', themeWords, targetWords = 7 } = options;
 
-  // For now, simulate the puzzle generation
-  // In production, this would call the Python generator via API
+  if (USE_CONVEX_GENERATOR) {
+    // TODO: Wire up to Convex action when ready
+    // const result = await convexClient.action(api.gridGenerator.generate5x5, {
+    //   words: themeWords.map(w => ({
+    //     id: w.id,
+    //     word: w.word,
+    //     clue: w.clue,
+    //     activeSpelling: w.activeSpelling,
+    //   })),
+    //   targetWords,
+    // });
+    // return convertConvexResultToGeneratedPuzzle(result, title, author);
+  }
+
+  // Use local simulation for now
   return simulateGeneration(title, author, themeWords, targetWords);
 }
 

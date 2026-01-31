@@ -42,6 +42,24 @@ export interface ClueStatus {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+// Grid size constraints
+export type GridSize = '5x5' | '7x7' | '9x9' | 'freeform';
+
+export interface GridConstraints {
+  size: GridSize;
+  maxWordLength: number;
+  minWordLength: number;
+  targetWordCount: number;
+}
+
+// Default constraints for 5x5 puzzles (Azmat's format)
+export const GRID_5X5_CONSTRAINTS: GridConstraints = {
+  size: '5x5',
+  maxWordLength: 5,
+  minWordLength: 2,
+  targetWordCount: 6,
+};
+
 // Theme word for puzzle building - tracks spelling variants and which is active
 export interface ThemeWord {
   id: string;
