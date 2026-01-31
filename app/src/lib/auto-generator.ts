@@ -503,7 +503,6 @@ function tryGenerateWithPattern(
   // If CSP failed but we have theme words placed, return a partial result
   // This allows the UI to show what was placed and let user use Auto-Complete
   if (!cspResult.success) {
-
     // Only return partial if we placed at least some theme words
     if (themeWordsPlaced.length > 0) {
       const gridStats = getGridStats(themedGrid);

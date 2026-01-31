@@ -140,13 +140,14 @@ function transformGrid(
   return result;
 }
 
-// Cell size configurations
+// Cell size configurations with responsive variants
 const cellSizes = {
   xs: { cell: 'w-6 h-6', text: 'text-xs', number: 'text-[5px]' },
   sm: { cell: 'w-8 h-8', text: 'text-sm', number: 'text-[6px]' },
   md: { cell: 'w-10 h-10', text: 'text-base', number: 'text-[8px]' },
-  lg: { cell: 'w-12 h-12', text: 'text-lg', number: 'text-[9px]' },
-  xl: { cell: 'w-14 h-14', text: 'text-xl', number: 'text-[10px]' },
+  // lg is responsive: smaller on mobile, larger on tablet+
+  lg: { cell: 'w-10 h-10 md:w-12 md:h-12', text: 'text-sm md:text-lg', number: 'text-[8px] md:text-[9px]' },
+  xl: { cell: 'w-12 h-12 md:w-14 md:h-14', text: 'text-base md:text-xl', number: 'text-[9px] md:text-[10px]' },
 };
 
 // Theme configurations with high-contrast black cells
@@ -474,17 +475,17 @@ export function CrosswordGrid({
       >
         {/* Direction indicator for editable mode */}
         {editable && selectedCell && (
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="text-[#8fc1e3] text-xs uppercase tracking-wider">Direction:</span>
+          <div className="flex items-center justify-center gap-1 md:gap-2 mb-2">
+            <span className="text-[#8fc1e3] text-[10px] md:text-xs uppercase tracking-wider hidden sm:inline">Direction:</span>
             <span className={cn(
-              'px-2 py-1 rounded text-xs font-bold',
+              'px-2 py-1 rounded text-[10px] md:text-xs font-bold',
               editDirection === 'across'
                 ? 'bg-[#D4AF37] text-[#001a2c]'
                 : 'bg-[#4A90C2] text-white'
             )}>
               {editDirection === 'across' ? '→ Across' : '↓ Down'}
             </span>
-            <span className="text-[#6ba8d4] text-xs">(Tab to toggle)</span>
+            <span className="text-[#6ba8d4] text-[10px] md:text-xs hidden sm:inline">(Tab to toggle)</span>
           </div>
         )}
 
@@ -650,18 +651,18 @@ export function CrosswordGrid({
         </div>
       </div>
 
-      {/* Edit mode instructions */}
+      {/* Edit mode instructions - hide some on mobile for space */}
       {editable && (
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-[#8fc1e3]">
+        <div className="mt-2 md:mt-3 flex flex-wrap items-center justify-center gap-2 md:gap-3 text-[10px] md:text-xs text-[#8fc1e3]">
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Type</kbd>
-            to fill letters
+            <kbd className="px-1 md:px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Type</kbd>
+            <span className="hidden sm:inline">to fill</span> letters
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Tab</kbd>
-            toggle direction
+            <kbd className="px-1 md:px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Tab</kbd>
+            <span className="hidden sm:inline">toggle</span> direction
           </span>
-          <span className="flex items-center gap-1">
+          <span className="hidden sm:flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-[#001a2c] rounded border border-[#4A90C2]/30">Right-click</kbd>
             toggle black cell
           </span>

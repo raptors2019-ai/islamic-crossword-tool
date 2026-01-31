@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Grid3X3, FileText } from 'lucide-react';
 import { ThemeWord, GeneratedPuzzle } from '@/lib/types';
 import { generatePuzzle } from '@/lib/generator-api';
 import { PuzzleStats } from '@/components/puzzle-stats';
@@ -71,6 +72,9 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [placedInGridIds, setPlacedInGridIds] = useState<Set<string>>(new Set());
+
+  // Mobile navigation state
+  const [mobileTab, setMobileTab] = useState<'grid' | 'clues'>('grid');
 
   // Grid-based clues with difficulty levels (word -> { easy, medium, hard })
   type Difficulty = 'easy' | 'medium' | 'hard';
@@ -246,6 +250,9 @@ export default function Home() {
   // Auto-complete state
   const [isAutoCompleting, setIsAutoCompleting] = useState(false);
   const [autoCompleteResult, setAutoCompleteResult] = useState<CSPFillResult | null>(null);
+
+  // Auto-generate result (from prophet selection)
+  const [autoGenerateResult, setAutoGenerateResult] = useState<GenerationResult | null>(null);
 
   // Detect words in the editable grid
   const detectedWords = useMemo(() => {
@@ -622,6 +629,11 @@ export default function Home() {
       setCells(result.grid);
     }
 
+    // Store the generation result to show status message
+    setAutoGenerateResult(result);
+    // Clear any previous auto-complete result since this is a fresh grid
+    setAutoCompleteResult(null);
+
     setIsGenerating(false);
   }, [clearGrid, wordIndex, setCells]);
 
@@ -648,6 +660,13 @@ export default function Home() {
       setIsAutoCompleting(false);
     }
   }, [editableCells, wordIndex, setCells]);
+
+  // Handle clearing the grid (also clears generation result states)
+  const handleClearGrid = useCallback(() => {
+    clearGrid();
+    setAutoGenerateResult(null);
+    setAutoCompleteResult(null);
+  }, [clearGrid]);
 
   // Check if grid can be completed (for validation)
   const gridCompletionStatus = useMemo(() => {
@@ -783,25 +802,25 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-[#001a2c] via-[#003B5C] to-[#002a42]">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#004d77]/60 backdrop-blur-md border-b border-[#4A90C2]/20">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex flex-wrap items-center gap-6">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#b8952f] flex items-center justify-center shadow-lg">
-                <span className="text-xl">☪</span>
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-6">
+            {/* Logo - smaller on mobile */}
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#b8952f] flex items-center justify-center shadow-lg">
+                <span className="text-lg md:text-xl">☪</span>
               </div>
-              <div>
-                <h1 className="text-white text-lg tracking-wide font-serif font-semibold">
+              <div className="hidden sm:block">
+                <h1 className="text-white text-base md:text-lg tracking-wide font-serif font-semibold">
                   Crossword Builder
                 </h1>
-                <p className="text-[#8fc1e3] text-xs tracking-widest uppercase">5×5 Islamic Puzzles</p>
+                <p className="text-[#8fc1e3] text-[10px] md:text-xs tracking-widest uppercase">5×5 Islamic Puzzles</p>
               </div>
             </div>
 
-            {/* Theme Selector */}
-            <div>
+            {/* Theme Selector - full width on mobile */}
+            <div className="w-full sm:w-auto order-last sm:order-none">
               <Select value={selectedTheme} onValueChange={(v) => { setSelectedTheme(v); clearWordsForTheme(); }}>
-                <SelectTrigger className="w-[200px] bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors">
+                <SelectTrigger className="w-full sm:w-[200px] bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#002a42] border-[#4A90C2]/30">
@@ -817,8 +836,8 @@ export default function Home() {
               </Select>
             </div>
 
-            {/* Title Input */}
-            <div className="flex-1 min-w-[200px] max-w-[320px]">
+            {/* Title Input - hidden on mobile, shown on tablet+ */}
+            <div className="hidden sm:flex flex-1 min-w-[200px] max-w-[320px]">
               <Input
                 value={puzzleTitle}
                 onChange={(e) => setPuzzleTitle(e.target.value)}
@@ -826,10 +845,10 @@ export default function Home() {
               />
             </div>
 
-            {/* Islamic Percentage */}
+            {/* Islamic Percentage - always visible but compact on mobile */}
             <div
               className={cn(
-                'px-4 py-2 rounded-full flex items-center gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
+                'px-2 md:px-4 py-1 md:py-2 rounded-full flex items-center gap-1 md:gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
                 islamicPercentage >= 50
                   ? 'bg-emerald-900/50 border border-emerald-500/30'
                   : 'bg-red-900/50 border border-red-500/30'
@@ -839,19 +858,47 @@ export default function Home() {
                 'w-2 h-2 rounded-full animate-pulse',
                 islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
               )} />
-              <span className="text-white font-medium">{islamicPercentage}%</span>
-              <span className="text-[#8fc1e3] text-sm">Islamic</span>
+              <span className="text-white font-medium text-sm md:text-base">{islamicPercentage}%</span>
+              <span className="text-[#8fc1e3] text-xs md:text-sm hidden md:inline">Islamic</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_340px] gap-8">
+      <main className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+        {/* Mobile Tab Switcher - visible only on small screens */}
+        <div className="flex md:hidden border-b border-[#4A90C2]/20 mb-4">
+          <button
+            onClick={() => setMobileTab('grid')}
+            className={cn(
+              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors",
+              mobileTab === 'grid'
+                ? "text-[#D4AF37] border-b-2 border-[#D4AF37]"
+                : "text-[#8fc1e3] hover:text-white"
+            )}
+          >
+            <Grid3X3 className="w-4 h-4" />
+            Grid
+          </button>
+          <button
+            onClick={() => setMobileTab('clues')}
+            className={cn(
+              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors",
+              mobileTab === 'clues'
+                ? "text-[#D4AF37] border-b-2 border-[#D4AF37]"
+                : "text-[#8fc1e3] hover:text-white"
+            )}
+          >
+            <FileText className="w-4 h-4" />
+            Clues
+          </button>
+        </div>
 
-          {/* Left Column: Slot Stats + Constraint Suggestions + Gap Fillers */}
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] lg:grid-cols-[280px_1fr_320px] gap-4 md:gap-6 lg:gap-8">
+
+          {/* Left Column: Slot Stats + Constraint Suggestions + Gap Fillers - hidden on mobile/tablet */}
+          <div className="hidden lg:block space-y-4 lg:space-y-6">
             {/* Slot Statistics */}
             <SlotStats
               cells={editableCells}
@@ -920,12 +967,22 @@ export default function Home() {
             )}
           </div>
 
-          {/* Center Column: Word Hub + Puzzle Grid */}
-          <div className="space-y-6">
+          {/* Center Column: Word Hub + Puzzle Grid - conditional visibility on mobile */}
+          <div className={cn("space-y-4 md:space-y-6", mobileTab !== 'grid' && 'hidden md:block')}>
+            {/* Mobile-only title input */}
+            <div className="sm:hidden">
+              <Input
+                value={puzzleTitle}
+                onChange={(e) => setPuzzleTitle(e.target.value)}
+                placeholder="Puzzle title..."
+                className="bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] font-serif text-base focus:ring-2 focus:ring-[#4A90C2]/30"
+              />
+            </div>
+
             {/* Word Hub - shown for prophets theme */}
             {selectedTheme === 'prophets' && (
               <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
-                <CardContent className="p-5">
+                <CardContent className="p-4 md:p-5">
                   <WordHub
                     onKeywordSelect={addProphetKeyword}
                     onKeywordDeselect={removeProphetKeyword}
@@ -947,7 +1004,7 @@ export default function Home() {
 
             {/* Always-On Editable Grid */}
             <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex justify-center mb-4">
                   <CrosswordGrid
                     grid={toGeneratedPuzzleGrid(calculateCellNumbers(editableCells))}
@@ -1002,7 +1059,7 @@ export default function Home() {
                     </svg>
                   </Button>
                   <Button
-                    onClick={clearGrid}
+                    onClick={handleClearGrid}
                     variant="outline"
                     className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white"
                   >
@@ -1054,6 +1111,32 @@ export default function Home() {
                     </Button>
                   )}
                 </div>
+
+                {/* Auto-Generate Result (from prophet selection) */}
+                {autoGenerateResult && (
+                  <div className={cn(
+                    "mt-4 p-3 rounded-lg text-sm",
+                    autoGenerateResult.success
+                      ? "bg-emerald-900/30 border border-emerald-500/30 text-emerald-400"
+                      : "bg-amber-900/30 border border-amber-500/30 text-amber-400"
+                  )}>
+                    <div className="font-semibold mb-1">
+                      {autoGenerateResult.success ? 'Puzzle Generated!' : 'Partial Grid Generated'}
+                    </div>
+                    <div className="text-xs opacity-80 space-y-1">
+                      <div>Theme words placed: {autoGenerateResult.stats.themeWordsPlaced}</div>
+                      <div>Grid fill: {autoGenerateResult.stats.gridFillPercentage.toFixed(0)}%</div>
+                      {autoGenerateResult.stats.islamicPercentage > 0 && (
+                        <div>Islamic words: {autoGenerateResult.stats.islamicPercentage.toFixed(0)}%</div>
+                      )}
+                      {!autoGenerateResult.success && (
+                        <div className="text-amber-300 mt-2">
+                          Use &quot;Auto-Complete&quot; to fill remaining slots, or manually edit the grid.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Auto-Complete Result */}
                 {autoCompleteResult && (
@@ -1108,7 +1191,7 @@ export default function Home() {
             {/* Generated Puzzle Preview (shows when auto-generated) */}
             {generatedPuzzle && (
               <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden">
-                <CardContent className="p-6">
+                <CardContent className="p-4 md:p-6">
                   <h3 className="text-[#D4AF37] text-sm font-semibold mb-4 uppercase tracking-wider">
                     Auto-Generated Preview
                   </h3>
@@ -1129,11 +1212,11 @@ export default function Home() {
 
           </div>
 
-          {/* Right Column: Clue Editor */}
-          <div className="space-y-6">
+          {/* Right Column: Clue Editor - hidden on mobile, visible on tablet+ */}
+          <div className={cn("space-y-4 md:space-y-6", mobileTab !== 'clues' && 'hidden md:block')}>
             <Card className="bg-[#004d77]/40 backdrop-blur-sm border-[#4A90C2]/20 overflow-hidden border-t-2 border-t-[#D4AF37]">
-              <CardContent className="p-5">
-                <h3 className="text-[#D4AF37] text-lg mb-4 font-serif font-semibold tracking-wide">
+              <CardContent className="p-4 md:p-5">
+                <h3 className="text-[#D4AF37] text-base md:text-lg mb-3 md:mb-4 font-serif font-semibold tracking-wide">
                   Clue Editor
                 </h3>
 
@@ -1157,44 +1240,50 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#004d77]/60 backdrop-blur-md border-t border-[#4A90C2]/20">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex flex-wrap justify-center gap-4">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#004d77]/90 backdrop-blur-md border-t border-[#4A90C2]/20 z-40">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 sm:gap-4">
+            {/* Primary button - full width on mobile */}
             <Button
               onClick={() => generatedPuzzle && downloadFlutterJson(generatedPuzzle, selectedTheme, puzzleTitle)}
               disabled={!generatedPuzzle}
-              className="bg-gradient-to-r from-[#D4AF37] to-[#b8952f] hover:from-[#e5c86b] hover:to-[#D4AF37] text-[#001a2c] font-bold px-6 shadow-lg shadow-[#D4AF37]/20 transition-all hover:scale-105 disabled:opacity-40"
+              className="w-full sm:w-auto bg-gradient-to-r from-[#D4AF37] to-[#b8952f] hover:from-[#e5c86b] hover:to-[#D4AF37] text-[#001a2c] font-bold px-4 md:px-6 shadow-lg shadow-[#D4AF37]/20 transition-all hover:scale-105 disabled:opacity-40"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              Export Flutter JSON
+              <span className="hidden sm:inline">Export Flutter JSON</span>
+              <span className="sm:hidden">Export Flutter</span>
             </Button>
-            <Button
-              disabled={!generatedPuzzle}
-              variant="outline"
-              className="border-[#4A90C2]/40 bg-[#002a42]/80 text-white hover:bg-[#003B5C] disabled:opacity-40"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export IPUZ
-            </Button>
-            <Button
-              disabled={!generatedPuzzle}
-              variant="outline"
-              className="border-[#4A90C2]/40 bg-[#002a42]/80 text-white hover:bg-[#003B5C] disabled:opacity-40"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Export PDF
-            </Button>
+            {/* Secondary buttons - side by side on mobile */}
+            <div className="flex gap-2 sm:contents">
+              <Button
+                disabled={!generatedPuzzle}
+                variant="outline"
+                className="flex-1 sm:flex-none border-[#4A90C2]/40 bg-[#002a42]/80 text-white hover:bg-[#003B5C] disabled:opacity-40"
+              >
+                <svg className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="hidden sm:inline">Export </span>IPUZ
+              </Button>
+              <Button
+                disabled={!generatedPuzzle}
+                variant="outline"
+                className="flex-1 sm:flex-none border-[#4A90C2]/40 bg-[#002a42]/80 text-white hover:bg-[#003B5C] disabled:opacity-40"
+              >
+                <svg className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span className="hidden sm:inline">Export </span>PDF
+              </Button>
+            </div>
           </div>
         </div>
       </footer>
 
-      <div className="h-24" />
+      {/* Spacer for fixed footer - taller on mobile due to stacked buttons */}
+      <div className="h-32 sm:h-24" />
 
       {/* Invalid Placement Modal */}
       {invalidPlacementData && (
