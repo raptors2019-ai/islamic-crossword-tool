@@ -21,11 +21,15 @@ import {
   validateConnectivity,
   BLACK_SQUARE_PATTERNS,
   getGridStats,
+  addSymmetricBlack,
+  wouldBreakWord,
 } from './editable-grid';
 import {
   fillGridWithCSP,
   canGridBeFilled,
   CSPFillResult,
+  CSPSlot,
+  getCSPSlots,
 } from './csp-filler';
 import {
   checkArcConsistency,
@@ -351,6 +355,175 @@ function findOpenPosition(
 }
 
 /**
+ * Find strategic black square positions to help resolve problematic slots.
+ *
+ * When CSP fails due to slots with 0 candidates, adding black squares
+ * at specific positions can shorten or eliminate those problematic slots,
+ * making the grid solvable.
+ *
+ * Returns positions that:
+ * 1. Would not break existing placed words
+ * 2. Would maintain grid connectivity
+ * 3. Would help bound problematic slot ends
+ */
+function findStrategicBlackPositions(
+  cells: EditableCell[][],
+  problematicSlots: CSPSlot[]
+): { row: number; col: number; reason: string }[] {
+  const suggestions: { row: number; col: number; reason: string; priority: number }[] = [];
+  const seen = new Set<string>();
+
+  for (const slot of problematicSlots) {
+    // Try adding black at the position after the slot ends
+    const endR = slot.direction === 'down'
+      ? slot.start.row + slot.length
+      : slot.start.row;
+    const endC = slot.direction === 'across'
+      ? slot.start.col + slot.length
+      : slot.start.col;
+
+    // Position after slot end
+    if (endR < GRID_SIZE && endC < GRID_SIZE) {
+      const key = `${endR},${endC}`;
+      if (!seen.has(key) && !wouldBreakWord(cells, endR, endC)) {
+        const testCells = addSymmetricBlack(cells, endR, endC);
+        if (validateConnectivity(testCells)) {
+          seen.add(key);
+          suggestions.push({
+            row: endR,
+            col: endC,
+            reason: `Bound end of ${slot.direction} slot at (${slot.start.row + 1},${slot.start.col + 1})`,
+            priority: 10, // High priority - directly addresses the problem
+          });
+        }
+      }
+    }
+
+    // Try adding black at the position before the slot starts
+    const beforeR = slot.direction === 'down'
+      ? slot.start.row - 1
+      : slot.start.row;
+    const beforeC = slot.direction === 'across'
+      ? slot.start.col - 1
+      : slot.start.col;
+
+    if (beforeR >= 0 && beforeC >= 0) {
+      const key = `${beforeR},${beforeC}`;
+      if (!seen.has(key) && !wouldBreakWord(cells, beforeR, beforeC)) {
+        const testCells = addSymmetricBlack(cells, beforeR, beforeC);
+        if (validateConnectivity(testCells)) {
+          seen.add(key);
+          suggestions.push({
+            row: beforeR,
+            col: beforeC,
+            reason: `Bound start of ${slot.direction} slot at (${slot.start.row + 1},${slot.start.col + 1})`,
+            priority: 8,
+          });
+        }
+      }
+    }
+
+    // Try adding black at positions along the slot to split it
+    // (useful for long slots that have no valid words)
+    if (slot.length >= 4) {
+      for (let i = 1; i < slot.length - 1; i++) {
+        const midR = slot.direction === 'down'
+          ? slot.start.row + i
+          : slot.start.row;
+        const midC = slot.direction === 'across'
+          ? slot.start.col + i
+          : slot.start.col;
+
+        const key = `${midR},${midC}`;
+        if (!seen.has(key) && !wouldBreakWord(cells, midR, midC)) {
+          const testCells = addSymmetricBlack(cells, midR, midC);
+          if (validateConnectivity(testCells)) {
+            seen.add(key);
+            suggestions.push({
+              row: midR,
+              col: midC,
+              reason: `Split ${slot.direction} slot at (${slot.start.row + 1},${slot.start.col + 1})`,
+              priority: 5, // Lower priority - more disruptive
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Sort by priority (highest first)
+  suggestions.sort((a, b) => b.priority - a.priority);
+
+  return suggestions.map(({ row, col, reason }) => ({ row, col, reason }));
+}
+
+/**
+ * Try to complete the grid by adding strategic black squares
+ * when the initial CSP fill fails.
+ *
+ * Strategy:
+ * 1. Identify slots with 0 candidates (problematic slots)
+ * 2. Find positions where adding symmetric black squares would help
+ * 3. Add black squares one at a time (maintaining symmetry)
+ * 4. Re-run CSP after each addition
+ * 5. Stop after maxIterations or when successful
+ */
+function tryWithStrategicBlacks(
+  grid: EditableCell[][],
+  wordIndex: WordIndex,
+  maxTimeMs: number,
+  placedThemeWordSet: Set<string>,
+  maxIterations: number = 3
+): CSPFillResult | null {
+  let currentGrid = grid.map(row => row.map(cell => ({ ...cell })));
+  let bestResult: CSPFillResult | null = null;
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    // Check which slots are problematic
+    const checkResult = canGridBeFilled(currentGrid, wordIndex);
+
+    if (checkResult.canFill) {
+      // Grid can be filled, try CSP
+      const cspResult = fillGridWithCSP(currentGrid, wordIndex, maxTimeMs, placedThemeWordSet);
+      if (cspResult.success) {
+        return cspResult;
+      }
+      // CSP failed but grid was fillable - might be timeout
+      if (!bestResult || cspResult.placedWords.length > bestResult.placedWords.length) {
+        bestResult = cspResult;
+      }
+      break;
+    }
+
+    // Get strategic positions for black squares
+    const blackPositions = findStrategicBlackPositions(currentGrid, checkResult.problematicSlots);
+
+    if (blackPositions.length === 0) {
+      // No valid positions to add blacks
+      break;
+    }
+
+    // Add the highest priority black square position (symmetric)
+    const pos = blackPositions[0];
+    currentGrid = addSymmetricBlack(currentGrid, pos.row, pos.col);
+
+    // Try CSP with the new grid configuration
+    const cspResult = fillGridWithCSP(currentGrid, wordIndex, maxTimeMs, placedThemeWordSet);
+
+    if (cspResult.success) {
+      return cspResult;
+    }
+
+    // Track best partial result
+    if (!bestResult || cspResult.placedWords.length > bestResult.placedWords.length) {
+      bestResult = cspResult;
+    }
+  }
+
+  return bestResult;
+}
+
+/**
  * Place theme words in the grid with improved strategy:
  * 1. Sort by "placeability" (letter friendliness - length penalty)
  * 2. First word is centered (across or down based on length)
@@ -485,7 +658,31 @@ function tryGenerateWithPattern(
   // Collect theme words that were placed to prevent duplicates
   const placedThemeWordSet = new Set(themeWordsPlaced.map(pw => pw.word.toUpperCase()));
 
-  const cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime, placedThemeWordSet);
+  let cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime, placedThemeWordSet);
+  let finalGrid = cspResult.grid;
+
+  // If CSP failed, try adding strategic black squares
+  if (!cspResult.success && themeWordsPlaced.length > 0) {
+    const blackSquareRemainingTime = maxTimeMs - (Date.now() - startTime);
+    if (blackSquareRemainingTime > 1000) {
+      const blackSquareResult = tryWithStrategicBlacks(
+        themedGrid,
+        wordIndex,
+        blackSquareRemainingTime,
+        placedThemeWordSet,
+        3 // max iterations
+      );
+
+      if (blackSquareResult && blackSquareResult.success) {
+        cspResult = blackSquareResult;
+        finalGrid = blackSquareResult.grid;
+      } else if (blackSquareResult && blackSquareResult.placedWords.length > cspResult.placedWords.length) {
+        // Use the better partial result from black square optimization
+        cspResult = blackSquareResult;
+        finalGrid = blackSquareResult.grid;
+      }
+    }
+  }
 
   // Combine placed words (even for partial results)
   const fillerWords: PlacedWord[] = cspResult.placedWords.map((pw) => ({
@@ -505,14 +702,14 @@ function tryGenerateWithPattern(
   if (!cspResult.success) {
     // Only return partial if we placed at least some theme words
     if (themeWordsPlaced.length > 0) {
-      const gridStats = getGridStats(themedGrid);
+      const gridStats = getGridStats(finalGrid);
       return {
         success: false, // Mark as not fully successful
-        grid: themedGrid, // Return grid with theme words placed
+        grid: finalGrid, // Return grid with theme words and any strategic black squares
         placedWords: themeWordsPlaced, // Only theme words, no fillers
         unplacedThemeWords: unplaced,
         stats: {
-          totalSlots: getAllSlots(themedGrid).length,
+          totalSlots: getAllSlots(finalGrid).length,
           themeWordsPlaced: themeWordsPlaced.length,
           fillerWordsPlaced: 0,
           islamicPercentage: 100, // All placed words are theme/Islamic
@@ -541,11 +738,11 @@ function tryGenerateWithPattern(
     }
   }
 
-  const gridStats = getGridStats(cspResult.grid);
+  const gridStats = getGridStats(finalGrid);
 
   return {
     success: true,
-    grid: cspResult.grid,
+    grid: finalGrid,
     placedWords: allWords,
     unplacedThemeWords: unplaced,
     stats: {
