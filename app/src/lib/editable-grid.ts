@@ -625,3 +625,452 @@ export function placeWordAtBestPosition(
 
   return { cells: newCells, placement };
 }
+
+// ============================================================================
+// BLACK SQUARE HELPERS
+// ============================================================================
+
+/**
+ * Add symmetric black squares (180° point symmetry)
+ * For a 5x5 grid, position (r, c) mirrors to (4-r, 4-c)
+ */
+export function addSymmetricBlack(
+  cells: EditableCell[][],
+  row: number,
+  col: number
+): EditableCell[][] {
+  const newCells = cells.map((r) => r.map((c) => ({ ...c })));
+
+  // Primary position
+  if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+    newCells[row][col] = {
+      ...newCells[row][col],
+      isBlack: true,
+      letter: null,
+      source: 'empty',
+    };
+  }
+
+  // Mirror position (180° rotation)
+  const mirrorRow = GRID_SIZE - 1 - row;
+  const mirrorCol = GRID_SIZE - 1 - col;
+
+  if (mirrorRow >= 0 && mirrorRow < GRID_SIZE && mirrorCol >= 0 && mirrorCol < GRID_SIZE) {
+    newCells[mirrorRow][mirrorCol] = {
+      ...newCells[mirrorRow][mirrorCol],
+      isBlack: true,
+      letter: null,
+      source: 'empty',
+    };
+  }
+
+  return newCells;
+}
+
+/**
+ * Check if adding a black square at a position would break an existing word
+ */
+export function wouldBreakWord(
+  cells: EditableCell[][],
+  row: number,
+  col: number
+): boolean {
+  // Can't place black on a cell with a letter
+  if (cells[row][col].letter) {
+    return true;
+  }
+
+  // Check mirror position too
+  const mirrorRow = GRID_SIZE - 1 - row;
+  const mirrorCol = GRID_SIZE - 1 - col;
+
+  if (
+    mirrorRow >= 0 &&
+    mirrorRow < GRID_SIZE &&
+    mirrorCol >= 0 &&
+    mirrorCol < GRID_SIZE &&
+    cells[mirrorRow][mirrorCol].letter
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if all white cells in the grid are connected (no isolated regions)
+ * Uses BFS to verify connectivity
+ */
+export function validateConnectivity(cells: EditableCell[][]): boolean {
+  // Find first non-black cell
+  let startR = -1;
+  let startC = -1;
+
+  for (let r = 0; r < GRID_SIZE && startR === -1; r++) {
+    for (let c = 0; c < GRID_SIZE && startC === -1; c++) {
+      if (!cells[r][c].isBlack) {
+        startR = r;
+        startC = c;
+      }
+    }
+  }
+
+  // If no white cells, trivially connected
+  if (startR === -1) return true;
+
+  // Count total white cells
+  let totalWhite = 0;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (!cells[r][c].isBlack) totalWhite++;
+    }
+  }
+
+  // BFS from start cell
+  const visited = new Set<string>();
+  const queue = [{ r: startR, c: startC }];
+  visited.add(`${startR},${startC}`);
+
+  while (queue.length > 0) {
+    const { r, c } = queue.shift()!;
+
+    // Check 4-neighbors
+    const neighbors = [
+      { r: r - 1, c },
+      { r: r + 1, c },
+      { r, c: c - 1 },
+      { r, c: c + 1 },
+    ];
+
+    for (const n of neighbors) {
+      if (
+        n.r >= 0 &&
+        n.r < GRID_SIZE &&
+        n.c >= 0 &&
+        n.c < GRID_SIZE &&
+        !cells[n.r][n.c].isBlack &&
+        !visited.has(`${n.r},${n.c}`)
+      ) {
+        visited.add(`${n.r},${n.c}`);
+        queue.push(n);
+      }
+    }
+  }
+
+  // All white cells should be reachable
+  return visited.size === totalWhite;
+}
+
+/**
+ * Suggest black square positions to bound short words
+ * Returns positions where adding a black square would:
+ * 1. Not break existing words
+ * 2. Maintain grid connectivity
+ * 3. Help bound slots that are too short or invalid
+ */
+export function suggestBlackSquares(
+  cells: EditableCell[][],
+  placedWords: { row: number; col: number; direction: 'across' | 'down'; length: number }[]
+): { row: number; col: number; reason: string }[] {
+  const suggestions: { row: number; col: number; reason: string }[] = [];
+
+  // Find cells that are adjacent to word ends and empty
+  for (const word of placedWords) {
+    // Check position after word end
+    let endR = word.direction === 'down' ? word.row + word.length : word.row;
+    let endC = word.direction === 'across' ? word.col + word.length : word.col;
+
+    // Position after word
+    if (endR < GRID_SIZE && endC < GRID_SIZE) {
+      const cell = cells[endR][endC];
+      if (!cell.isBlack && !cell.letter) {
+        // Check if adding black here would help
+        const testCells = addSymmetricBlack(cells, endR, endC);
+        if (validateConnectivity(testCells)) {
+          suggestions.push({
+            row: endR,
+            col: endC,
+            reason: `Bound end of ${word.direction} word`,
+          });
+        }
+      }
+    }
+
+    // Position before word start
+    let beforeR = word.direction === 'down' ? word.row - 1 : word.row;
+    let beforeC = word.direction === 'across' ? word.col - 1 : word.col;
+
+    if (beforeR >= 0 && beforeC >= 0) {
+      const cell = cells[beforeR][beforeC];
+      if (!cell.isBlack && !cell.letter) {
+        const testCells = addSymmetricBlack(cells, beforeR, beforeC);
+        if (validateConnectivity(testCells)) {
+          suggestions.push({
+            row: beforeR,
+            col: beforeC,
+            reason: `Bound start of ${word.direction} word`,
+          });
+        }
+      }
+    }
+  }
+
+  // Remove duplicates
+  const seen = new Set<string>();
+  return suggestions.filter((s) => {
+    const key = `${s.row},${s.col}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Common black square patterns for 5x5 grids
+ * Each pattern is defined by the primary positions (symmetry is auto-applied)
+ */
+export const BLACK_SQUARE_PATTERNS: {
+  name: string;
+  positions: [number, number][];
+}[] = [
+  { name: 'open', positions: [] },
+  { name: 'single-corner', positions: [[0, 4]] },
+  { name: 'diagonal-corners', positions: [[0, 4], [4, 0]] },
+  { name: 'L-shape', positions: [[0, 4], [1, 4]] },
+  { name: 'center', positions: [[2, 2]] },
+  { name: 'staircase', positions: [[0, 4], [1, 3]] },
+  { name: 'edge-middle', positions: [[2, 4], [2, 0]] },
+  { name: 'three-corners', positions: [[0, 4], [4, 0], [4, 4]] },
+];
+
+/**
+ * Apply a black square pattern to the grid
+ */
+export function applyBlackPattern(
+  cells: EditableCell[][],
+  patternIndex: number
+): EditableCell[][] {
+  if (patternIndex < 0 || patternIndex >= BLACK_SQUARE_PATTERNS.length) {
+    return cells;
+  }
+
+  let newCells = cells.map((row) => row.map((cell) => ({ ...cell })));
+
+  // Clear existing black squares first
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (newCells[r][c].isBlack && !newCells[r][c].letter) {
+        newCells[r][c] = {
+          ...newCells[r][c],
+          isBlack: false,
+        };
+      }
+    }
+  }
+
+  // Apply pattern
+  const pattern = BLACK_SQUARE_PATTERNS[patternIndex];
+  for (const [row, col] of pattern.positions) {
+    newCells = addSymmetricBlack(newCells, row, col);
+  }
+
+  return newCells;
+}
+
+/**
+ * Find the best black square pattern for the current grid state
+ * Tries each pattern and scores by:
+ * 1. Number of valid slots created
+ * 2. Whether it preserves existing letters
+ */
+export function findBestBlackPattern(
+  cells: EditableCell[][]
+): { patternIndex: number; score: number } {
+  let bestPattern = 0;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < BLACK_SQUARE_PATTERNS.length; i++) {
+    const testCells = applyBlackPattern(cells, i);
+
+    // Check if pattern is valid (doesn't cover letters)
+    let valid = true;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (testCells[r][c].isBlack && cells[r][c].letter) {
+          valid = false;
+          break;
+        }
+      }
+      if (!valid) break;
+    }
+
+    if (!valid) continue;
+
+    // Check connectivity
+    if (!validateConnectivity(testCells)) continue;
+
+    // Score: count white cells (more = better for word placement)
+    let whiteCount = 0;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (!testCells[r][c].isBlack) whiteCount++;
+      }
+    }
+
+    // Bonus for patterns that create good slot lengths
+    let score = whiteCount;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestPattern = i;
+    }
+  }
+
+  return { patternIndex: bestPattern, score: bestScore };
+}
+
+/**
+ * Remove a word from the grid by finding and clearing its letters
+ * Only removes letters that spell the word contiguously (across or down)
+ *
+ * @param cells The grid cells
+ * @param word The word to remove
+ * @param forceRemove If true, removes all letters even if shared with perpendicular words.
+ *                    Useful for auto-generated puzzles where words are interconnected.
+ */
+export function removeWordFromGrid(
+  cells: EditableCell[][],
+  word: string,
+  forceRemove: boolean = false
+): EditableCell[][] {
+  const upperWord = word.toUpperCase();
+  const newCells = cells.map((row) => row.map((cell) => ({ ...cell })));
+
+  // Search for the word across
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c <= GRID_SIZE - upperWord.length; c++) {
+      let match = true;
+      for (let i = 0; i < upperWord.length && match; i++) {
+        if (newCells[r][c + i].letter !== upperWord[i]) {
+          match = false;
+        }
+      }
+      if (match) {
+        // Found the word, clear it
+        for (let i = 0; i < upperWord.length; i++) {
+          const cell = newCells[r][c + i];
+
+          if (forceRemove) {
+            // Force remove: clear regardless of perpendicular usage
+            newCells[r][c + i] = {
+              ...cell,
+              letter: null,
+              source: 'empty',
+            };
+          } else {
+            // Check if letter is used in a perpendicular word
+            let usedPerpendicular = false;
+            // Check above and below
+            if (
+              (r > 0 && newCells[r - 1][c + i].letter) ||
+              (r < GRID_SIZE - 1 && newCells[r + 1][c + i].letter)
+            ) {
+              usedPerpendicular = true;
+            }
+            if (!usedPerpendicular) {
+              newCells[r][c + i] = {
+                ...cell,
+                letter: null,
+                source: 'empty',
+              };
+            }
+          }
+        }
+        return newCells;
+      }
+    }
+  }
+
+  // Search for the word down
+  for (let r = 0; r <= GRID_SIZE - upperWord.length; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      let match = true;
+      for (let i = 0; i < upperWord.length && match; i++) {
+        if (newCells[r + i][c].letter !== upperWord[i]) {
+          match = false;
+        }
+      }
+      if (match) {
+        // Found the word, clear it
+        for (let i = 0; i < upperWord.length; i++) {
+          const cell = newCells[r + i][c];
+
+          if (forceRemove) {
+            // Force remove: clear regardless of perpendicular usage
+            newCells[r + i][c] = {
+              ...cell,
+              letter: null,
+              source: 'empty',
+            };
+          } else {
+            // Check if letter is used in a perpendicular word
+            let usedPerpendicular = false;
+            // Check left and right
+            if (
+              (c > 0 && newCells[r + i][c - 1].letter) ||
+              (c < GRID_SIZE - 1 && newCells[r + i][c + 1].letter)
+            ) {
+              usedPerpendicular = true;
+            }
+            if (!usedPerpendicular) {
+              newCells[r + i][c] = {
+                ...cell,
+                letter: null,
+                source: 'empty',
+              };
+            }
+          }
+        }
+        return newCells;
+      }
+    }
+  }
+
+  return newCells;
+}
+
+/**
+ * Count filled and empty cells
+ */
+export function getGridStats(cells: EditableCell[][]): {
+  totalCells: number;
+  whiteCells: number;
+  blackCells: number;
+  filledCells: number;
+  emptyCells: number;
+} {
+  let whiteCells = 0;
+  let blackCells = 0;
+  let filledCells = 0;
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (cells[r][c].isBlack) {
+        blackCells++;
+      } else {
+        whiteCells++;
+        if (cells[r][c].letter) {
+          filledCells++;
+        }
+      }
+    }
+  }
+
+  return {
+    totalCells: GRID_SIZE * GRID_SIZE,
+    whiteCells,
+    blackCells,
+    filledCells,
+    emptyCells: whiteCells - filledCells,
+  };
+}

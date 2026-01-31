@@ -3,7 +3,37 @@
  *
  * Provides O(1) lookup for words matching patterns like "J_M" or "A__AH"
  * Used for perpendicular slot validation in crossword generation.
+ *
+ * Enhanced with:
+ * - Word scoring by category (Islamic keywords, fillers, common English)
+ * - Priority-based word selection for CSP filling
  */
+
+import { ALL_WORDS_2_5, ISLAMIC_WORDS_SET } from './word-list-full';
+
+/** Word category scores for fill quality */
+export const WORD_SCORE = {
+  ISLAMIC_KEYWORD: 100,  // Prophet names, Names of Allah, Quran terms
+  ISLAMIC_FILLER: 70,    // PEACE, LIGHT, FAITH, etc.
+  COMMON_ENGLISH: 40,    // Standard crossword words
+  RARE_ENGLISH: 20,      // Less common but valid
+  CROSSWORDESE: 10,      // EEL, QUA, etc. - last resort
+} as const;
+
+/** Islamic filler words (themed for Islamic crosswords) */
+const ISLAMIC_FILLER_WORDS = new Set([
+  'PEACE', 'LIGHT', 'TRUTH', 'FAITH', 'GRACE', 'MERCY', 'HOPE', 'LOVE',
+  'WISE', 'JUST', 'PURE', 'SOUL', 'GOOD', 'KIND', 'PRAY', 'FAST', 'GIVE',
+  'READ', 'SEEK', 'PATH', 'GUIDE', 'BLESS', 'NOBLE', 'TRUST', 'GLORY',
+  'ANGEL', 'EARTH', 'WATER', 'NIGHT', 'DREAM', 'HEART', 'HONOR', 'MORAL',
+]);
+
+/** Common crosswordese (valid but less desirable) */
+const CROSSWORDESE = new Set([
+  'QUA', 'EEL', 'EMU', 'ERE', 'ERR', 'ESS', 'ETA', 'EVE', 'EWE',
+  'GNU', 'OAT', 'ODE', 'OLE', 'ORE', 'OWE', 'OWL', 'UNO', 'URN',
+  'ALOE', 'ALEE', 'ARIA', 'ASEA', 'EPEE', 'ERNE', 'ESNE', 'OLEO',
+]);
 
 export interface WordIndex {
   /** Words grouped by length */
@@ -12,6 +42,27 @@ export interface WordIndex {
   byFirstLetter: Map<string, Map<number, Set<string>>>;
   /** All words in the index */
   allWords: Set<string>;
+  /** Word scores for prioritization */
+  wordScores: Map<string, number>;
+}
+
+/**
+ * Calculate the score for a word based on its category.
+ */
+export function getWordScore(word: string): number {
+  const upper = word.toUpperCase();
+
+  if (ISLAMIC_WORDS_SET.has(upper)) {
+    return WORD_SCORE.ISLAMIC_KEYWORD;
+  }
+  if (ISLAMIC_FILLER_WORDS.has(upper)) {
+    return WORD_SCORE.ISLAMIC_FILLER;
+  }
+  if (CROSSWORDESE.has(upper)) {
+    return WORD_SCORE.CROSSWORDESE;
+  }
+  // Common words are everything else
+  return WORD_SCORE.COMMON_ENGLISH;
 }
 
 /**
@@ -22,12 +73,14 @@ export function buildWordIndex(words: string[]): WordIndex {
   const byLength = new Map<number, Set<string>>();
   const byFirstLetter = new Map<string, Map<number, Set<string>>>();
   const allWords = new Set<string>();
+  const wordScores = new Map<string, number>();
 
   for (const word of words) {
     const upper = word.toUpperCase().trim();
     if (upper.length < 2 || upper.length > 5) continue; // 5x5 grid constraint
 
     allWords.add(upper);
+    wordScores.set(upper, getWordScore(upper));
 
     // Index by length
     if (!byLength.has(upper.length)) {
@@ -47,7 +100,7 @@ export function buildWordIndex(words: string[]): WordIndex {
     letterMap.get(upper.length)!.add(upper);
   }
 
-  return { byLength, byFirstLetter, allWords };
+  return { byLength, byFirstLetter, allWords, wordScores };
 }
 
 /**
@@ -171,4 +224,122 @@ export function getWordsByLength(length: number, index: WordIndex): string[] {
  */
 export function countCandidates(pattern: string, index: WordIndex): number {
   return matchPattern(pattern, index).length;
+}
+
+/**
+ * Get the score for a word from the index.
+ */
+export function getScore(word: string, index: WordIndex): number {
+  return index.wordScores.get(word.toUpperCase()) ?? WORD_SCORE.COMMON_ENGLISH;
+}
+
+/**
+ * Find all words matching a pattern, sorted by score (highest first).
+ * Use this when you need prioritized candidates for CSP filling.
+ */
+export function matchPatternSorted(pattern: string, index: WordIndex): string[] {
+  const matches = matchPattern(pattern, index);
+  // Sort by score (highest first), then alphabetically for stability
+  return matches.sort((a, b) => {
+    const scoreA = index.wordScores.get(a) ?? WORD_SCORE.COMMON_ENGLISH;
+    const scoreB = index.wordScores.get(b) ?? WORD_SCORE.COMMON_ENGLISH;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.localeCompare(b);
+  });
+}
+
+/**
+ * Build the default word index using the full word list.
+ * This is a convenience function for creating an index with all words.
+ */
+export function buildDefaultWordIndex(): WordIndex {
+  return buildWordIndex(ALL_WORDS_2_5);
+}
+
+/**
+ * Singleton instance of the default word index.
+ * Use this for most operations to avoid rebuilding the index.
+ */
+let _defaultIndex: WordIndex | null = null;
+
+export function getDefaultWordIndex(): WordIndex {
+  if (!_defaultIndex) {
+    _defaultIndex = buildDefaultWordIndex();
+  }
+  return _defaultIndex;
+}
+
+/**
+ * Build a word index with boosted priority for specific keywords.
+ * Used for prophet-specific puzzle generation to maximize theme words.
+ *
+ * @param boostedWords Words to give highest priority (e.g., prophet keywords)
+ * @param baseIndex Optional base index to extend (defaults to the full word list)
+ * @returns New word index with boosted scores
+ */
+export function buildBoostedWordIndex(
+  boostedWords: string[],
+  baseIndex?: WordIndex
+): WordIndex {
+  const base = baseIndex ?? getDefaultWordIndex();
+
+  // Create a new word scores map with boosted words
+  const newScores = new Map(base.wordScores);
+  const boostedSet = new Set<string>();
+
+  // Add boosted words with maximum priority
+  for (const word of boostedWords) {
+    const upper = word.toUpperCase().trim();
+    if (upper.length >= 2 && upper.length <= 5) {
+      newScores.set(upper, WORD_SCORE.ISLAMIC_KEYWORD + 50); // Higher than any other
+      boostedSet.add(upper);
+    }
+  }
+
+  // Ensure boosted words are in the index (they might not be in the base dictionary)
+  const newAllWords = new Set(base.allWords);
+  const newByLength = new Map<number, Set<string>>();
+  const newByFirstLetter = new Map<string, Map<number, Set<string>>>();
+
+  // Copy existing data
+  for (const [len, words] of base.byLength) {
+    newByLength.set(len, new Set(words));
+  }
+  for (const [letter, lenMap] of base.byFirstLetter) {
+    newByFirstLetter.set(letter, new Map());
+    for (const [len, words] of lenMap) {
+      newByFirstLetter.get(letter)!.set(len, new Set(words));
+    }
+  }
+
+  // Add boosted words that might not be in the index
+  for (const word of boostedSet) {
+    if (!newAllWords.has(word)) {
+      newAllWords.add(word);
+
+      // Add to byLength
+      if (!newByLength.has(word.length)) {
+        newByLength.set(word.length, new Set());
+      }
+      newByLength.get(word.length)!.add(word);
+
+      // Add to byFirstLetter
+      const firstLetter = word[0];
+      if (!newByFirstLetter.has(firstLetter)) {
+        newByFirstLetter.set(firstLetter, new Map());
+      }
+      const letterMap = newByFirstLetter.get(firstLetter)!;
+      if (!letterMap.has(word.length)) {
+        letterMap.set(word.length, new Set());
+      }
+      letterMap.get(word.length)!.add(word);
+    }
+  }
+
+  return {
+    byLength: newByLength,
+    byFirstLetter: newByFirstLetter,
+    allWords: newAllWords,
+    wordScores: newScores,
+  };
 }

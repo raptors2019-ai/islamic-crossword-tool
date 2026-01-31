@@ -1,3 +1,11 @@
+// Mock Convex to avoid requiring environment variables in tests
+jest.mock('@/lib/convex', () => ({
+  convexClient: {
+    query: jest.fn(),
+    mutation: jest.fn(),
+  },
+}));
+
 import { wordToThemeWord } from '@/lib/generator-api';
 
 describe('wordToThemeWord', () => {

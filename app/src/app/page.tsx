@@ -20,7 +20,6 @@ import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
 import { WordHub } from '@/components/word-hub';
 import { GapFillers } from '@/components/gap-fillers';
-import { ProphetKeyword } from '@/lib/prophet-keywords';
 import { KeywordReview } from '@/components/keyword-review';
 import { ConstraintSuggestions } from '@/components/constraint-suggestions';
 import { SlotStats } from '@/components/slot-stats';
@@ -32,6 +31,7 @@ import {
   PlacementSuggestion,
   generatePlacementSuggestions,
 } from '@/components/invalid-placement-modal';
+import { LiveClueEditor } from '@/components/live-clue-editor';
 import { SlotValidation } from '@/lib/perpendicular-validator';
 import {
   toGeneratedPuzzleGrid,
@@ -39,7 +39,20 @@ import {
   calculateCellNumbers,
   placeWordAtBestPosition,
   GRID_SIZE,
+  getGridStats,
+  removeWordFromGrid,
+  createEmptyGrid,
 } from '@/lib/editable-grid';
+import {
+  generatePuzzle as generateAutoPuzzle,
+  GenerationResult,
+} from '@/lib/auto-generator';
+import {
+  getKeywordsForProphet,
+  ProphetKeyword,
+} from '@/lib/prophet-keywords';
+import { fillGridWithCSP, canGridBeFilled, CSPFillResult } from '@/lib/csp-filler';
+import { buildBoostedWordIndex } from '@/lib/word-index';
 
 const themePresets = [
   { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
@@ -60,6 +73,14 @@ export default function Home() {
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [placedInGridIds, setPlacedInGridIds] = useState<Set<string>>(new Set());
+  // Grid-based clues (word string -> clue text)
+  const [gridClues, setGridClues] = useState<Record<string, string>>({});
+  const [selectedGridWord, setSelectedGridWord] = useState<string | null>(null);
+
+  // Handle clue change from LiveClueEditor
+  const handleGridClueChange = useCallback((word: string, clue: string) => {
+    setGridClues(prev => ({ ...prev, [word]: clue }));
+  }, []);
 
   // Editable grid hook for always-on interactive grid
   const {
@@ -83,6 +104,10 @@ export default function Home() {
     invalidSlots: SlotValidation[];
     suggestions: PlacementSuggestion[];
   } | null>(null);
+
+  // Auto-complete state
+  const [isAutoCompleting, setIsAutoCompleting] = useState(false);
+  const [autoCompleteResult, setAutoCompleteResult] = useState<CSPFillResult | null>(null);
 
   // Detect words in the editable grid
   const detectedWords = useMemo(() => {
@@ -238,6 +263,17 @@ export default function Home() {
     const newThemeWords = themeWords.filter((w) => w.id !== wordToRemove.id);
     const { [wordToRemove.id]: _, ...newClues } = clues;
 
+    // Remove word from the editable grid (forceRemove=true to clear even in word squares)
+    const newCells = removeWordFromGrid(editableCells, wordToRemove.activeSpelling, true);
+    setCells(newCells);
+
+    // Remove from placedInGridIds
+    setPlacedInGridIds(prev => {
+      const next = new Set(prev);
+      next.delete(wordToRemove.id);
+      return next;
+    });
+
     setThemeWords(newThemeWords);
     setClues(newClues);
     if (selectedWordId === wordToRemove.id) setSelectedWordId(null);
@@ -257,15 +293,29 @@ export default function Home() {
     } else {
       setGeneratedPuzzle(null);
     }
-  }, [themeWords, clues, selectedWordId, puzzleTitle]);
+  }, [themeWords, clues, selectedWordId, puzzleTitle, editableCells, setCells]);
 
-  const removeWord = (id: string) => {
+  const removeWord = useCallback((id: string) => {
+    const wordToRemove = themeWords.find(w => w.id === id);
+    if (wordToRemove) {
+      // Remove word from the editable grid (forceRemove=true to clear even in word squares)
+      const newCells = removeWordFromGrid(editableCells, wordToRemove.activeSpelling, true);
+      setCells(newCells);
+
+      // Remove from placedInGridIds
+      setPlacedInGridIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+
     setThemeWords(themeWords.filter(w => w.id !== id));
     const { [id]: _, ...rest } = clues;
     setClues(rest);
     if (selectedWordId === id) setSelectedWordId(null);
     setGeneratedPuzzle(null);
-  };
+  }, [themeWords, clues, selectedWordId, editableCells, setCells]);
 
   const toggleSpelling = (id: string) => {
     setThemeWords(themeWords.map(w => {
@@ -356,6 +406,118 @@ export default function Home() {
       setIsGenerating(false);
     }
   }, [puzzleTitle, themeWords]);
+
+  // Handle prophet selection - auto-generate puzzle with prophet's keywords
+  const handleProphetSelect = useCallback((prophetId: string, keywords: ProphetKeyword[]) => {
+    // Clear existing state
+    clearGrid();
+    setThemeWords([]);
+    setClues({});
+    setPlacedInGridIds(new Set());
+    setGeneratedPuzzle(null);
+    setSelectedWordId(null);
+    setAutoCompleteResult(null);
+
+    // Filter to 5-letter-or-less words and sort by relevance
+    const validKeywords = keywords
+      .filter(kw => kw.word.length >= 2 && kw.word.length <= 5)
+      .sort((a, b) => b.relevance - a.relevance);
+
+    if (validKeywords.length === 0) return;
+
+    setIsGenerating(true);
+
+    // Build a boosted word index that prioritizes prophet keywords
+    const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
+    const boostedIndex = buildBoostedWordIndex(keywordWords);
+
+    // Create a map for quick clue lookup
+    const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
+
+    // Use the auto-generator to create a complete puzzle
+    const themeWordsInput = validKeywords.map(kw => ({
+      word: kw.word.toUpperCase(),
+      clue: kw.clue,
+    }));
+
+    // Generate using auto-generator with boosted index
+    const result = generateAutoPuzzle(themeWordsInput, {
+      maxTimeMs: 10000,
+      wordIndex: boostedIndex,
+    });
+
+    // Update state with results
+    const newThemeWords: ThemeWord[] = [];
+    const newClues: Record<string, string> = {};
+    const newPlacedIds = new Set<string>();
+
+    // Track all placed words that are prophet keywords (theme or filler)
+    // Deduplicate by word (same word can appear across and down in word squares)
+    const keywordSet = new Set(keywordWords);
+    const addedWords = new Set<string>();
+    for (const placed of result.placedWords) {
+      const isKeyword = keywordSet.has(placed.word);
+      if (isKeyword && !addedWords.has(placed.word)) {
+        addedWords.add(placed.word);
+        const clue = clueMap.get(placed.word) || placed.clue || '';
+        const id = `prophet-${prophetId}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        newThemeWords.push({
+          id,
+          word: placed.word,
+          clue,
+          activeSpelling: placed.word,
+          category: 'prophets',
+        });
+        newClues[id] = clue;
+        newPlacedIds.add(id);
+      }
+    }
+
+    setThemeWords(newThemeWords);
+    setClues(newClues);
+    setPlacedInGridIds(newPlacedIds);
+
+    // Apply the generated grid to the editable grid
+    if (result.success) {
+      setCells(result.grid);
+    }
+
+    setIsGenerating(false);
+  }, [clearGrid, wordIndex, setCells]);
+
+  // Handle auto-complete (CSP-based gap filling)
+  const handleAutoComplete = useCallback(async () => {
+    setIsAutoCompleting(true);
+    setAutoCompleteResult(null);
+
+    try {
+      // Run CSP filling on the current grid
+      const result = fillGridWithCSP(editableCells, wordIndex, 15000);
+
+      if (result.success) {
+        // Apply the filled grid
+        setCells(result.grid);
+        setAutoCompleteResult(result);
+      } else {
+        // Show partial result info
+        setAutoCompleteResult(result);
+      }
+    } catch (error) {
+      console.error('Auto-complete error:', error);
+    } finally {
+      setIsAutoCompleting(false);
+    }
+  }, [editableCells, wordIndex, setCells]);
+
+  // Check if grid can be completed (for validation)
+  const gridCompletionStatus = useMemo(() => {
+    return canGridBeFilled(editableCells, wordIndex);
+  }, [editableCells, wordIndex]);
+
+  // Grid fill stats for progress indicator
+  const gridStats = useMemo(() => {
+    return getGridStats(editableCells);
+  }, [editableCells]);
 
   // Handle invalid placement from WordHub
   const handleInvalidPlacement = useCallback((word: string, invalidSlots: SlotValidation[]) => {
@@ -637,6 +799,7 @@ export default function Home() {
                     editableCells={editableCells}
                     wordIndex={wordIndex}
                     onInvalidPlacement={handleInvalidPlacement}
+                    onProphetSelect={handleProphetSelect}
                   />
                 </CardContent>
               </Card>
@@ -664,8 +827,28 @@ export default function Home() {
                   />
                 </div>
 
+                {/* Grid Fill Progress */}
+                {gridStats.whiteCells > 0 && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs text-[#8fc1e3] mb-1">
+                      <span>Grid Fill Progress</span>
+                      <span>{Math.round((gridStats.filledCells / gridStats.whiteCells) * 100)}%</span>
+                    </div>
+                    <div className="h-2 bg-[#001a2c]/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#4A90C2] to-[#D4AF37] transition-all duration-300"
+                        style={{ width: `${(gridStats.filledCells / gridStats.whiteCells) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-[#6ba8d4] mt-1">
+                      <span>{gridStats.filledCells} filled</span>
+                      <span>{gridStats.emptyCells} empty</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Grid Actions */}
-                <div className="flex justify-center gap-3 mt-4">
+                <div className="flex flex-wrap justify-center gap-3 mt-4">
                   <Button
                     onClick={clearGrid}
                     variant="outline"
@@ -676,6 +859,36 @@ export default function Home() {
                     </svg>
                     Clear Grid
                   </Button>
+
+                  {/* Auto-Complete Button */}
+                  <Button
+                    onClick={handleAutoComplete}
+                    disabled={isAutoCompleting || gridStats.emptyCells === 0}
+                    className={cn(
+                      "px-6 transition-all",
+                      gridCompletionStatus.canFill
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white hover:scale-105"
+                        : "bg-amber-600 hover:bg-amber-500 text-white"
+                    )}
+                  >
+                    {isAutoCompleting ? (
+                      <>
+                        <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Filling...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Auto-Complete
+                      </>
+                    )}
+                  </Button>
+
                   {themeWords.length >= 3 && (
                     <Button
                       onClick={handleGenerate}
@@ -689,6 +902,47 @@ export default function Home() {
                     </Button>
                   )}
                 </div>
+
+                {/* Auto-Complete Result */}
+                {autoCompleteResult && (
+                  <div className={cn(
+                    "mt-4 p-3 rounded-lg text-sm",
+                    autoCompleteResult.success
+                      ? "bg-emerald-900/30 border border-emerald-500/30 text-emerald-400"
+                      : "bg-amber-900/30 border border-amber-500/30 text-amber-400"
+                  )}>
+                    <div className="font-semibold mb-1">
+                      {autoCompleteResult.success ? 'Grid Completed!' : 'Partial Fill'}
+                    </div>
+                    <div className="text-xs opacity-80 space-y-1">
+                      <div>Filled {autoCompleteResult.stats.filledByCSP} slots in {autoCompleteResult.stats.timeTakenMs}ms</div>
+                      <div>Avg word score: {autoCompleteResult.stats.avgWordScore.toFixed(0)}</div>
+                      {autoCompleteResult.stats.islamicPercentage > 0 && (
+                        <div>Islamic words: {autoCompleteResult.stats.islamicPercentage.toFixed(0)}%</div>
+                      )}
+                      {!autoCompleteResult.success && autoCompleteResult.unfilledSlots.length > 0 && (
+                        <div className="text-amber-300">
+                          {autoCompleteResult.unfilledSlots.length} slot(s) could not be filled
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Can't Complete Warning */}
+                {!gridCompletionStatus.canFill && gridStats.emptyCells > 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-900/30 border border-red-500/30 text-red-400 text-sm">
+                    <div className="font-semibold mb-1">Cannot Complete Grid</div>
+                    <div className="text-xs opacity-80">
+                      Some slots have no valid words. Try:
+                      <ul className="list-disc ml-4 mt-1">
+                        <li>Adding black squares to shorten problematic slots</li>
+                        <li>Changing some letters</li>
+                        <li>Using a different black square pattern</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 {/* Stats for generated puzzle */}
                 {generatedPuzzle && (
@@ -731,184 +985,13 @@ export default function Home() {
                   Clue Editor
                 </h3>
 
-                {selectedWord ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl text-white font-bold tracking-widest font-serif">
-                        {selectedWord.activeSpelling}
-                      </span>
-                      {selectedWord.arabicScript && (
-                        <span className="text-[#D4AF37] text-lg">{selectedWord.arabicScript}</span>
-                      )}
-                    </div>
-
-                    {selectedWord.spellingVariants && selectedWord.spellingVariants.length > 1 && (
-                      <button
-                        onClick={() => toggleSpelling(selectedWord.id)}
-                        className="text-[#8fc1e3] hover:text-[#D4AF37] text-sm flex items-center gap-2 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                        Switch spelling variant
-                      </button>
-                    )}
-
-                    <Textarea
-                      value={clues[selectedWord.id] || selectedWord.clue || ''}
-                      onChange={(e) => setClues({ ...clues, [selectedWord.id]: e.target.value })}
-                      className="bg-[#001a2c]/60 border-[#4A90C2]/30 text-white min-h-[100px] placeholder:text-[#6ba8d4] resize-none focus:ring-2 focus:ring-[#4A90C2]/30"
-                      placeholder="Enter your clue..."
-                    />
-
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                        </svg>
-                        AI Suggest
-                      </Button>
-                      <Button
-                        onClick={() => setSelectedWordId(null)}
-                        className="bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c]"
-                      >
-                        Done
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[#001a2c]/40 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </div>
-                    <p className="text-[#8fc1e3]">Select a word to edit its clue</p>
-                  </div>
-                )}
-
-                {/* Clues Display - Clean Crossword Format */}
-                <div className="mt-6 pt-6 border-t border-[#4A90C2]/20">
-                  {generatedPuzzle ? (
-                    <>
-                      {/* Across Clues */}
-                      <div className="mb-5">
-                        <h4 className="text-[#D4AF37] font-semibold mb-3 flex items-center gap-2 uppercase tracking-wider text-sm">
-                          <span className="text-base">→</span> Across
-                        </h4>
-                        <div className="space-y-2">
-                          {generatedPuzzle.clues.across.map((clue) => {
-                            const isSelected = themeWords.find(w =>
-                              w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                            )?.id === selectedWordId;
-                            return (
-                              <button
-                                key={`across-${clue.number}`}
-                                onClick={() => {
-                                  const word = themeWords.find(w =>
-                                    w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                                  );
-                                  if (word) setSelectedWordId(word.id);
-                                }}
-                                className={cn(
-                                  'w-full text-left px-3 py-2 rounded-lg transition-all group',
-                                  isSelected
-                                    ? 'bg-[#D4AF37]/20 border border-[#D4AF37]/40'
-                                    : 'hover:bg-[#001a2c]/60 border border-transparent'
-                                )}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <span className="text-[#D4AF37] font-mono font-bold text-sm min-w-[1.5rem]">
-                                    {clue.number}.
-                                  </span>
-                                  <div className="flex-1">
-                                    <span className="text-white text-sm">
-                                      {clue.clue || 'No clue yet'}
-                                    </span>
-                                    <span className="text-[#6ba8d4] text-xs ml-1.5">
-                                      ({clue.length})
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="ml-6 mt-1 text-[10px] text-[#4A90C2] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Answer: {clue.answer}
-                                </div>
-                              </button>
-                            );
-                          })}
-                          {generatedPuzzle.clues.across.length === 0 && (
-                            <p className="text-[#6ba8d4] text-xs italic px-3">No across clues</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Down Clues */}
-                      <div>
-                        <h4 className="text-[#D4AF37] font-semibold mb-3 flex items-center gap-2 uppercase tracking-wider text-sm">
-                          <span className="text-base">↓</span> Down
-                        </h4>
-                        <div className="space-y-2">
-                          {generatedPuzzle.clues.down.map((clue) => {
-                            const isSelected = themeWords.find(w =>
-                              w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                            )?.id === selectedWordId;
-                            return (
-                              <button
-                                key={`down-${clue.number}`}
-                                onClick={() => {
-                                  const word = themeWords.find(w =>
-                                    w.activeSpelling.toUpperCase() === clue.answer.toUpperCase()
-                                  );
-                                  if (word) setSelectedWordId(word.id);
-                                }}
-                                className={cn(
-                                  'w-full text-left px-3 py-2 rounded-lg transition-all group',
-                                  isSelected
-                                    ? 'bg-[#D4AF37]/20 border border-[#D4AF37]/40'
-                                    : 'hover:bg-[#001a2c]/60 border border-transparent'
-                                )}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <span className="text-[#D4AF37] font-mono font-bold text-sm min-w-[1.5rem]">
-                                    {clue.number}.
-                                  </span>
-                                  <div className="flex-1">
-                                    <span className="text-white text-sm">
-                                      {clue.clue || 'No clue yet'}
-                                    </span>
-                                    <span className="text-[#6ba8d4] text-xs ml-1.5">
-                                      ({clue.length})
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="ml-6 mt-1 text-[10px] text-[#4A90C2] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Answer: {clue.answer}
-                                </div>
-                              </button>
-                            );
-                          })}
-                          {generatedPuzzle.clues.down.length === 0 && (
-                            <p className="text-[#6ba8d4] text-xs italic px-3">No down clues</p>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-6">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-[#001a2c]/40 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-[#6ba8d4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h7" />
-                        </svg>
-                      </div>
-                      <p className="text-[#8fc1e3] text-sm">
-                        Generate a puzzle to see clues
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <LiveClueEditor
+                  cells={editableCells}
+                  clues={gridClues}
+                  onClueChange={handleGridClueChange}
+                  selectedWord={selectedGridWord}
+                  onSelectWord={setSelectedGridWord}
+                />
               </CardContent>
             </Card>
 

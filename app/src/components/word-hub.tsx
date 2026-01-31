@@ -48,6 +48,8 @@ interface WordHubProps {
   editableCells?: EditableCell[][];
   wordIndex?: WordIndex;
   onInvalidPlacement?: (word: string, invalidSlots: SlotValidation[]) => void;
+  // Auto-generate callback when prophet is selected
+  onProphetSelect?: (prophetId: string, keywords: ProphetKeyword[]) => void;
 }
 
 // Source badge colors - more visible
@@ -72,6 +74,7 @@ export function WordHub({
   editableCells,
   wordIndex,
   onInvalidPlacement,
+  onProphetSelect,
 }: WordHubProps) {
   const [selectedProphet, setSelectedProphet] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -86,7 +89,13 @@ export function WordHub({
   const handleProphetChange = useCallback((prophetId: string) => {
     setSelectedProphet(prophetId);
     setShowAll(false);
-  }, []);
+
+    // Auto-generate puzzle with all keywords for this prophet
+    if (onProphetSelect) {
+      const keywords = getKeywordsForProphet(prophetId);
+      onProphetSelect(prophetId, keywords);
+    }
+  }, [onProphetSelect]);
 
   const handleAddCustomWord = useCallback(() => {
     const word = customWordInput.trim().toUpperCase();
