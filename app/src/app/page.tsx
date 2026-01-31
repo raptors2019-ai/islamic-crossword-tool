@@ -20,7 +20,6 @@ import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
 import { WordHub } from '@/components/word-hub';
 import { GapFillers } from '@/components/gap-fillers';
-import { KeywordReview } from '@/components/keyword-review';
 import { ConstraintSuggestions } from '@/components/constraint-suggestions';
 import { SlotStats } from '@/components/slot-stats';
 import { useEditableGrid } from '@/hooks/use-editable-grid';
@@ -71,15 +70,20 @@ export default function Home() {
   const [generatedPuzzle, setGeneratedPuzzle] = useState<GeneratedPuzzle | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
-  const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [placedInGridIds, setPlacedInGridIds] = useState<Set<string>>(new Set());
 
   // Grid-based clues with difficulty levels (word -> { easy, medium, hard })
   type Difficulty = 'easy' | 'medium' | 'hard';
+  interface ClueOptions {
+    easy: string[];
+    medium: string[];
+    hard: string[];
+  }
   interface DifficultyClues {
     easy: string;
     medium: string;
     hard: string;
+    options?: ClueOptions;  // All generated options for popover display
   }
   const [gridClues, setGridClues] = useState<Record<string, DifficultyClues>>({});
   const [selectedDifficulties, setSelectedDifficulties] = useState<Record<string, Difficulty>>({});
@@ -94,6 +98,23 @@ export default function Home() {
         [difficulty]: clue,
       },
     }));
+  }, []);
+
+  // Handle storing AI-generated clue options
+  const handleClueOptionsUpdate = useCallback((word: string, options: ClueOptions) => {
+    setGridClues(prev => {
+      const existing = prev[word] || { easy: '', medium: '', hard: '' };
+      return {
+        ...prev,
+        [word]: {
+          // Set the first option as the default selected clue if no clue exists
+          easy: existing.easy || options.easy[0] || '',
+          medium: existing.medium || options.medium[0] || '',
+          hard: existing.hard || options.hard[0] || '',
+          options,
+        },
+      };
+    });
   }, []);
 
   // Handle difficulty selection change
@@ -1056,6 +1077,7 @@ export default function Home() {
                   selectedDifficulties={selectedDifficulties}
                   onClueChange={handleGridClueChange}
                   onDifficultyChange={handleDifficultyChange}
+                  onClueOptionsUpdate={handleClueOptionsUpdate}
                   onSwapWord={handleSwapWord}
                   selectedWord={selectedGridWord}
                   onSelectWord={setSelectedGridWord}
@@ -1063,27 +1085,6 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Keyword Review Toggle */}
-            <button
-              onClick={() => setShowReviewPanel(!showReviewPanel)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-[#004d77]/40 border border-[#4A90C2]/20 hover:border-[#D4AF37]/30 transition-colors"
-            >
-              <span className="text-[#8fc1e3] text-sm">Review AI Keywords</span>
-              <svg
-                className={cn(
-                  'w-4 h-4 text-[#8fc1e3] transition-transform',
-                  showReviewPanel && 'rotate-180'
-                )}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Keyword Review Panel */}
-            {showReviewPanel && <KeywordReview />}
           </div>
         </div>
       </main>

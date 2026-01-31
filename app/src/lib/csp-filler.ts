@@ -21,6 +21,7 @@ import {
 import {
   WordIndex,
   matchPatternSorted,
+  matchPatternByTier,
   hasMatch,
   getDefaultWordIndex,
   getScore,
@@ -103,10 +104,10 @@ export function getCSPSlots(
     // Check if slot is already completely filled
     const isFilled = !slot.pattern.includes('_');
 
-    // Get candidates (sorted by score)
+    // Get candidates (sorted by tier, then score - Islamic words first)
     const candidates = isFilled
       ? [slot.pattern] // Already filled, only candidate is current word
-      : matchPatternSorted(slot.pattern, wordIndex);
+      : matchPatternByTier(slot.pattern, wordIndex);
 
     const cspSlot: CSPSlot = {
       ...slot,

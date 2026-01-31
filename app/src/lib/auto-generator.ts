@@ -36,8 +36,15 @@ import {
   getDefaultWordIndex,
   getScore,
   WORD_SCORE,
+  ISLAMIC_FILLER_WORDS,
 } from './word-index';
 import { ISLAMIC_WORDS_SET } from './word-list-full';
+
+/** Minimum Islamic percentage to consider "good enough" for early exit */
+const EXCELLENT_ISLAMIC_PERCENTAGE = 70;
+
+/** Number of candidate puzzles to generate before picking the best */
+const MAX_CANDIDATES = 5;
 
 /**
  * Theme word input
@@ -211,52 +218,105 @@ function scorePosition(
 }
 
 /**
- * Find an open position for the first word
+ * Find an open position for the first word - CENTERED in the grid
+ *
+ * Centering the first word maximizes intersection opportunities because:
+ * - Words can connect from above, below, left, and right
+ * - More flexibility for placing subsequent theme words
  */
 function findOpenPosition(
   cells: EditableCell[][],
   word: string,
-  wordIndex: WordIndex
+  wordIndex: WordIndex,
+  preferredDirection: 'across' | 'down' = 'across'
 ): { row: number; col: number; direction: 'across' | 'down' } | null {
   const upperWord = word.toUpperCase();
+  const length = upperWord.length;
 
-  // Prefer row 0 for first across word
-  if (upperWord.length <= GRID_SIZE) {
-    if (canPlaceWord(cells, upperWord, 0, 0, 'across')) {
-      if (checkArcConsistency(cells, upperWord, { row: 0, col: 0 }, 'across', wordIndex)) {
-        return { row: 0, col: 0, direction: 'across' };
+  if (length > GRID_SIZE) return null;
+
+  // Calculate centered position
+  // For a 5x5 grid, center is (2, 2)
+  const centerRow = Math.floor(GRID_SIZE / 2);
+  const centerCol = Math.floor(GRID_SIZE / 2);
+
+  // Calculate starting position to center the word
+  // For across: center the word horizontally on the middle row
+  // For down: center the word vertically on the middle column
+  const acrossStartCol = Math.max(0, Math.min(centerCol - Math.floor(length / 2), GRID_SIZE - length));
+  const downStartRow = Math.max(0, Math.min(centerRow - Math.floor(length / 2), GRID_SIZE - length));
+
+  // Try preferred direction first, centered
+  if (preferredDirection === 'across') {
+    // Try centered across first
+    if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
+      if (checkArcConsistency(cells, upperWord, { row: centerRow, col: acrossStartCol }, 'across', wordIndex)) {
+        return { row: centerRow, col: acrossStartCol, direction: 'across' };
+      }
+    }
+    // Try centered down
+    if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
+      if (checkArcConsistency(cells, upperWord, { row: downStartRow, col: centerCol }, 'down', wordIndex)) {
+        return { row: downStartRow, col: centerCol, direction: 'down' };
+      }
+    }
+  } else {
+    // Try centered down first
+    if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
+      if (checkArcConsistency(cells, upperWord, { row: downStartRow, col: centerCol }, 'down', wordIndex)) {
+        return { row: downStartRow, col: centerCol, direction: 'down' };
+      }
+    }
+    // Try centered across
+    if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
+      if (checkArcConsistency(cells, upperWord, { row: centerRow, col: acrossStartCol }, 'across', wordIndex)) {
+        return { row: centerRow, col: acrossStartCol, direction: 'across' };
       }
     }
   }
 
-  // Try other positions
-  for (let r = 0; r <= GRID_SIZE - upperWord.length; r++) {
-    for (let c = 0; c <= GRID_SIZE - upperWord.length; c++) {
+  // If centered positions don't work, try positions radiating outward from center
+  // This keeps words as central as possible
+  const positions: { row: number; col: number; direction: 'across' | 'down'; dist: number }[] = [];
+
+  for (let r = 0; r <= GRID_SIZE - length; r++) {
+    for (let c = 0; c <= GRID_SIZE - length; c++) {
+      // Calculate distance from center for this position
+      const acrossDist = Math.abs(r - centerRow) + Math.abs(c + length / 2 - centerCol);
+      const downDist = Math.abs(r + length / 2 - centerRow) + Math.abs(c - centerCol);
+
       if (canPlaceWord(cells, upperWord, r, c, 'across')) {
         if (checkArcConsistency(cells, upperWord, { row: r, col: c }, 'across', wordIndex)) {
-          return { row: r, col: c, direction: 'across' };
+          positions.push({ row: r, col: c, direction: 'across', dist: acrossDist });
         }
       }
       if (canPlaceWord(cells, upperWord, r, c, 'down')) {
         if (checkArcConsistency(cells, upperWord, { row: r, col: c }, 'down', wordIndex)) {
-          return { row: r, col: c, direction: 'down' };
+          positions.push({ row: r, col: c, direction: 'down', dist: downDist });
         }
       }
     }
   }
 
-  return null;
+  if (positions.length === 0) return null;
+
+  // Sort by distance from center (closest first)
+  positions.sort((a, b) => a.dist - b.dist);
+  return positions[0];
 }
 
 /**
- * Place theme words in the grid
+ * Place theme words in the grid with improved strategy:
+ * 1. First word is centered (across or down based on length)
+ * 2. Subsequent words alternate directions when possible
+ * 3. Prioritize placements that leave room for more intersections
  */
 function placeThemeWords(
   cells: EditableCell[][],
   themeWords: ThemeWord[],
   wordIndex: WordIndex
 ): { grid: EditableCell[][]; placed: PlacedWord[]; unplaced: ThemeWord[] } {
-  // Sort by length (longest first)
+  // Sort by length (longest first) - longer words are harder to place
   const sortedWords = [...themeWords].sort(
     (a, b) => b.word.length - a.word.length
   );
@@ -264,6 +324,10 @@ function placeThemeWords(
   let grid = cells.map((row) => row.map((cell) => ({ ...cell })));
   const placed: PlacedWord[] = [];
   const unplaced: ThemeWord[] = [];
+
+  // Track direction balance
+  let acrossCount = 0;
+  let downCount = 0;
 
   for (const themeWord of sortedWords) {
     const word = themeWord.word.toUpperCase();
@@ -276,12 +340,25 @@ function placeThemeWords(
 
     let position: { row: number; col: number; direction: 'across' | 'down' } | null = null;
 
-    // First word: find open position
+    // Determine preferred direction (alternate to maximize intersections)
+    const preferDirection: 'across' | 'down' = acrossCount <= downCount ? 'across' : 'down';
+
+    // First word: find centered open position
     if (placed.length === 0) {
-      position = findOpenPosition(grid, word, wordIndex);
+      // For first word, prefer across if it's a 5-letter word (spans full row)
+      // Otherwise prefer down to leave horizontal space for intersections
+      const firstWordPrefer = word.length === 5 ? 'across' : preferDirection;
+      position = findOpenPosition(grid, word, wordIndex, firstWordPrefer);
     } else {
       // Try to find intersection with existing words
+      // findIntersection already scores by intersections and centrality
       position = findIntersection(grid, word, wordIndex);
+
+      // If no intersection found, try placing near the center anyway
+      // This can still connect via CSP filling later
+      if (!position) {
+        position = findOpenPosition(grid, word, wordIndex, preferDirection);
+      }
     }
 
     if (position) {
@@ -305,6 +382,9 @@ function placeThemeWords(
           direction: position.direction,
           isThemeWord: true,
         });
+        // Update direction counts
+        if (position.direction === 'across') acrossCount++;
+        else downCount++;
       } else {
         unplaced.push(themeWord);
       }
@@ -374,9 +454,11 @@ function tryGenerateWithPattern(
   let totalScore = 0;
 
   for (const pw of allWords) {
-    const score = getScore(pw.word, wordIndex);
+    const upperWord = pw.word.toUpperCase();
+    const score = getScore(upperWord, wordIndex);
     totalScore += score;
-    if (ISLAMIC_WORDS_SET.has(pw.word.toUpperCase())) {
+    // Count both core Islamic words and Islamic filler words as "Islamic"
+    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord)) {
       islamicCount++;
     }
   }
@@ -407,6 +489,12 @@ function tryGenerateWithPattern(
 /**
  * Main entry point: Generate a complete crossword puzzle
  *
+ * Uses multi-candidate selection to maximize Islamic word percentage:
+ * 1. Generate up to MAX_CANDIDATES successful puzzles using different patterns
+ * 2. Score each by Islamic word percentage
+ * 3. Return the candidate with highest Islamic %
+ * 4. Early-exit if we hit EXCELLENT_ISLAMIC_PERCENTAGE (70%+)
+ *
  * @param themeWords The Islamic theme words to place
  * @param options Generation options
  * @returns Generation result with complete grid or best partial result
@@ -420,7 +508,9 @@ export function generatePuzzle(
   const maxAttempts = options.maxAttempts ?? BLACK_SQUARE_PATTERNS.length;
   const wordIndex = options.wordIndex ?? getDefaultWordIndex();
 
-  let bestResult: GenerationResult | null = null;
+  // Collect successful candidates to pick the best one
+  const successfulCandidates: GenerationResult[] = [];
+  let bestPartialResult: GenerationResult | null = null;
   let attempts = 0;
 
   // If preferred pattern specified, try it first
@@ -437,36 +527,63 @@ export function generatePuzzle(
     if (attempts >= maxAttempts) break;
     if (Date.now() - startTime > maxTimeMs) break;
 
+    // Stop collecting if we have enough good candidates
+    if (successfulCandidates.length >= MAX_CANDIDATES) break;
+
     attempts++;
 
     const remainingTime = maxTimeMs - (Date.now() - startTime);
+    // Divide time more evenly across attempts to allow for multiple candidates
+    const timePerAttempt = Math.max(remainingTime / (MAX_CANDIDATES - successfulCandidates.length + 1), 1000);
+
     const result = tryGenerateWithPattern(
       themeWords,
       patternIndex,
       wordIndex,
-      remainingTime / 2 // Leave time for other attempts
+      timePerAttempt
     );
 
     if (result) {
       result.stats.attemptsUsed = attempts;
 
-      // If successful, return
       if (result.success) {
-        return result;
-      }
+        successfulCandidates.push(result);
 
-      // Track best partial result
-      if (!bestResult || result.stats.gridFillPercentage > bestResult.stats.gridFillPercentage) {
-        bestResult = result;
+        // Early exit if we found an excellent result
+        if (result.stats.islamicPercentage >= EXCELLENT_ISLAMIC_PERCENTAGE) {
+          result.stats.timeTakenMs = Date.now() - startTime;
+          return result;
+        }
+      } else {
+        // Track best partial result as fallback
+        if (!bestPartialResult || result.stats.gridFillPercentage > bestPartialResult.stats.gridFillPercentage) {
+          bestPartialResult = result;
+        }
       }
     }
   }
 
-  // Return best result or failure
-  if (bestResult) {
-    bestResult.stats.attemptsUsed = attempts;
-    bestResult.stats.timeTakenMs = Date.now() - startTime;
-    return bestResult;
+  // Pick the best successful candidate by Islamic percentage
+  if (successfulCandidates.length > 0) {
+    // Sort by Islamic percentage (highest first), then by word score
+    successfulCandidates.sort((a, b) => {
+      if (b.stats.islamicPercentage !== a.stats.islamicPercentage) {
+        return b.stats.islamicPercentage - a.stats.islamicPercentage;
+      }
+      return b.stats.avgWordScore - a.stats.avgWordScore;
+    });
+
+    const best = successfulCandidates[0];
+    best.stats.attemptsUsed = attempts;
+    best.stats.timeTakenMs = Date.now() - startTime;
+    return best;
+  }
+
+  // Return best partial result or failure
+  if (bestPartialResult) {
+    bestPartialResult.stats.attemptsUsed = attempts;
+    bestPartialResult.stats.timeTakenMs = Date.now() - startTime;
+    return bestPartialResult;
   }
 
   // Complete failure

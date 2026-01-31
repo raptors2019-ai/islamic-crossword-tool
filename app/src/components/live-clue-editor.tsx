@@ -11,8 +11,15 @@ import {
 } from '@/lib/editable-grid';
 import { getWordInfo } from '@/lib/word-detector';
 import { findMatchingWords, WordSuggestion } from '@/lib/constraint-suggester';
+import { ClueOptionsPopover } from './clue-options-popover';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
+
+interface ClueOptions {
+  easy: string[];
+  medium: string[];
+  hard: string[];
+}
 
 interface ClueWord {
   word: string;
@@ -26,6 +33,7 @@ interface DifficultyClues {
   easy: string;
   medium: string;
   hard: string;
+  options?: ClueOptions;
 }
 
 interface LiveClueEditorProps {
@@ -34,6 +42,7 @@ interface LiveClueEditorProps {
   selectedDifficulties: Record<string, Difficulty>;
   onClueChange: (word: string, difficulty: Difficulty, clue: string) => void;
   onDifficultyChange: (word: string, difficulty: Difficulty) => void;
+  onClueOptionsUpdate?: (word: string, options: ClueOptions) => void;
   onSwapWord?: (oldWord: string, newWord: string, newClue: string, row: number, col: number, direction: 'across' | 'down') => void;
   selectedWord?: string | null;
   onSelectWord?: (word: string | null) => void;
@@ -124,6 +133,7 @@ export function LiveClueEditor({
   selectedDifficulties,
   onClueChange,
   onDifficultyChange,
+  onClueOptionsUpdate,
   onSwapWord,
   selectedWord,
   onSelectWord,
@@ -152,12 +162,31 @@ export function LiveClueEditor({
       setLoadingAI(word);
       try {
         const result = await generateClues({ word });
+        console.log('[AI Clues] Raw result for', word, ':', result);
 
-        if (result.easy || result.medium || result.hard) {
-          // Update all three difficulty clues
-          if (result.easy) onClueChange(word, 'easy', result.easy);
-          if (result.medium) onClueChange(word, 'medium', result.medium);
-          if (result.hard) onClueChange(word, 'hard', result.hard);
+        // API now returns arrays of clue options
+        const hasOptions = result.easy.length > 0 || result.medium.length > 0 || result.hard.length > 0;
+        console.log('[AI Clues] hasOptions:', hasOptions);
+
+        if (hasOptions) {
+          // Store all options for the popover
+          const options: ClueOptions = {
+            easy: result.easy,
+            medium: result.medium,
+            hard: result.hard,
+          };
+          console.log('[AI Clues] Storing options:', options);
+
+          if (onClueOptionsUpdate) {
+            onClueOptionsUpdate(word, options);
+          } else {
+            // Fallback: just set the first option as the selected clue
+            if (result.easy[0]) onClueChange(word, 'easy', result.easy[0]);
+            if (result.medium[0]) onClueChange(word, 'medium', result.medium[0]);
+            if (result.hard[0]) onClueChange(word, 'hard', result.hard[0]);
+          }
+        } else if (result.error) {
+          console.error('[AI Clues] API error:', result.error);
         }
       } catch (error) {
         console.error('Failed to generate clues:', error);
@@ -165,7 +194,7 @@ export function LiveClueEditor({
         setLoadingAI(null);
       }
     },
-    [generateClues, onClueChange]
+    [generateClues, onClueChange, onClueOptionsUpdate]
   );
 
   const handleStartEdit = (word: string, difficulty: Difficulty) => {
@@ -315,29 +344,42 @@ export function LiveClueEditor({
             );
           })}
 
-          {/* AI button */}
-          <button
-            onClick={() => handleAskAI(word.word)}
-            disabled={isLoading}
-            className={cn(
-              'ml-auto p-1 rounded transition-all',
-              isLoading
-                ? 'text-violet-400'
-                : 'text-[#6ba8d4] hover:text-violet-400 hover:bg-violet-500/10'
-            )}
-            title="Generate AI clues for all difficulties"
+          {/* AI button with popover */}
+          <ClueOptionsPopover
+            word={word.word}
+            options={wordClues.options}
+            selectedClues={{
+              easy: wordClues.easy,
+              medium: wordClues.medium,
+              hard: wordClues.hard,
+            }}
+            isLoading={isLoading}
+            onSelectClue={(difficulty, clue) => onClueChange(word.word, difficulty, clue)}
+            onGenerate={() => handleAskAI(word.word)}
           >
-            {isLoading ? (
-              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            )}
-          </button>
+            <button
+              className={cn(
+                'ml-auto p-1 rounded transition-all',
+                isLoading
+                  ? 'text-violet-400'
+                  : wordClues.options
+                    ? 'text-violet-400 hover:bg-violet-500/10'
+                    : 'text-[#6ba8d4] hover:text-violet-400 hover:bg-violet-500/10'
+              )}
+              title="Generate AI clues for all difficulties"
+            >
+              {isLoading ? (
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              )}
+            </button>
+          </ClueOptionsPopover>
         </div>
 
         {/* Clue display/edit */}

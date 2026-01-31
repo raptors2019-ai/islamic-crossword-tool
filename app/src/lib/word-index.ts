@@ -13,6 +13,7 @@ import { ALL_WORDS_2_5, ISLAMIC_WORDS_SET } from './word-list-full';
 
 /** Word category scores for fill quality */
 export const WORD_SCORE = {
+  BOOSTED_THEME: 150,    // Prophet-specific keywords (highest priority)
   ISLAMIC_KEYWORD: 100,  // Prophet names, Names of Allah, Quran terms
   ISLAMIC_FILLER: 70,    // PEACE, LIGHT, FAITH, etc.
   COMMON_ENGLISH: 40,    // Standard crossword words
@@ -21,11 +22,30 @@ export const WORD_SCORE = {
 } as const;
 
 /** Islamic filler words (themed for Islamic crosswords) */
-const ISLAMIC_FILLER_WORDS = new Set([
+export const ISLAMIC_FILLER_WORDS = new Set([
+  // Original set
   'PEACE', 'LIGHT', 'TRUTH', 'FAITH', 'GRACE', 'MERCY', 'HOPE', 'LOVE',
   'WISE', 'JUST', 'PURE', 'SOUL', 'GOOD', 'KIND', 'PRAY', 'FAST', 'GIVE',
   'READ', 'SEEK', 'PATH', 'GUIDE', 'BLESS', 'NOBLE', 'TRUST', 'GLORY',
   'ANGEL', 'EARTH', 'WATER', 'NIGHT', 'DREAM', 'HEART', 'HONOR', 'MORAL',
+  // Expanded set - thematically appropriate words
+  'GIFT', 'KING', 'PALM', 'STAR', 'DAWN', 'MOON', 'CALM', 'REST',
+  'SAFE', 'HEAL', 'HELP', 'CARE', 'WARM', 'DEAR', 'BEST', 'LIFE',
+  'HOME', 'FREE', 'RISE', 'GROW', 'LEAD', 'CALL', 'WALK', 'KEEP',
+  'HOLD', 'FIRM', 'TRUE', 'WILL', 'DUTY', 'OBEY', 'SAVE', 'STAY',
+  'OPEN', 'SIGN', 'WORD', 'BOOK', 'LAND', 'EAST', 'WEST', 'RAIN',
+  'TREE', 'SEED', 'FOOD', 'GOLD', 'RICH', 'POOR', 'LAMB', 'BIRD',
+  'LORD', 'CITY', 'GATE', 'WORK', 'MADE', 'SENT', 'TOLD', 'KNEW',
+  'CAME', 'WENT', 'SAID', 'HEAR', 'SEEN', 'KNOW', 'FEEL', 'BORN',
+  // 2-letter acceptable fillers
+  'GO', 'BE', 'DO', 'SO', 'AS', 'AT', 'BY', 'IF', 'IN', 'IS', 'IT',
+  'MY', 'OF', 'ON', 'OR', 'TO', 'UP', 'WE', 'AN', 'AM', 'HE', 'ME',
+  // 3-letter acceptable fillers
+  'ALL', 'AND', 'ARE', 'BUT', 'CAN', 'DAY', 'DID', 'FOR', 'GOD', 'GOT',
+  'HAS', 'HAD', 'HIM', 'HIS', 'HOW', 'ITS', 'LET', 'MAN', 'MEN', 'NEW',
+  'NOT', 'NOW', 'OLD', 'ONE', 'OUR', 'OUT', 'OWN', 'SAW', 'SAY', 'SHE',
+  'SUN', 'THE', 'TWO', 'WAY', 'WHO', 'WHY', 'YET', 'YOU', 'SEA', 'SKY',
+  'JOY', 'SON', 'END', 'SET', 'RUN', 'TEN', 'SIX', 'BOW', 'VOW', 'ROW',
 ]);
 
 /** Common crosswordese (valid but less desirable) */
@@ -33,6 +53,35 @@ const CROSSWORDESE = new Set([
   'QUA', 'EEL', 'EMU', 'ERE', 'ERR', 'ESS', 'ETA', 'EVE', 'EWE',
   'GNU', 'OAT', 'ODE', 'OLE', 'ORE', 'OWE', 'OWL', 'UNO', 'URN',
   'ALOE', 'ALEE', 'ARIA', 'ASEA', 'EPEE', 'ERNE', 'ESNE', 'OLEO',
+]);
+
+/**
+ * BLOCKED WORDS - Haram/inappropriate words that should NEVER appear
+ * in an Islamic crossword puzzle. These are filtered out during index building.
+ */
+const BLOCKED_WORDS = new Set([
+  // Alcohol-related
+  'BEER', 'BEERS', 'WINE', 'WINES', 'VODKA', 'RUM', 'GIN', 'ALE', 'ALES',
+  'BREW', 'BREWS', 'DRUNK', 'BOOZE', 'BAR', 'BARS', 'PUB', 'PUBS',
+  'LIQUOR', 'WHISKY', 'BRANDY', 'CIDER', 'MEAD', 'LAGER', 'STOUT',
+  'TIPSY', 'WINO', 'WINOS', 'SOT', 'SOTS', 'GROG',
+
+  // Pork-related
+  'PORK', 'HAM', 'HAMS', 'BACON', 'PIG', 'PIGS', 'SWINE', 'HOG', 'HOGS',
+  'PIGGY', 'BOAR', 'BOARS', 'SOW', 'SOWS', 'LARD',
+
+  // Gambling-related
+  'BET', 'BETS', 'WAGER', 'GAMBLE', 'CASINO', 'POKER', 'SLOTS', 'SLOT',
+  'ROULETTE', 'BINGO', 'LOTTO', 'CRAPS',
+
+  // Idolatry
+  'IDOL', 'IDOLS',
+
+  // Profanity/vulgar (common crossword traps)
+  'DAMN', 'DAMNS', 'CRAP', 'HELL', 'ASS', 'ASSES',
+
+  // Other inappropriate for Islamic context
+  'NUDE', 'NUDES', 'NAKED', 'SEXY', 'STRIPPER',
 ]);
 
 export interface WordIndex {
@@ -44,6 +93,13 @@ export interface WordIndex {
   allWords: Set<string>;
   /** Word scores for prioritization */
   wordScores: Map<string, number>;
+}
+
+/**
+ * Check if a word is blocked (haram/inappropriate for Islamic crosswords).
+ */
+export function isBlockedWord(word: string): boolean {
+  return BLOCKED_WORDS.has(word.toUpperCase().trim());
 }
 
 /**
@@ -78,6 +134,7 @@ export function buildWordIndex(words: string[]): WordIndex {
   for (const word of words) {
     const upper = word.toUpperCase().trim();
     if (upper.length < 2 || upper.length > 5) continue; // 5x5 grid constraint
+    if (BLOCKED_WORDS.has(upper)) continue; // Skip haram/inappropriate words
 
     allWords.add(upper);
     wordScores.set(upper, getWordScore(upper));
@@ -249,6 +306,65 @@ export function matchPatternSorted(pattern: string, index: WordIndex): string[] 
 }
 
 /**
+ * Get the tier for a word based on its score.
+ * Tier 0 = Boosted theme words (highest priority)
+ * Tier 1 = Islamic keywords
+ * Tier 2 = Islamic filler words
+ * Tier 3 = Common English (lowest priority)
+ */
+export function getWordTier(word: string, index: WordIndex): number {
+  const score = index.wordScores.get(word.toUpperCase()) ?? WORD_SCORE.COMMON_ENGLISH;
+  if (score >= WORD_SCORE.BOOSTED_THEME) return 0;
+  if (score >= WORD_SCORE.ISLAMIC_KEYWORD) return 1;
+  if (score >= WORD_SCORE.ISLAMIC_FILLER) return 2;
+  return 3;
+}
+
+/**
+ * Find all words matching a pattern, sorted by tier then score.
+ * This ensures we exhaust all Islamic options before trying English words.
+ *
+ * Returns words in priority order:
+ * 1. All boosted theme words (sorted by score)
+ * 2. All Islamic keywords (sorted by score)
+ * 3. All Islamic filler words (sorted by score)
+ * 4. All common English words (sorted by score)
+ */
+export function matchPatternByTier(pattern: string, index: WordIndex): string[] {
+  const matches = matchPattern(pattern, index);
+
+  // Group by tier
+  const tier0: string[] = []; // Boosted theme
+  const tier1: string[] = []; // Islamic keywords
+  const tier2: string[] = []; // Islamic filler
+  const tier3: string[] = []; // Common English
+
+  for (const word of matches) {
+    const tier = getWordTier(word, index);
+    if (tier === 0) tier0.push(word);
+    else if (tier === 1) tier1.push(word);
+    else if (tier === 2) tier2.push(word);
+    else tier3.push(word);
+  }
+
+  // Sort each tier by score (descending), then alphabetically
+  const sortByScore = (a: string, b: string) => {
+    const scoreA = index.wordScores.get(a) ?? WORD_SCORE.COMMON_ENGLISH;
+    const scoreB = index.wordScores.get(b) ?? WORD_SCORE.COMMON_ENGLISH;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.localeCompare(b);
+  };
+
+  tier0.sort(sortByScore);
+  tier1.sort(sortByScore);
+  tier2.sort(sortByScore);
+  tier3.sort(sortByScore);
+
+  // Concatenate in tier order
+  return [...tier0, ...tier1, ...tier2, ...tier3];
+}
+
+/**
  * Build the default word index using the full word list.
  * This is a convenience function for creating an index with all words.
  */
@@ -287,10 +403,10 @@ export function buildBoostedWordIndex(
   const newScores = new Map(base.wordScores);
   const boostedSet = new Set<string>();
 
-  // Add boosted words with maximum priority
+  // Add boosted words with maximum priority (skip blocked words)
   for (const word of boostedWords) {
     const upper = word.toUpperCase().trim();
-    if (upper.length >= 2 && upper.length <= 5) {
+    if (upper.length >= 2 && upper.length <= 5 && !BLOCKED_WORDS.has(upper)) {
       newScores.set(upper, WORD_SCORE.ISLAMIC_KEYWORD + 50); // Higher than any other
       boostedSet.add(upper);
     }

@@ -8,7 +8,7 @@ import { api, internal } from "./_generated/api";
  * Generates 7-10 clue options per word based on the cruciverbist prompt.
  */
 
-// Clue generation prompt template - categorized by difficulty
+// Clue generation prompt template - categorized by difficulty with 3 options each
 const CLUE_PROMPT = `You are an expert cruciverbist (crossword puzzle creator) in the style of Patrick Barry and Will Shortz, specializing in Islamic-themed crossword puzzles.
 
 Create clues for the word: {word}
@@ -21,26 +21,27 @@ IMPORTANT RULES:
 
 {islamicContext}
 
-Generate exactly 3 clues categorized by difficulty:
+Generate exactly 9 clues (3 per difficulty level):
 
-**EASY** - Simple, straightforward definition or direct Islamic reference
-**MEDIUM** - Familiar phrase clue ("costs for living" for RANSOM), idiom ("she's a doll" for BARBIE), or clever dictionary clue
-**HARD** - Analogy clue, sneaky misdirection, double meaning, or wordplay
+**EASY** (3 clues) - Simple, straightforward definitions or direct Islamic references
+**MEDIUM** (3 clues) - Familiar phrase clues ("costs for living" for RANSOM), idiom ("she's a doll" for BARBIE), or clever dictionary clues
+**HARD** (3 clues) - Analogy clues, sneaky misdirection, double meaning, or wordplay
 
 Return EXACTLY this JSON format (no markdown, no extra text):
 {
   "word": "{word}",
-  "easy": "simple straightforward clue here",
-  "medium": "familiar phrase or idiom clue here",
-  "hard": "sneaky or analogy clue here"
+  "easy": ["clue 1", "clue 2", "clue 3"],
+  "medium": ["clue 1", "clue 2", "clue 3"],
+  "hard": ["clue 1", "clue 2", "clue 3"]
 }
 
 Requirements:
 - Each clue must be UNIQUE and different in approach
+- All 3 clues within each difficulty should be distinct options
 - Prefer Islamic connections when the word is Islamic
 - Clues should be suitable for all ages
 - Keep clues concise (under 80 characters each)
-- Make sure HARD is genuinely tricky/clever`;
+- Make sure all HARD clues are genuinely tricky/clever`;
 
 // Prophet names with context
 const PROPHET_CONTEXT: Record<string, string> = {
@@ -134,9 +135,9 @@ export const generateClues = action({
   },
   handler: async (ctx, args): Promise<{
     word: string;
-    easy: string;
-    medium: string;
-    hard: string;
+    easy: string[];
+    medium: string[];
+    hard: string[];
     error?: string;
   }> => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -144,9 +145,9 @@ export const generateClues = action({
     if (!apiKey) {
       return {
         word: args.word,
-        easy: "",
-        medium: "",
-        hard: "",
+        easy: [],
+        medium: [],
+        hard: [],
         error: "ANTHROPIC_API_KEY not configured",
       };
     }
@@ -194,18 +195,25 @@ export const generateClues = action({
         }
       }
 
+      // Normalize to arrays (handle both old string format and new array format)
+      const normalizeToArray = (val: unknown): string[] => {
+        if (Array.isArray(val)) return val.filter(v => typeof v === 'string' && v.length > 0);
+        if (typeof val === 'string' && val.length > 0) return [val];
+        return [];
+      };
+
       return {
         word,
-        easy: parsedData.easy || "",
-        medium: parsedData.medium || "",
-        hard: parsedData.hard || "",
+        easy: normalizeToArray(parsedData.easy),
+        medium: normalizeToArray(parsedData.medium),
+        hard: normalizeToArray(parsedData.hard),
       };
     } catch (error) {
       return {
         word,
-        easy: "",
-        medium: "",
-        hard: "",
+        easy: [],
+        medium: [],
+        hard: [],
         error: String(error),
       };
     }

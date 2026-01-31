@@ -305,7 +305,8 @@ export function WordHub({
           )}
 
           {/* Legend */}
-          <div className="pt-3 border-t border-[#4A90C2]/20">
+          <div className="pt-3 border-t border-[#4A90C2]/20 space-y-2">
+            {/* Fit indicators */}
             <div className="flex flex-wrap items-center gap-3 text-xs text-[#8fc1e3]">
               <div className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -322,6 +323,21 @@ export function WordHub({
               <div className="flex items-center gap-1">
                 <span className="text-white/40">Dim</span>
                 <span>= Wrong length</span>
+              </div>
+            </div>
+            {/* Source badges */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-[#8fc1e3]">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-amber-500 text-amber-950">P</span>
+                <span>= Proven</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-sky-500 text-sky-950">W</span>
+                <span>= Word list</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-violet-500 text-violet-950">AI</span>
+                <span>= AI-generated</span>
               </div>
             </div>
           </div>
