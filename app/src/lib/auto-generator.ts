@@ -349,7 +349,10 @@ function tryGenerateWithPattern(
     return null;
   }
 
-  const cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime);
+  // Collect theme words that were placed to prevent duplicates
+  const placedThemeWordSet = new Set(themeWordsPlaced.map(pw => pw.word.toUpperCase()));
+
+  const cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime, placedThemeWordSet);
 
   if (!cspResult.success) {
     return null;

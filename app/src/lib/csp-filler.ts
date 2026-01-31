@@ -364,12 +364,14 @@ function placeWordInGrid(
 
 /**
  * Backtracking search with forward checking
+ * Tracks used words to prevent duplicates in the same puzzle
  */
 function backtrackSearch(
   slots: CSPSlot[],
   slotMap: Map<string, CSPSlot>,
   grid: EditableCell[][],
   placedWords: { word: string; slot: CSPSlot }[],
+  usedWords: Set<string>,
   maxTime: number,
   startTime: number
 ): boolean {
@@ -387,11 +389,15 @@ function backtrackSearch(
   }
 
   // Try each candidate word (already sorted by priority)
-  for (const word of [...slot.candidates]) {
+  // Filter out words that are already used in this puzzle
+  const availableCandidates = slot.candidates.filter(w => !usedWords.has(w));
+
+  for (const word of availableCandidates) {
     // Assign the word
     slot.isFilled = true;
     const originalCandidates = slot.candidates;
     slot.candidates = [word];
+    usedWords.add(word);
 
     // Forward check
     const { success, prunedValues } = forwardCheck(slot, word, slots, slotMap);
@@ -402,7 +408,7 @@ function backtrackSearch(
       placedWords.push({ word, slot });
 
       // Recurse
-      if (backtrackSearch(slots, slotMap, grid, placedWords, maxTime, startTime)) {
+      if (backtrackSearch(slots, slotMap, grid, placedWords, usedWords, maxTime, startTime)) {
         return true;
       }
 
@@ -413,6 +419,7 @@ function backtrackSearch(
     // Restore state
     slot.isFilled = false;
     slot.candidates = originalCandidates;
+    usedWords.delete(word);
     restorePrunedValues(prunedValues, slotMap);
   }
 
@@ -425,12 +432,14 @@ function backtrackSearch(
  * @param cells Current grid state
  * @param wordIndex Word index for pattern matching (uses default if not provided)
  * @param maxTimeMs Maximum time to spend (default 15000ms = 15 seconds)
+ * @param existingWords Words already placed in the grid (to prevent duplicates)
  * @returns Fill result with success status and updated grid
  */
 export function fillGridWithCSP(
   cells: EditableCell[][],
   wordIndex?: WordIndex,
-  maxTimeMs: number = 15000
+  maxTimeMs: number = 15000,
+  existingWords?: Set<string>
 ): CSPFillResult {
   const startTime = Date.now();
   const index = wordIndex ?? getDefaultWordIndex();
@@ -445,6 +454,14 @@ export function fillGridWithCSP(
   // Count initial state
   const alreadyFilled = slots.filter((s) => s.isFilled).length;
   const totalSlots = slots.length;
+
+  // Collect words already in the grid (from filled slots)
+  const usedWords = new Set<string>(existingWords ?? []);
+  for (const slot of slots) {
+    if (slot.isFilled && !slot.pattern.includes('_')) {
+      usedWords.add(slot.pattern.toUpperCase());
+    }
+  }
 
   // Apply AC-3 to prune domains
   const acResult = enforceArcConsistency(slots, slotMap);
@@ -474,6 +491,7 @@ export function fillGridWithCSP(
     slotMap,
     grid,
     placedWords,
+    usedWords,
     maxTimeMs,
     startTime
   );
