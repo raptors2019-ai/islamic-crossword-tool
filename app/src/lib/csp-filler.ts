@@ -26,6 +26,10 @@ import {
   getDefaultWordIndex,
   getScore,
   WORD_SCORE,
+  getIslamicWordIndex,
+  getEnglishWordIndex,
+  matchPattern,
+  isIslamicWord,
 } from './word-index';
 
 /**
@@ -601,4 +605,248 @@ export function getUnfilledSlotsByDifficulty(
   return slots
     .filter((s) => !s.isFilled)
     .sort((a, b) => a.candidates.length - b.candidates.length);
+}
+
+// ============================================================================
+// LEVER 3: Islamic-Biased CSP Fill
+// ============================================================================
+
+/**
+ * Get candidates for a pattern with Islamic words prioritized.
+ * Returns Islamic matches first, then English matches (deduplicated).
+ */
+export function getIslamicBiasedCandidates(
+  pattern: string,
+  islamicIndex: WordIndex,
+  englishIndex: WordIndex
+): string[] {
+  // Get matches from Islamic index first
+  const islamicMatches = matchPattern(pattern, islamicIndex);
+
+  // Get matches from English index
+  const englishMatches = matchPattern(pattern, englishIndex);
+
+  // Dedupe (Islamic takes priority)
+  const islamicSet = new Set(islamicMatches);
+  const filteredEnglish = englishMatches.filter(w => !islamicSet.has(w));
+
+  return [...islamicMatches, ...filteredEnglish];
+}
+
+/**
+ * Result of biased CSP fill
+ */
+export interface BiasedCSPFillResult extends CSPFillResult {
+  /** Actual Islamic percentage achieved */
+  islamicPercent: number;
+}
+
+/**
+ * Fill the grid with Islamic-biased CSP.
+ *
+ * This version of CSP fill prioritizes Islamic words:
+ * 1. Try Islamic words first for every slot
+ * 2. Force Islamic-only fills when below target percentage
+ * 3. Fall back to English only when necessary
+ *
+ * @param cells Current grid state
+ * @param targetIslamicPercent Target Islamic word percentage (0-1, default 0.5)
+ * @param maxTimeMs Maximum time in milliseconds
+ * @param existingWords Words already placed (to prevent duplicates)
+ * @returns Fill result with Islamic percentage achieved
+ */
+export function fillGridWithBiasedCSP(
+  cells: EditableCell[][],
+  targetIslamicPercent: number = 0.5,
+  maxTimeMs: number = 15000,
+  existingWords?: Set<string>
+): BiasedCSPFillResult {
+  const startTime = Date.now();
+  const islamicIndex = getIslamicWordIndex();
+  const englishIndex = getEnglishWordIndex();
+  const fullIndex = getDefaultWordIndex();
+
+  // Deep copy the grid
+  const grid = cells.map((row) => row.map((cell) => ({ ...cell })));
+
+  // Get all slots
+  const slots = getCSPSlots(grid, fullIndex);
+  const slotMap = new Map(slots.map((s) => [s.id, s]));
+
+  // Count initial state
+  const alreadyFilled = slots.filter((s) => s.isFilled).length;
+  const totalSlots = slots.length;
+
+  // Track used words
+  const usedWords = new Set<string>(existingWords ?? []);
+  for (const slot of slots) {
+    if (slot.isFilled && !slot.pattern.includes('_')) {
+      usedWords.add(slot.pattern.toUpperCase());
+    }
+  }
+
+  // Override candidates with Islamic-biased ordering
+  for (const slot of slots) {
+    if (!slot.isFilled) {
+      slot.candidates = getIslamicBiasedCandidates(slot.pattern, islamicIndex, englishIndex);
+    }
+  }
+
+  // Apply AC-3 to prune domains
+  const acResult = enforceArcConsistency(slots, slotMap);
+
+  if (!acResult) {
+    return {
+      success: false,
+      grid,
+      placedWords: [],
+      unfilledSlots: slots.filter((s) => !s.isFilled),
+      stats: {
+        totalSlots,
+        alreadyFilled,
+        filledByCSP: 0,
+        avgWordScore: 0,
+        islamicPercentage: 0,
+        timeTakenMs: Date.now() - startTime,
+      },
+      islamicPercent: 0,
+    };
+  }
+
+  // Run biased backtracking search
+  const placedWords: { word: string; slot: CSPSlot }[] = [];
+  const success = biasedBacktrackSearch(
+    slots,
+    slotMap,
+    grid,
+    placedWords,
+    usedWords,
+    islamicIndex,
+    targetIslamicPercent,
+    maxTimeMs,
+    startTime
+  );
+
+  // Calculate statistics
+  const filledByCSP = placedWords.length;
+  const unfilledSlots = slots.filter((s) => !s.isFilled);
+
+  let totalScore = 0;
+  let islamicCount = 0;
+
+  for (const { word } of placedWords) {
+    const score = getScore(word, fullIndex);
+    totalScore += score;
+    if (isIslamicWord(word)) {
+      islamicCount++;
+    }
+  }
+
+  const avgWordScore = filledByCSP > 0 ? totalScore / filledByCSP : 0;
+  const islamicPercentage = filledByCSP > 0 ? (islamicCount / filledByCSP) * 100 : 0;
+  const islamicPercent = filledByCSP > 0 ? islamicCount / filledByCSP : 0;
+
+  return {
+    success,
+    grid,
+    placedWords,
+    unfilledSlots,
+    stats: {
+      totalSlots,
+      alreadyFilled,
+      filledByCSP,
+      avgWordScore,
+      islamicPercentage,
+      timeTakenMs: Date.now() - startTime,
+    },
+    islamicPercent,
+  };
+}
+
+/**
+ * Biased backtracking search that prioritizes Islamic words
+ * and forces Islamic selections when below target percentage.
+ */
+function biasedBacktrackSearch(
+  slots: CSPSlot[],
+  slotMap: Map<string, CSPSlot>,
+  grid: EditableCell[][],
+  placedWords: { word: string; slot: CSPSlot }[],
+  usedWords: Set<string>,
+  islamicIndex: WordIndex,
+  targetIslamicPercent: number,
+  maxTime: number,
+  startTime: number
+): boolean {
+  // Check timeout
+  if (Date.now() - startTime > maxTime) {
+    return false;
+  }
+
+  // Select next slot to fill (MRV heuristic)
+  const slot = selectMRVSlot(slots);
+
+  // If no unfilled slots, we're done!
+  if (!slot) {
+    return true;
+  }
+
+  // Calculate current Islamic percentage
+  const islamicCount = placedWords.filter(pw => isIslamicWord(pw.word)).length;
+  const currentPercent = placedWords.length > 0 ? islamicCount / placedWords.length : 1;
+
+  // Filter out used words
+  let availableCandidates = slot.candidates.filter(w => !usedWords.has(w));
+
+  // If we're below target, force Islamic-only candidates
+  if (currentPercent < targetIslamicPercent && placedWords.length > 2) {
+    const islamicOnly = availableCandidates.filter(w => isIslamicWord(w));
+    if (islamicOnly.length > 0) {
+      availableCandidates = islamicOnly;
+    }
+    // If no Islamic options, fall back to all candidates
+  }
+
+  for (const word of availableCandidates) {
+    // Assign the word
+    slot.isFilled = true;
+    const originalCandidates = slot.candidates;
+    slot.candidates = [word];
+    usedWords.add(word);
+
+    // Forward check
+    const { success, prunedValues } = forwardCheck(slot, word, slots, slotMap);
+
+    if (success) {
+      // Place word in grid
+      placeWordInGrid(grid, slot, word);
+      placedWords.push({ word, slot });
+
+      // Recurse
+      if (biasedBacktrackSearch(
+        slots,
+        slotMap,
+        grid,
+        placedWords,
+        usedWords,
+        islamicIndex,
+        targetIslamicPercent,
+        maxTime,
+        startTime
+      )) {
+        return true;
+      }
+
+      // Backtrack: remove word from grid
+      placedWords.pop();
+    }
+
+    // Restore state
+    slot.isFilled = false;
+    slot.candidates = originalCandidates;
+    usedWords.delete(word);
+    restorePrunedValues(prunedValues, slotMap);
+  }
+
+  return false;
 }

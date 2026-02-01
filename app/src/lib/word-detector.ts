@@ -5,6 +5,7 @@
 
 import { EditableCell, GRID_SIZE } from './editable-grid';
 import { sampleWords } from './sample-data';
+import { ALL_WORDS_2_5 } from './word-list-full';
 
 export interface DetectedWord {
   word: string;
@@ -19,16 +20,30 @@ export interface DetectedWord {
 }
 
 /**
- * Build a set of valid words from sample data (2-5 letters for 5x5)
+ * Build a comprehensive dictionary from:
+ * 1. Sample words (with clues and categories)
+ * 2. Full word list (for validation)
  */
 function buildDictionary(): Map<string, { clue: string; category?: string }> {
   const dict = new Map<string, { clue: string; category?: string }>();
 
+  // First add sample words with their clues
   for (const word of sampleWords) {
     if (word.word.length >= 2 && word.word.length <= 5) {
       dict.set(word.word.toUpperCase(), {
         clue: word.clue,
         category: word.category,
+      });
+    }
+  }
+
+  // Then add all words from the full word list (without clues)
+  // This ensures words like HU, SH, etc. are recognized as valid
+  for (const word of ALL_WORDS_2_5) {
+    if (!dict.has(word.toUpperCase())) {
+      dict.set(word.toUpperCase(), {
+        clue: '', // No pre-defined clue
+        category: undefined,
       });
     }
   }

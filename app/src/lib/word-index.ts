@@ -429,6 +429,86 @@ export function getDefaultWordIndex(): WordIndex {
   return _defaultIndex;
 }
 
+// ============================================================================
+// Split Indices for Islamic-Biased Fill
+// ============================================================================
+
+/**
+ * Build an index containing ONLY Islamic words (keywords + fillers).
+ * Used for Islamic-biased CSP fill to prioritize Islamic vocabulary.
+ */
+export function buildIslamicWordIndex(): WordIndex {
+  const islamicWords: string[] = [];
+
+  // Add all Islamic keywords
+  for (const word of ISLAMIC_WORDS_SET) {
+    const upper = word.toUpperCase();
+    if (upper.length >= 2 && upper.length <= 5) {
+      islamicWords.push(upper);
+    }
+  }
+
+  // Add all Islamic filler words
+  for (const word of ISLAMIC_FILLER_WORDS) {
+    const upper = word.toUpperCase();
+    if (upper.length >= 2 && upper.length <= 5 && !islamicWords.includes(upper)) {
+      islamicWords.push(upper);
+    }
+  }
+
+  return buildWordIndex(islamicWords);
+}
+
+/**
+ * Build an index containing only common English words (non-Islamic).
+ * Used as fallback when no Islamic words match a pattern.
+ */
+export function buildEnglishWordIndex(): WordIndex {
+  const englishWords: string[] = [];
+  const islamicSet = new Set([...ISLAMIC_WORDS_SET, ...ISLAMIC_FILLER_WORDS].map(w => w.toUpperCase()));
+
+  for (const word of ALL_WORDS_2_5) {
+    const upper = word.toUpperCase();
+    if (!islamicSet.has(upper)) {
+      englishWords.push(upper);
+    }
+  }
+
+  return buildWordIndex(englishWords);
+}
+
+/** Singleton instances for performance */
+let _islamicIndex: WordIndex | null = null;
+let _englishIndex: WordIndex | null = null;
+
+/**
+ * Get the Islamic-only word index (singleton).
+ */
+export function getIslamicWordIndex(): WordIndex {
+  if (!_islamicIndex) {
+    _islamicIndex = buildIslamicWordIndex();
+  }
+  return _islamicIndex;
+}
+
+/**
+ * Get the English-only word index (singleton).
+ */
+export function getEnglishWordIndex(): WordIndex {
+  if (!_englishIndex) {
+    _englishIndex = buildEnglishWordIndex();
+  }
+  return _englishIndex;
+}
+
+/**
+ * Check if a word is in the Islamic word set (keywords or fillers).
+ */
+export function isIslamicWord(word: string): boolean {
+  const upper = word.toUpperCase();
+  return ISLAMIC_WORDS_SET.has(upper) || ISLAMIC_FILLER_WORDS.has(upper);
+}
+
 /**
  * Build a word index with boosted priority for specific keywords.
  * Used for prophet-specific puzzle generation to maximize theme words.

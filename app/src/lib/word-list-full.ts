@@ -45,18 +45,22 @@ const FILLER_WORDS = [
 
 // Common English 2-5 letter words (crossword-friendly)
 const COMMON_ENGLISH_WORDS = [
-  // 2-letter words
-  'AM', 'AN', 'AS', 'AT', 'BE', 'BY', 'DO', 'GO', 'HE', 'IF', 'IN', 'IS',
-  'IT', 'ME', 'MY', 'NO', 'OF', 'ON', 'OR', 'SO', 'TO', 'UP', 'US', 'WE',
-  'AD', 'AH', 'AI', 'AW', 'AX', 'BI', 'EH', 'EL', 'EM', 'EN', 'ER', 'ET',
-  'EX', 'FA', 'GO', 'HA', 'HI', 'HO', 'ID', 'LA', 'LO', 'MA', 'MI', 'MU',
-  'NA', 'NU', 'OD', 'OE', 'OH', 'OK', 'OP', 'OW', 'OX', 'PA', 'PE', 'PI',
-  'RE', 'SH', 'SI', 'TA', 'TI', 'UH', 'UM', 'UN', 'UT', 'WO', 'XI', 'XU',
-  'YA', 'YO', 'ZA',
+  // 2-letter words (comprehensive Scrabble dictionary)
+  'AA', 'AB', 'AD', 'AE', 'AG', 'AH', 'AI', 'AL', 'AM', 'AN', 'AR', 'AS',
+  'AT', 'AW', 'AX', 'AY', 'BA', 'BE', 'BI', 'BO', 'BY', 'DA', 'DE', 'DI',
+  'DO', 'ED', 'EF', 'EH', 'EL', 'EM', 'EN', 'ER', 'ES', 'ET', 'EW', 'EX',
+  'FA', 'FE', 'GI', 'GO', 'GU', 'HA', 'HE', 'HI', 'HM', 'HO', 'HU', 'ID',
+  'IF', 'IN', 'IS', 'IT', 'JA', 'JO', 'KA', 'KI', 'LA', 'LI', 'LO', 'MA',
+  'ME', 'MI', 'MM', 'MO', 'MU', 'MY', 'NA', 'NE', 'NO', 'NU', 'OD', 'OE',
+  'OF', 'OH', 'OI', 'OK', 'OM', 'ON', 'OO', 'OP', 'OR', 'OS', 'OU', 'OW',
+  'OX', 'OY', 'PA', 'PE', 'PI', 'PO', 'QI', 'RE', 'SH', 'SI', 'SO', 'TA',
+  'TE', 'TI', 'TO', 'UH', 'UM', 'UN', 'UP', 'UR', 'US', 'UT', 'WE', 'WO',
+  'XI', 'XU', 'YA', 'YE', 'YO', 'ZA', 'ZO',
 
   // 3-letter words
-  'ACE', 'ACT', 'ADD', 'AGE', 'AGO', 'AID', 'AIM', 'AIR', 'ALL', 'AND',
-  'ANT', 'ANY', 'APE', 'ARC', 'ARE', 'ARM', 'ART', 'ASH', 'ATE', 'AWE',
+  'ABA', 'ACE', 'ACT', 'ADA', 'ADD', 'AGE', 'AGO', 'AHA', 'AID', 'AIM',
+  'AIR', 'ALA', 'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC', 'ARE', 'ARM',
+  'ART', 'ASH', 'ATE', 'AVA', 'AWE',
   'BAD', 'BAG', 'BAR', 'BAT', 'BAY', 'BED', 'BEE', 'BET', 'BIG', 'BIT',
   'BOW', 'BOX', 'BOY', 'BUD', 'BUG', 'BUS', 'BUT', 'BUY', 'CAB', 'CAN',
   'CAP', 'CAR', 'CAT', 'COB', 'COD', 'COG', 'COP', 'COT', 'COW', 'CRY',

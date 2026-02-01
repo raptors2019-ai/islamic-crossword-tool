@@ -43,6 +43,7 @@ import {
   RelaxedArcOptions,
   getAllSlots,
 } from './perpendicular-validator';
+import { detectWords } from './word-detector';
 import {
   WordIndex,
   getDefaultWordIndex,
@@ -53,6 +54,40 @@ import {
   matchPattern,
 } from './word-index';
 import { ISLAMIC_WORDS_SET } from './word-list-full';
+
+// ============================================================================
+// Final Grid Validation
+// ============================================================================
+
+/**
+ * Validate that ALL words in the grid are valid dictionary words.
+ *
+ * This is the final gate before returning a successful puzzle.
+ * It catches invalid 2-letter combinations (like RT, SY, RU, TF)
+ * that can be created when black squares split slots.
+ *
+ * @param cells The grid to validate
+ * @returns Object with valid flag and list of invalid words
+ */
+export function validateAllWords(cells: EditableCell[][]): {
+  valid: boolean;
+  invalidWords: { word: string; row: number; col: number; direction: 'across' | 'down' }[];
+} {
+  const detectedWords = detectWords(cells);
+  const invalidWords = detectedWords
+    .filter(w => !w.isValid)
+    .map(w => ({
+      word: w.word,
+      row: w.row,
+      col: w.col,
+      direction: w.direction,
+    }));
+
+  return {
+    valid: invalidWords.length === 0,
+    invalidWords,
+  };
+}
 
 // ============================================================================
 // LEVER 1: Friendliest-First Keyword Scoring
@@ -1027,6 +1062,15 @@ function tryGenerateWithSmartMatcher(
     return null;
   }
 
+  // FINAL VALIDATION: Ensure ALL words in the grid are valid dictionary words
+  // This catches invalid 2-letter combinations created by black square placement
+  const validation = validateAllWords(finalGrid);
+  if (!validation.valid) {
+    console.log('Smart matcher: Grid contains invalid words:', validation.invalidWords.map(w => w.word));
+    // Return null to try another approach - grid is not valid
+    return null;
+  }
+
   // Calculate stats
   let islamicCount = 0;
   let totalScore = 0;
@@ -1192,6 +1236,16 @@ function tryGenerateWithPattern(
     }
     return null;
   }
+
+  // FINAL VALIDATION: Ensure ALL words in the grid are valid dictionary words
+  // This catches invalid 2-letter combinations created by black square placement
+  const validation = validateAllWords(finalGrid);
+  if (!validation.valid) {
+    console.log(`Pattern ${patternName}: Grid contains invalid words:`, validation.invalidWords.map(w => w.word));
+    // Return null to try another pattern - grid is not valid
+    return null;
+  }
+
   let islamicCount = 0;
   let totalScore = 0;
 
