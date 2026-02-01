@@ -42,6 +42,7 @@ import {
   getGridStats,
   removeWordFromGrid,
   createEmptyGrid,
+  regenerateWord,
 } from '@/lib/editable-grid';
 import {
   generatePuzzle as generateAutoPuzzle,
@@ -52,7 +53,7 @@ import {
   ProphetKeyword,
 } from '@/lib/prophet-keywords';
 import { fillGridWithCSP, canGridBeFilled, CSPFillResult } from '@/lib/csp-filler';
-import { buildBoostedWordIndex } from '@/lib/word-index';
+import { buildBoostedWordIndex, matchPattern } from '@/lib/word-index';
 
 const themePresets = [
   { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
@@ -92,6 +93,12 @@ export default function Home() {
   const [gridClues, setGridClues] = useState<Record<string, DifficultyClues>>({});
   const [selectedDifficulties, setSelectedDifficulties] = useState<Record<string, Difficulty>>({});
   const [selectedGridWord, setSelectedGridWord] = useState<string | null>(null);
+
+  // Track current prophet selection for regeneration
+  const [currentProphet, setCurrentProphet] = useState<{
+    id: string;
+    keywords: ProphetKeyword[];
+  } | null>(null);
 
   // Handle clue change from LiveClueEditor
   const handleGridClueChange = useCallback((word: string, difficulty: Difficulty, clue: string) => {
@@ -258,6 +265,35 @@ export default function Home() {
   const detectedWords = useMemo(() => {
     return detectWords(editableCells);
   }, [editableCells]);
+
+  // Handle regenerating a filler word
+  const handleRegenerateWord = useCallback((word: { word: string; row: number; col: number; direction: 'across' | 'down' }) => {
+    // Get all words currently in the grid to exclude from alternatives
+    const usedWords = new Set(detectedWords.map(w => w.word.toUpperCase()));
+
+    // Create a matchPattern wrapper for the word index
+    const indexWrapper = {
+      matchPattern: (pattern: string) => matchPattern(pattern, wordIndex),
+    };
+
+    const result = regenerateWord(editableCells, word, indexWrapper, usedWords);
+
+    if (result) {
+      setCells(result.newCells);
+      // Update clues: remove old word's clues and add placeholder for new
+      setGridClues(prev => {
+        const { [word.word.toUpperCase()]: _, ...rest } = prev;
+        return {
+          ...rest,
+          [result.newWord]: {
+            easy: '',
+            medium: '',
+            hard: '',
+          },
+        };
+      });
+    }
+  }, [editableCells, wordIndex, detectedWords, setCells]);
 
   // Get the current pattern string for constraint suggestions
   const patternString = currentPattern?.pattern || null;
@@ -552,8 +588,21 @@ export default function Home() {
     }
   }, [puzzleTitle, themeWords]);
 
+  // Helper to shuffle an array (Fisher-Yates)
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // Handle prophet selection - auto-generate puzzle with prophet's keywords
-  const handleProphetSelect = useCallback((prophetId: string, keywords: ProphetKeyword[]) => {
+  const handleProphetSelect = useCallback((prophetId: string, keywords: ProphetKeyword[], shuffle: boolean = false) => {
+    // Store prophet selection for regeneration
+    setCurrentProphet({ id: prophetId, keywords });
+
     // Clear existing state
     clearGrid();
     setThemeWords([]);
@@ -562,11 +611,17 @@ export default function Home() {
     setGeneratedPuzzle(null);
     setSelectedWordId(null);
     setAutoCompleteResult(null);
+    setGridClues({}); // Also clear grid clues
 
     // Filter to 5-letter-or-less words and sort by relevance
-    const validKeywords = keywords
+    let validKeywords = keywords
       .filter(kw => kw.word.length >= 2 && kw.word.length <= 5)
       .sort((a, b) => b.relevance - a.relevance);
+
+    // Shuffle keywords for variety when regenerating
+    if (shuffle) {
+      validKeywords = shuffleArray(validKeywords);
+    }
 
     if (validKeywords.length === 0) return;
 
@@ -586,10 +641,16 @@ export default function Home() {
     }));
 
     // Generate using auto-generator with boosted index
-    const result = generateAutoPuzzle(themeWordsInput, {
+    // When shuffling (regenerating), use a random starting pattern for more variety
+    const generatorOptions: { maxTimeMs: number; wordIndex: typeof boostedIndex; preferredPattern?: number } = {
       maxTimeMs: 10000,
       wordIndex: boostedIndex,
-    });
+    };
+    if (shuffle) {
+      // Random pattern from 0-7 (8 patterns available)
+      generatorOptions.preferredPattern = Math.floor(Math.random() * 8);
+    }
+    const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
 
     // Update state with results
     const newThemeWords: ThemeWord[] = [];
@@ -636,6 +697,14 @@ export default function Home() {
 
     setIsGenerating(false);
   }, [clearGrid, wordIndex, setCells]);
+
+  // Handle regenerating the puzzle with the same prophet's keywords
+  const handleRegeneratePuzzle = useCallback(() => {
+    if (currentProphet) {
+      // Pass shuffle=true to get a different puzzle layout
+      handleProphetSelect(currentProphet.id, currentProphet.keywords, true);
+    }
+  }, [currentProphet, handleProphetSelect]);
 
   // Handle auto-complete (CSP-based gap filling)
   const handleAutoComplete = useCallback(async () => {
@@ -1098,6 +1167,32 @@ export default function Home() {
                     )}
                   </Button>
 
+                  {/* Regenerate Puzzle Button - only show when a prophet is selected */}
+                  {currentProphet && (
+                    <Button
+                      onClick={handleRegeneratePuzzle}
+                      disabled={isGenerating}
+                      className="bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] px-6 transition-all hover:scale-105"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Regenerate Puzzle
+                        </>
+                      )}
+                    </Button>
+                  )}
+
                   {themeWords.length >= 3 && (
                     <Button
                       onClick={handleGenerate}
@@ -1229,6 +1324,7 @@ export default function Home() {
                   onClueOptionsUpdate={handleClueOptionsUpdate}
                   onSwapClueAlternative={handleSwapClueAlternative}
                   onSwapWord={handleSwapWord}
+                  onRegenerateWord={handleRegenerateWord}
                   selectedWord={selectedGridWord}
                   onSelectWord={setSelectedGridWord}
                 />

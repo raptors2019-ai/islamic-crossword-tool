@@ -44,6 +44,7 @@ interface LiveClueEditorProps {
   onClueOptionsUpdate?: (word: string, options: { easy: string[]; medium: string[]; hard: string[] }) => void;
   onSwapClueAlternative?: (word: string, difficulty: Difficulty, alternativeClue: string) => void;
   onSwapWord?: (oldWord: string, newWord: string, newClue: string, row: number, col: number, direction: 'across' | 'down') => void;
+  onRegenerateWord?: (word: { word: string; row: number; col: number; direction: 'across' | 'down' }) => void;
   selectedWord?: string | null;
   onSelectWord?: (word: string | null) => void;
 }
@@ -136,6 +137,7 @@ export function LiveClueEditor({
   onClueOptionsUpdate,
   onSwapClueAlternative,
   onSwapWord,
+  onRegenerateWord,
   selectedWord,
   onSelectWord,
 }: LiveClueEditorProps) {
@@ -345,9 +347,31 @@ export function LiveClueEditor({
               </span>
             )}
             {!isIslamic && (
-              <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider bg-orange-500/20 text-orange-400">
-                FILLER
-              </span>
+              <>
+                <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider bg-orange-500/20 text-orange-400">
+                  FILLER
+                </span>
+                {/* Regenerate button for filler words */}
+                {onRegenerateWord && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRegenerateWord({
+                        word: word.word,
+                        row: word.row,
+                        col: word.col,
+                        direction: word.direction,
+                      });
+                    }}
+                    className="p-1 rounded transition-all text-orange-400 hover:text-orange-300 hover:bg-orange-500/20"
+                    title="Regenerate puzzle"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -1040,6 +1040,105 @@ export function removeWordFromGrid(
 }
 
 /**
+ * Regenerate a word in the grid by finding an alternative valid word.
+ * Only changes letters that aren't locked by perpendicular words.
+ *
+ * @param cells The current grid cells
+ * @param word The word to regenerate (with position and direction)
+ * @param wordIndex The word index to find alternatives
+ * @param excludeWords Optional set of words to exclude from alternatives
+ * @returns New grid with replacement word, or null if no alternative found
+ */
+export function regenerateWord(
+  cells: EditableCell[][],
+  word: { word: string; row: number; col: number; direction: 'across' | 'down' },
+  wordIndex: { matchPattern: (pattern: string) => string[] },
+  excludeWords?: Set<string>
+): { newWord: string; newCells: EditableCell[][] } | null {
+  const { row, col, direction } = word;
+  const upperWord = word.word.toUpperCase();
+  const length = upperWord.length;
+
+  // Build pattern with locked letters (intersections with perpendicular words)
+  let pattern = '';
+  const lockedPositions: boolean[] = [];
+
+  for (let i = 0; i < length; i++) {
+    const r = direction === 'down' ? row + i : row;
+    const c = direction === 'across' ? col + i : col;
+
+    if (r >= GRID_SIZE || c >= GRID_SIZE) {
+      return null; // Word extends beyond grid
+    }
+
+    const cell = cells[r][c];
+    if (!cell.letter) {
+      return null; // Word has gaps - shouldn't happen for complete words
+    }
+
+    // Check if this letter is used by a perpendicular word
+    let isLocked = false;
+
+    if (direction === 'across') {
+      // Check for down word through this cell
+      const hasAbove = r > 0 && !cells[r - 1][c].isBlack && cells[r - 1][c].letter;
+      const hasBelow = r < GRID_SIZE - 1 && !cells[r + 1][c].isBlack && cells[r + 1][c].letter;
+      isLocked = !!(hasAbove || hasBelow);
+    } else {
+      // Check for across word through this cell
+      const hasLeft = c > 0 && !cells[r][c - 1].isBlack && cells[r][c - 1].letter;
+      const hasRight = c < GRID_SIZE - 1 && !cells[r][c + 1].isBlack && cells[r][c + 1].letter;
+      isLocked = !!(hasLeft || hasRight);
+    }
+
+    if (isLocked) {
+      pattern += cell.letter;
+    } else {
+      pattern += '_';
+    }
+    lockedPositions.push(isLocked);
+  }
+
+  // Get candidates matching the pattern
+  const candidates = wordIndex.matchPattern(pattern);
+
+  // Filter out current word and excluded words
+  const excludeSet = new Set<string>(excludeWords || []);
+  excludeSet.add(upperWord);
+
+  const validCandidates = candidates.filter(
+    (candidate) => !excludeSet.has(candidate.toUpperCase())
+  );
+
+  if (validCandidates.length === 0) {
+    return null; // No alternatives available
+  }
+
+  // Pick a random alternative
+  const randomIndex = Math.floor(Math.random() * validCandidates.length);
+  const newWord = validCandidates[randomIndex];
+
+  // Write the new word to the grid
+  const newCells = cells.map((r) => r.map((c) => ({ ...c })));
+
+  for (let i = 0; i < length; i++) {
+    const r = direction === 'down' ? row + i : row;
+    const c = direction === 'across' ? col + i : col;
+
+    // Only update non-locked positions
+    if (!lockedPositions[i]) {
+      newCells[r][c] = {
+        ...newCells[r][c],
+        letter: newWord[i].toUpperCase(),
+        source: 'auto',
+      };
+    }
+  }
+
+  return { newWord: newWord.toUpperCase(), newCells };
+}
+
+/**
  * Count filled and empty cells
  */
 export function getGridStats(cells: EditableCell[][]): {
