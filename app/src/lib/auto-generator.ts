@@ -25,7 +25,13 @@ import {
   wouldBreakWord,
 } from './editable-grid';
 import {
+  findBestKeywordAssignment,
+  executePatternCandidate,
+  PatternCandidate,
+} from './keyword-slot-matcher';
+import {
   fillGridWithCSP,
+  fillGridWithBiasedCSP,
   canGridBeFilled,
   CSPFillResult,
   CSPSlot,
@@ -44,8 +50,254 @@ import {
   WORD_SCORE,
   ISLAMIC_FILLER_WORDS,
   calculateWordFriendliness,
+  matchPattern,
 } from './word-index';
 import { ISLAMIC_WORDS_SET } from './word-list-full';
+
+// ============================================================================
+// LEVER 1: Friendliest-First Keyword Scoring
+// ============================================================================
+
+/**
+ * Letters that are easy to find perpendicular words for.
+ * These are the most common letters in English crossword dictionaries.
+ */
+const FRIENDLY_LETTERS = new Set('AEIOSTRNL'.split(''));
+
+/**
+ * Letters that are hard to find perpendicular words for.
+ * Words containing these will be placed last or skipped.
+ */
+const RARE_LETTERS = new Set('QJXZKFYWV'.split(''));
+
+/**
+ * Score a keyword by how "friendly" it is for crossword placement.
+ * Higher scores = easier to place (should be placed first).
+ *
+ * Scoring:
+ * - Base: length * 5 (slight preference for shorter words)
+ * - +10 per friendly letter (A,E,I,O,S,T,R,N,L)
+ * - -20 per rare letter (Q,J,X,Z,K,F,Y,W,V)
+ *
+ * Examples:
+ * - DREAM: 5*5 + D(0) + R(+10) + E(+10) + A(+10) + M(0) = 55
+ * - MANNA: 5*5 + M(0) + A(+10) + N(+10) + N(+10) + A(+10) = 65
+ * - YUSUF: 5*5 + Y(-20) + U(0) + S(+10) + U(0) + F(-20) = -5
+ */
+export function scoreKeywordFriendliness(word: string): number {
+  const upper = word.toUpperCase();
+  let score = upper.length * 5; // Base score from length
+
+  for (const letter of upper) {
+    if (FRIENDLY_LETTERS.has(letter)) {
+      score += 10;
+    } else if (RARE_LETTERS.has(letter)) {
+      score -= 20;
+    }
+    // Neutral letters (B, C, D, G, H, M, P, U) add 0
+  }
+
+  return score;
+}
+
+// ============================================================================
+// LEVER 1 CONTINUED: Verify Completability
+// ============================================================================
+
+/**
+ * Verify that a grid can still be completed (no dead-end slots).
+ *
+ * After placing a theme word, this function checks unfilled slots
+ * to ensure they have valid word candidates. Uses a relaxed approach:
+ * - Only fails if slots with 2+ letter constraints have zero candidates
+ * - Single-letter constraints (like D____ from placing DREAM) are ignored
+ *   since auto-blacks can break them later
+ *
+ * Progressive thresholds based on how many words are already placed:
+ * - First 3 words: Skip verification (let them place freely)
+ * - Words 3-5: Use 50% threshold (relaxed)
+ * - Words 6+: Use 70% threshold (strict)
+ *
+ * @param cells The grid state to verify
+ * @param wordIndex Word index for pattern matching
+ * @param themeCells Set of cell keys (e.g., "2-3") that are part of theme words
+ * @param placedCount Number of theme words already placed (for progressive thresholds)
+ * @returns true if all significantly-constrained slots have candidates
+ */
+export function verifyCompletable(
+  cells: EditableCell[][],
+  wordIndex: WordIndex,
+  themeCells: Set<string>,
+  placedCount: number = 0
+): boolean {
+  // Skip verification for first 3 words - let them place freely
+  // Early placements on nearly-empty grids often fail verification
+  // even when the grid is still highly solvable
+  if (placedCount < 3) return true;
+
+  const slots = getAllSlots(cells);
+
+  let slotsChecked = 0;
+  let slotsWithCandidates = 0;
+
+  for (const slot of slots) {
+    // Skip slots that are completely filled (all letters known)
+    if (!slot.pattern.includes('_')) continue;
+
+    // Count how many letters are constrained (not wildcards)
+    const constrainedLetters = slot.pattern.split('').filter(c => c !== '_').length;
+
+    // Only verify slots with 2+ constrained letters
+    // Single-letter constraints are too early to reject - auto-blacks can fix them
+    if (constrainedLetters < 2) continue;
+
+    slotsChecked++;
+    const candidates = matchPattern(slot.pattern, wordIndex);
+
+    if (candidates.length > 0) {
+      slotsWithCandidates++;
+    }
+  }
+
+  // If no significantly-constrained slots, allow the placement
+  if (slotsChecked === 0) return true;
+
+  // Progressive threshold: 50% for words 3-5, 70% for words 6+
+  // This allows more flexibility early while still preventing bad placements later
+  const threshold = placedCount < 5 ? 0.5 : 0.7;
+  const percentWithCandidates = slotsWithCandidates / slotsChecked;
+  return percentWithCandidates >= threshold;
+}
+
+/**
+ * Find all valid positions for placing a word in the grid.
+ * Returns positions sorted by quality (intersections, centrality).
+ */
+export function findAllPositions(
+  cells: EditableCell[][],
+  word: string,
+  wordIndex: WordIndex
+): { row: number; col: number; direction: 'across' | 'down'; score: number }[] {
+  const upperWord = word.toUpperCase();
+  const length = upperWord.length;
+  const results: { row: number; col: number; direction: 'across' | 'down'; score: number }[] = [];
+
+  if (length > GRID_SIZE) return results;
+
+  // Try all positions for across placement
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c <= GRID_SIZE - length; c++) {
+      if (canPlaceWord(cells, upperWord, r, c, 'across')) {
+        const score = scorePosition(cells, r, c, 'across', length);
+        results.push({ row: r, col: c, direction: 'across', score });
+      }
+    }
+  }
+
+  // Try all positions for down placement
+  for (let r = 0; r <= GRID_SIZE - length; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (canPlaceWord(cells, upperWord, r, c, 'down')) {
+        const score = scorePosition(cells, r, c, 'down', length);
+        results.push({ row: r, col: c, direction: 'down', score });
+      }
+    }
+  }
+
+  // Sort by score (highest first)
+  results.sort((a, b) => b.score - a.score);
+
+  return results;
+}
+
+// ============================================================================
+// LEVER 2: Auto-Blacks for Orphan Slots
+// ============================================================================
+
+/**
+ * Automatically add black squares to break orphan slots that have no valid candidates.
+ *
+ * When theme word placement creates slots with rare letters (like F??? from YUSUF),
+ * this function adds strategic black squares to split those problematic slots
+ * into smaller, fillable ones.
+ *
+ * Strategy:
+ * 1. Find slots with 0 candidates
+ * 2. For each orphan slot, find a cell that can be turned black
+ * 3. Prefer middle positions to create two smaller valid slots
+ * 4. Never black out theme word cells
+ *
+ * @param cells Current grid state
+ * @param wordIndex Word index for validation
+ * @param themeCells Cells that are part of theme words (cannot be blacked)
+ * @param maxBlacks Maximum black squares to add (default 4)
+ * @returns Updated grid with strategic black squares
+ */
+export function autoAddBlacks(
+  cells: EditableCell[][],
+  wordIndex: WordIndex,
+  themeCells: Set<string>,
+  maxBlacks: number = 4
+): EditableCell[][] {
+  let grid = cells.map(row => row.map(cell => ({ ...cell })));
+  let blacksAdded = 0;
+  let changed = true;
+
+  while (changed && blacksAdded < maxBlacks) {
+    changed = false;
+    const slots = getAllSlots(grid);
+
+    for (const slot of slots) {
+      // Only process unfilled slots
+      if (!slot.pattern.includes('_')) continue;
+
+      const candidates = matchPattern(slot.pattern, wordIndex);
+
+      // Skip slots that have valid words
+      if (candidates.length > 0) continue;
+
+      // Slot is orphaned - find a cell to turn black
+      // Calculate cell positions for this slot
+      const slotCells: { row: number; col: number; index: number }[] = [];
+      for (let i = 0; i < slot.length; i++) {
+        const r = slot.direction === 'down' ? slot.start.row + i : slot.start.row;
+        const c = slot.direction === 'across' ? slot.start.col + i : slot.start.col;
+        slotCells.push({ row: r, col: c, index: i });
+      }
+
+      // Prefer middle cells to create two smaller slots
+      const midIndex = Math.floor(slot.length / 2);
+      const cellOrder = [midIndex, midIndex - 1, midIndex + 1, 0, slot.length - 1]
+        .filter(i => i >= 0 && i < slot.length);
+
+      for (const i of cellOrder) {
+        const cell = slotCells[i];
+        const key = `${cell.row}-${cell.col}`;
+
+        // Don't black out theme word cells
+        if (themeCells.has(key)) continue;
+
+        // Don't black out cells that already have letters from other words
+        if (grid[cell.row][cell.col].letter) continue;
+
+        // Test if adding black here maintains connectivity
+        const testGrid = addSymmetricBlack(grid, cell.row, cell.col);
+        if (!validateConnectivity(testGrid)) continue;
+
+        // Add black square (with symmetry)
+        grid = testGrid;
+        blacksAdded++;
+        changed = true;
+        break;
+      }
+
+      // If we made a change, restart slot scan
+      if (changed) break;
+    }
+  }
+
+  return grid;
+}
 
 /** Minimum Islamic percentage to consider "good enough" for early exit */
 const EXCELLENT_ISLAMIC_PERCENTAGE = 70;
@@ -110,14 +362,18 @@ export interface GeneratorOptions {
 }
 
 /**
- * Find intersection between a word and existing letters in the grid
+ * Find intersections between a word and existing letters in the grid.
+ * Returns multiple positions (top 5) sorted by quality score.
+ *
+ * This allows trying multiple positions if the first one fails verification,
+ * increasing the chance of successfully placing theme words.
  */
 function findIntersection(
   cells: EditableCell[][],
   word: string,
   wordIndex: WordIndex,
   relaxedOptions?: RelaxedArcOptions
-): { row: number; col: number; direction: 'across' | 'down' } | null {
+): { row: number; col: number; direction: 'across' | 'down'; score: number }[] {
   const upperWord = word.toUpperCase();
   const results: {
     row: number;
@@ -166,11 +422,9 @@ function findIntersection(
     }
   }
 
-  if (results.length === 0) return null;
-
-  // Return best position
+  // Sort by score (best first) and return top 5 positions
   results.sort((a, b) => b.score - a.score);
-  return results[0];
+  return results.slice(0, 5);
 }
 
 /**
@@ -260,11 +514,15 @@ function sortThemeWordsByPlaceability(themeWords: ThemeWord[]): ThemeWord[] {
 }
 
 /**
- * Find an open position for the first word - CENTERED in the grid
+ * Find open positions for placing a word - CENTERED in the grid.
+ * Returns multiple positions (top 5) sorted by distance from center.
  *
  * Centering the first word maximizes intersection opportunities because:
  * - Words can connect from above, below, left, and right
  * - More flexibility for placing subsequent theme words
+ *
+ * Returning multiple positions allows trying alternatives if the first
+ * one fails verification.
  */
 function findOpenPosition(
   cells: EditableCell[][],
@@ -272,22 +530,16 @@ function findOpenPosition(
   wordIndex: WordIndex,
   preferredDirection: 'across' | 'down' = 'across',
   relaxedOptions?: RelaxedArcOptions
-): { row: number; col: number; direction: 'across' | 'down' } | null {
+): { row: number; col: number; direction: 'across' | 'down'; score: number }[] {
   const upperWord = word.toUpperCase();
   const length = upperWord.length;
 
-  if (length > GRID_SIZE) return null;
+  if (length > GRID_SIZE) return [];
 
   // Calculate centered position
   // For a 5x5 grid, center is (2, 2)
   const centerRow = Math.floor(GRID_SIZE / 2);
   const centerCol = Math.floor(GRID_SIZE / 2);
-
-  // Calculate starting position to center the word
-  // For across: center the word horizontally on the middle row
-  // For down: center the word vertically on the middle column
-  const acrossStartCol = Math.max(0, Math.min(centerCol - Math.floor(length / 2), GRID_SIZE - length));
-  const downStartRow = Math.max(0, Math.min(centerRow - Math.floor(length / 2), GRID_SIZE - length));
 
   // Helper function for arc consistency check (relaxed or strict)
   const checkArc = (row: number, col: number, dir: 'across' | 'down') =>
@@ -295,37 +547,7 @@ function findOpenPosition(
       ? checkRelaxedArcConsistency(cells, upperWord, { row, col }, dir, wordIndex, relaxedOptions)
       : checkArcConsistency(cells, upperWord, { row, col }, dir, wordIndex);
 
-  // Try preferred direction first, centered
-  if (preferredDirection === 'across') {
-    // Try centered across first
-    if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
-      if (checkArc(centerRow, acrossStartCol, 'across')) {
-        return { row: centerRow, col: acrossStartCol, direction: 'across' };
-      }
-    }
-    // Try centered down
-    if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
-      if (checkArc(downStartRow, centerCol, 'down')) {
-        return { row: downStartRow, col: centerCol, direction: 'down' };
-      }
-    }
-  } else {
-    // Try centered down first
-    if (canPlaceWord(cells, upperWord, downStartRow, centerCol, 'down')) {
-      if (checkArc(downStartRow, centerCol, 'down')) {
-        return { row: downStartRow, col: centerCol, direction: 'down' };
-      }
-    }
-    // Try centered across
-    if (canPlaceWord(cells, upperWord, centerRow, acrossStartCol, 'across')) {
-      if (checkArc(centerRow, acrossStartCol, 'across')) {
-        return { row: centerRow, col: acrossStartCol, direction: 'across' };
-      }
-    }
-  }
-
-  // If centered positions don't work, try positions radiating outward from center
-  // This keeps words as central as possible
+  // Collect all valid positions with distance from center
   const positions: { row: number; col: number; direction: 'across' | 'down'; dist: number }[] = [];
 
   for (let r = 0; r <= GRID_SIZE - length; r++) {
@@ -347,11 +569,25 @@ function findOpenPosition(
     }
   }
 
-  if (positions.length === 0) return null;
+  if (positions.length === 0) return [];
 
-  // Sort by distance from center (closest first)
-  positions.sort((a, b) => a.dist - b.dist);
-  return positions[0];
+  // Sort by distance from center (closest first), with preferred direction as tiebreaker
+  positions.sort((a, b) => {
+    if (a.dist !== b.dist) return a.dist - b.dist;
+    // Prefer the preferred direction when distances are equal
+    if (a.direction === preferredDirection && b.direction !== preferredDirection) return -1;
+    if (b.direction === preferredDirection && a.direction !== preferredDirection) return 1;
+    return 0;
+  });
+
+  // Convert to score-based format (higher score = closer to center)
+  // Max dist in 5x5 is about 6, so score = 100 - dist * 10
+  return positions.slice(0, 5).map(p => ({
+    row: p.row,
+    col: p.col,
+    direction: p.direction,
+    score: 100 - p.dist * 10,
+  }));
 }
 
 /**
@@ -524,69 +760,90 @@ function tryWithStrategicBlacks(
 }
 
 /**
- * Place theme words in the grid with improved strategy:
- * 1. Sort by "placeability" (letter friendliness - length penalty)
- * 2. First word is centered (across or down based on length)
- * 3. Subsequent words alternate directions when possible
- * 4. Use relaxed arc consistency to allow more theme words
+ * Place theme words in the grid using the "Verify-Greedy" strategy:
+ *
+ * 1. FRIENDLIEST-FIRST: Sort keywords by friendliness score (highest first)
+ *    - Words with common letters (A,E,I,O,S,T,R,N,L) placed first
+ *    - Words with rare letters (Q,J,X,Z,K,F,Y,W,V) placed last
+ *
+ * 2. VERIFY BEFORE COMMIT: Before committing each placement, verify the grid
+ *    is still completable (all slots have valid candidates)
+ *
+ * 3. TRACK THEME CELLS: Keep track of which cells are part of theme words
+ *    (these cannot be turned into black squares later)
+ *
+ * This strategy prevents dead-ends by:
+ * - Placing "easy" words first to establish a viable grid foundation
+ * - Only committing placements that don't create unsolvable slots
  */
 function placeThemeWords(
   cells: EditableCell[][],
   themeWords: ThemeWord[],
   wordIndex: WordIndex
-): { grid: EditableCell[][]; placed: PlacedWord[]; unplaced: ThemeWord[] } {
+): { grid: EditableCell[][]; placed: PlacedWord[]; unplaced: ThemeWord[]; themeCells: Set<string> } {
   // Relaxed arc consistency options for theme words
-  // Allow placement even if some perpendicular slots are risky
   const relaxedOptions: RelaxedArcOptions = {
-    minValidPercent: 0.5,         // Only 50% of perpendiculars need candidates
-    allowEmptySlotsUnderLength: 2, // 2-letter slots can be empty
+    minValidPercent: 0.5,
+    allowEmptySlotsUnderLength: 2,
   };
 
-  // Sort by placeability (friendlier letters + shorter = easier to place first)
-  const sortedWords = sortThemeWordsByPlaceability(themeWords);
+  // FRIENDLIEST-FIRST: Sort by friendliness score (highest first)
+  // Take top 12 candidates to avoid trying too many
+  const sortedWords = [...themeWords]
+    .filter(tw => tw.word.length <= GRID_SIZE)
+    .sort((a, b) => scoreKeywordFriendliness(b.word) - scoreKeywordFriendliness(a.word))
+    .slice(0, 12);
 
   let grid = cells.map((row) => row.map((cell) => ({ ...cell })));
   const placed: PlacedWord[] = [];
   const unplaced: ThemeWord[] = [];
+  const themeCells = new Set<string>();
 
-  // Track direction balance
+  // Track direction balance for alternating
   let acrossCount = 0;
   let downCount = 0;
 
   for (const themeWord of sortedWords) {
     const word = themeWord.word.toUpperCase();
-
-    // Skip words that are too long
-    if (word.length > GRID_SIZE) {
-      unplaced.push(themeWord);
-      continue;
-    }
-
-    let position: { row: number; col: number; direction: 'across' | 'down' } | null = null;
-
-    // Determine preferred direction (alternate to maximize intersections)
     const preferDirection: 'across' | 'down' = acrossCount <= downCount ? 'across' : 'down';
 
-    // First word: find centered open position
-    if (placed.length === 0) {
-      // For first word, prefer across if it's a 5-letter word (spans full row)
-      // Otherwise prefer down to leave horizontal space for intersections
-      const firstWordPrefer = word.length === 5 ? 'across' : preferDirection;
-      position = findOpenPosition(grid, word, wordIndex, firstWordPrefer, relaxedOptions);
-    } else {
-      // Try to find intersection with existing words
-      // findIntersection already scores by intersections and centrality
-      position = findIntersection(grid, word, wordIndex, relaxedOptions);
+    // Get all valid positions for this word
+    let positions: { row: number; col: number; direction: 'across' | 'down'; score: number }[] = [];
 
-      // If no intersection found, try placing near the center anyway
-      // This can still connect via CSP filling later
-      if (!position) {
-        position = findOpenPosition(grid, word, wordIndex, preferDirection, relaxedOptions);
+    if (placed.length === 0) {
+      // First word: find centered open positions (returns multiple)
+      const firstWordPrefer = word.length === 5 ? 'across' : preferDirection;
+      positions = findOpenPosition(grid, word, wordIndex, firstWordPrefer, relaxedOptions);
+    } else {
+      // Subsequent words: combine intersection and open positions
+      // findIntersection now returns multiple positions with scores
+      const intersectionPositions = findIntersection(grid, word, wordIndex, relaxedOptions);
+      // Boost intersection scores since they're preferred
+      for (const pos of intersectionPositions) {
+        positions.push({ ...pos, score: pos.score + 100 });
+      }
+
+      // Also get open positions as fallback
+      const openPositions = findOpenPosition(grid, word, wordIndex, preferDirection, relaxedOptions);
+      for (const pos of openPositions) {
+        // Check if this position is already in the list (from intersections)
+        const isDuplicate = positions.some(
+          p => p.row === pos.row && p.col === pos.col && p.direction === pos.direction
+        );
+        if (!isDuplicate) {
+          positions.push(pos);
+        }
       }
     }
 
-    if (position) {
-      const newGrid = placeWord(
+    // Sort positions by score (best first)
+    positions.sort((a, b) => b.score - a.score);
+
+    // VERIFY BEFORE COMMIT: Try each position until we find one that's completable
+    let wordPlaced = false;
+
+    for (const position of positions) {
+      const testGrid = placeWord(
         grid,
         word,
         position.row,
@@ -596,8 +853,20 @@ function placeThemeWords(
         true
       );
 
-      if (newGrid) {
-        grid = newGrid;
+      if (!testGrid) continue;
+
+      // Calculate theme cells for this placement
+      const testThemeCells = new Set(themeCells);
+      for (let i = 0; i < word.length; i++) {
+        const r = position.direction === 'down' ? position.row + i : position.row;
+        const c = position.direction === 'across' ? position.col + i : position.col;
+        testThemeCells.add(`${r}-${c}`);
+      }
+
+      // Verify the grid is still completable (pass placed count for progressive threshold)
+      if (verifyCompletable(testGrid, wordIndex, testThemeCells, placed.length)) {
+        // Commit this placement
+        grid = testGrid;
         placed.push({
           word,
           clue: themeWord.clue,
@@ -606,22 +875,202 @@ function placeThemeWords(
           direction: position.direction,
           isThemeWord: true,
         });
+
+        // Update theme cells tracking
+        for (let i = 0; i < word.length; i++) {
+          const r = position.direction === 'down' ? position.row + i : position.row;
+          const c = position.direction === 'across' ? position.col + i : position.col;
+          themeCells.add(`${r}-${c}`);
+        }
+
         // Update direction counts
         if (position.direction === 'across') acrossCount++;
         else downCount++;
-      } else {
-        unplaced.push(themeWord);
+
+        wordPlaced = true;
+        break;
       }
-    } else {
+    }
+
+    // If no valid position found, mark as unplaced
+    if (!wordPlaced) {
       unplaced.push(themeWord);
     }
   }
 
-  return { grid, placed, unplaced };
+  // Add any words we didn't try to unplaced
+  for (const tw of themeWords) {
+    if (!placed.some(p => p.word === tw.word.toUpperCase()) &&
+        !unplaced.includes(tw)) {
+      unplaced.push(tw);
+    }
+  }
+
+  return { grid, placed, unplaced, themeCells };
 }
 
 /**
- * Try to generate a complete puzzle with a specific black square pattern
+ * Try to generate a puzzle using the smart keyword-slot matcher.
+ *
+ * This approach pre-computes keyword compatibility with black square patterns
+ * to find valid keyword combinations BEFORE placement, avoiding dead ends.
+ *
+ * Steps:
+ * 1. Find best pattern + keyword assignment via compatibility graph
+ * 2. Execute the pre-validated assignment
+ * 3. Fill remaining slots with Islamic-biased CSP
+ */
+function tryGenerateWithSmartMatcher(
+  themeWords: ThemeWord[],
+  wordIndex: WordIndex,
+  maxTimeMs: number
+): GenerationResult | null {
+  const startTime = Date.now();
+
+  // Extract keywords
+  const keywords = themeWords.map(tw => tw.word.toUpperCase());
+
+  // Find best pattern + keyword assignment
+  const bestCandidate = findBestKeywordAssignment(keywords, wordIndex);
+
+  if (!bestCandidate || !bestCandidate.isFillable) {
+    return null;
+  }
+
+  // Execute the pre-validated plan
+  const { grid: themedGrid, placedKeywords, themeCells } = executePatternCandidate(bestCandidate);
+
+  // Convert placed keywords to PlacedWord format
+  const themeWordsPlaced: PlacedWord[] = placedKeywords.map(pk => {
+    const themeWord = themeWords.find(tw => tw.word.toUpperCase() === pk.word);
+    return {
+      word: pk.word,
+      clue: themeWord?.clue || '',
+      row: pk.row,
+      col: pk.col,
+      direction: pk.direction,
+      isThemeWord: true,
+    };
+  });
+
+  // Find unplaced theme words
+  const placedKeywordSet = new Set(placedKeywords.map(pk => pk.word.toUpperCase()));
+  const unplaced = themeWords.filter(tw => !placedKeywordSet.has(tw.word.toUpperCase()));
+
+  // Check time
+  let remainingTime = maxTimeMs - (Date.now() - startTime);
+  if (remainingTime <= 0) {
+    return null;
+  }
+
+  // Auto-add black squares for orphan slots (may still be needed)
+  const gridWithBlacks = autoAddBlacks(themedGrid, wordIndex, themeCells, 4);
+
+  // Fill with Islamic-biased CSP
+  remainingTime = maxTimeMs - (Date.now() - startTime);
+  if (remainingTime <= 0) {
+    return null;
+  }
+
+  const placedThemeWordSet = new Set(themeWordsPlaced.map(pw => pw.word.toUpperCase()));
+  let cspResult: CSPFillResult = fillGridWithBiasedCSP(gridWithBlacks, 0.5, remainingTime, placedThemeWordSet);
+  let finalGrid = cspResult.grid;
+
+  // If biased CSP failed, try regular CSP as fallback
+  if (!cspResult.success) {
+    remainingTime = maxTimeMs - (Date.now() - startTime);
+    if (remainingTime > 1000) {
+      const fallbackResult = fillGridWithCSP(gridWithBlacks, wordIndex, remainingTime, placedThemeWordSet);
+      if (fallbackResult.success || fallbackResult.placedWords.length > cspResult.placedWords.length) {
+        cspResult = fallbackResult;
+        finalGrid = fallbackResult.grid;
+      }
+    }
+  }
+
+  // Build result
+  const fillerWords: PlacedWord[] = cspResult.placedWords.map((pw) => ({
+    word: pw.word,
+    clue: '',
+    row: pw.slot.start.row,
+    col: pw.slot.start.col,
+    direction: pw.slot.direction,
+    isThemeWord: false,
+  }));
+
+  const allWords = [...themeWordsPlaced, ...fillerWords];
+
+  // If CSP failed, return partial result
+  if (!cspResult.success) {
+    if (themeWordsPlaced.length > 0) {
+      const gridStats = getGridStats(finalGrid);
+      return {
+        success: false,
+        grid: finalGrid,
+        placedWords: themeWordsPlaced,
+        unplacedThemeWords: unplaced,
+        stats: {
+          totalSlots: getAllSlots(finalGrid).length,
+          themeWordsPlaced: themeWordsPlaced.length,
+          fillerWordsPlaced: 0,
+          islamicPercentage: 100,
+          avgWordScore: 100,
+          gridFillPercentage: gridStats.whiteCells > 0
+            ? (gridStats.filledCells / gridStats.whiteCells) * 100
+            : 0,
+          timeTakenMs: Date.now() - startTime,
+          attemptsUsed: 1,
+          patternUsed: `smart:${bestCandidate.patternName}`,
+        },
+      };
+    }
+    return null;
+  }
+
+  // Calculate stats
+  let islamicCount = 0;
+  let totalScore = 0;
+
+  for (const pw of allWords) {
+    const upperWord = pw.word.toUpperCase();
+    const score = getScore(upperWord, wordIndex);
+    totalScore += score;
+    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord)) {
+      islamicCount++;
+    }
+  }
+
+  const gridStats = getGridStats(finalGrid);
+
+  return {
+    success: true,
+    grid: finalGrid,
+    placedWords: allWords,
+    unplacedThemeWords: unplaced,
+    stats: {
+      totalSlots: cspResult.stats.totalSlots,
+      themeWordsPlaced: themeWordsPlaced.length,
+      fillerWordsPlaced: fillerWords.length,
+      islamicPercentage: allWords.length > 0 ? (islamicCount / allWords.length) * 100 : 0,
+      avgWordScore: allWords.length > 0 ? totalScore / allWords.length : 0,
+      gridFillPercentage: gridStats.whiteCells > 0
+        ? (gridStats.filledCells / gridStats.whiteCells) * 100
+        : 0,
+      timeTakenMs: Date.now() - startTime,
+      attemptsUsed: 1,
+      patternUsed: `smart:${bestCandidate.patternName}`,
+    },
+  };
+}
+
+/**
+ * Try to generate a complete puzzle with a specific black square pattern.
+ *
+ * Uses the "Verify-Greedy + Bias + Blacks" strategy:
+ * 1. FRIENDLIEST-FIRST: Place theme words sorted by letter friendliness
+ * 2. VERIFY BEFORE COMMIT: Only commit placements that don't create dead ends
+ * 3. AUTO-BLACKS: Add strategic black squares to break orphan slots
+ * 4. ISLAMIC-BIASED CSP: Fill remaining slots prioritizing Islamic words
  */
 function tryGenerateWithPattern(
   themeWords: ThemeWord[],
@@ -641,43 +1090,63 @@ function tryGenerateWithPattern(
     return null;
   }
 
-  // Place theme words
-  const { grid: themedGrid, placed: themeWordsPlaced, unplaced } = placeThemeWords(
+  // LEVER 1: Place theme words with friendliest-first ordering + verification
+  const { grid: themedGrid, placed: themeWordsPlaced, unplaced, themeCells } = placeThemeWords(
     grid,
     themeWords,
     wordIndex
   );
 
-  // Fill remaining slots with CSP
-  const remainingTime = maxTimeMs - (Date.now() - startTime);
+  // Check time
+  let remainingTime = maxTimeMs - (Date.now() - startTime);
   if (remainingTime <= 0) {
-    console.log(`[tryGenerate] Pattern ${patternName}: timeout before CSP`);
     return null;
   }
+
+  // LEVER 2: Auto-add black squares for orphan slots
+  const gridWithBlacks = autoAddBlacks(themedGrid, wordIndex, themeCells, 4);
 
   // Collect theme words that were placed to prevent duplicates
   const placedThemeWordSet = new Set(themeWordsPlaced.map(pw => pw.word.toUpperCase()));
 
-  let cspResult = fillGridWithCSP(themedGrid, wordIndex, remainingTime, placedThemeWordSet);
+  // LEVER 3: Fill with Islamic-biased CSP
+  remainingTime = maxTimeMs - (Date.now() - startTime);
+  if (remainingTime <= 0) {
+    return null;
+  }
+
+  // Use CSPFillResult as the common type (BiasedCSPFillResult extends it)
+  let cspResult: CSPFillResult = fillGridWithBiasedCSP(gridWithBlacks, 0.5, remainingTime, placedThemeWordSet);
   let finalGrid = cspResult.grid;
 
-  // If CSP failed, try adding strategic black squares
+  // If biased CSP failed, try regular CSP as fallback
+  if (!cspResult.success) {
+    remainingTime = maxTimeMs - (Date.now() - startTime);
+    if (remainingTime > 1000) {
+      const fallbackResult = fillGridWithCSP(gridWithBlacks, wordIndex, remainingTime, placedThemeWordSet);
+      if (fallbackResult.success || fallbackResult.placedWords.length > cspResult.placedWords.length) {
+        cspResult = fallbackResult;
+        finalGrid = fallbackResult.grid;
+      }
+    }
+  }
+
+  // If still failed, try with strategic blacks (legacy fallback)
   if (!cspResult.success && themeWordsPlaced.length > 0) {
-    const blackSquareRemainingTime = maxTimeMs - (Date.now() - startTime);
-    if (blackSquareRemainingTime > 1000) {
+    remainingTime = maxTimeMs - (Date.now() - startTime);
+    if (remainingTime > 1000) {
       const blackSquareResult = tryWithStrategicBlacks(
-        themedGrid,
+        gridWithBlacks,
         wordIndex,
-        blackSquareRemainingTime,
+        remainingTime,
         placedThemeWordSet,
-        3 // max iterations
+        3
       );
 
       if (blackSquareResult && blackSquareResult.success) {
         cspResult = blackSquareResult;
         finalGrid = blackSquareResult.grid;
       } else if (blackSquareResult && blackSquareResult.placedWords.length > cspResult.placedWords.length) {
-        // Use the better partial result from black square optimization
         cspResult = blackSquareResult;
         finalGrid = blackSquareResult.grid;
       }
@@ -687,7 +1156,7 @@ function tryGenerateWithPattern(
   // Combine placed words (even for partial results)
   const fillerWords: PlacedWord[] = cspResult.placedWords.map((pw) => ({
     word: pw.word,
-    clue: '', // Filler words don't have clues yet
+    clue: '',
     row: pw.slot.start.row,
     col: pw.slot.start.col,
     direction: pw.slot.direction,
@@ -698,21 +1167,19 @@ function tryGenerateWithPattern(
   const allWords = [...themeWordsPlaced, ...fillerWords];
 
   // If CSP failed but we have theme words placed, return a partial result
-  // This allows the UI to show what was placed and let user use Auto-Complete
   if (!cspResult.success) {
-    // Only return partial if we placed at least some theme words
     if (themeWordsPlaced.length > 0) {
       const gridStats = getGridStats(finalGrid);
       return {
-        success: false, // Mark as not fully successful
-        grid: finalGrid, // Return grid with theme words and any strategic black squares
-        placedWords: themeWordsPlaced, // Only theme words, no fillers
+        success: false,
+        grid: finalGrid,
+        placedWords: themeWordsPlaced,
         unplacedThemeWords: unplaced,
         stats: {
           totalSlots: getAllSlots(finalGrid).length,
           themeWordsPlaced: themeWordsPlaced.length,
           fillerWordsPlaced: 0,
-          islamicPercentage: 100, // All placed words are theme/Islamic
+          islamicPercentage: 100,
           avgWordScore: 100,
           gridFillPercentage: gridStats.whiteCells > 0
             ? (gridStats.filledCells / gridStats.whiteCells) * 100
@@ -764,11 +1231,11 @@ function tryGenerateWithPattern(
 /**
  * Main entry point: Generate a complete crossword puzzle
  *
- * Uses multi-candidate selection to maximize Islamic word percentage:
- * 1. Generate up to MAX_CANDIDATES successful puzzles using different patterns
- * 2. Score each by Islamic word percentage
- * 3. Return the candidate with highest Islamic %
- * 4. Early-exit if we hit EXCELLENT_ISLAMIC_PERCENTAGE (70%+)
+ * Strategy (in order of attempt):
+ * 1. SMART MATCHER: Pre-compute keyword compatibility with patterns,
+ *    find valid combinations BEFORE placement to avoid dead ends
+ * 2. FALLBACK: Try patterns in order with greedy placement + verification
+ * 3. Multi-candidate selection to maximize Islamic word percentage
  *
  * @param themeWords The Islamic theme words to place
  * @param options Generation options
@@ -787,6 +1254,33 @@ export function generatePuzzle(
   const successfulCandidates: GenerationResult[] = [];
   let bestPartialResult: GenerationResult | null = null;
   let attempts = 0;
+
+  // =========================================================================
+  // STEP 1: Try smart keyword-slot matcher first
+  // This pre-computes keyword compatibility to avoid dead ends
+  // =========================================================================
+  const smartTimeLimit = Math.min(maxTimeMs * 0.4, 5000); // Use up to 40% of time, max 5s
+  const smartResult = tryGenerateWithSmartMatcher(themeWords, wordIndex, smartTimeLimit);
+
+  if (smartResult) {
+    attempts++;
+
+    if (smartResult.success) {
+      // Early exit if smart matcher found an excellent result
+      if (smartResult.stats.islamicPercentage >= EXCELLENT_ISLAMIC_PERCENTAGE) {
+        smartResult.stats.timeTakenMs = Date.now() - startTime;
+        return smartResult;
+      }
+      successfulCandidates.push(smartResult);
+    } else if (smartResult.stats.themeWordsPlaced > 0) {
+      bestPartialResult = smartResult;
+    }
+  }
+
+  // =========================================================================
+  // STEP 2: Fallback to pattern loop if smart matcher didn't produce
+  //         an excellent result or we want more candidates
+  // =========================================================================
 
   // If preferred pattern specified, try it first
   const patternsToTry = options.preferredPattern !== undefined

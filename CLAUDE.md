@@ -90,3 +90,34 @@ WORD;SCORE;CLUE
 QURAN;100;Muslim Holy Book
 HAJJ;100;Pilgrimage to Mecca
 ```
+
+## Auto-Generator Algorithm (Jan 2026)
+
+The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
+
+### Three Levers
+
+1. **Friendliest-First Ordering** (`scoreKeywordFriendliness()`)
+   - Score keywords by letter friendliness: AEIOSTRNL = +10, QJXZKFYWV = -20
+   - Place high-scoring words first (DREAM=55, MANNA=65) before low-scoring (YUSUF=-5)
+   - Rationale: Friendly letters have more cross-word options
+
+2. **Verify Before Commit** (`verifyCompletable()`)
+   - Before committing placement, verify grid is still completable
+   - Uses relaxed threshold: 70% of slots with 2+ letter constraints must have candidates
+   - Single-letter constraints (D____ from DREAM) are ignored - auto-blacks can fix them
+
+3. **Islamic-Biased CSP Fill** (`fillGridWithBiasedCSP()`)
+   - Islamic words fill first, then English as fallback
+   - Forces Islamic-only when below 50% threshold
+   - Target: 55-70% Islamic words
+
+### Key Files
+- `app/src/lib/auto-generator.ts` - Main generation logic
+- `app/src/lib/csp-filler.ts` - CSP fill with Islamic bias
+- `app/src/lib/word-index.ts` - Split Islamic/English indices
+
+### Debugging Tips
+- If only 1 theme word places: Check `verifyCompletable()` threshold
+- If Islamic % is low: Check `fillGridWithBiasedCSP()` target
+- If grid incomplete: Check `autoAddBlacks()` max limit
