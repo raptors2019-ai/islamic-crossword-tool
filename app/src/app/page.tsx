@@ -14,8 +14,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Grid3X3, FileText } from 'lucide-react';
-import { ThemeWord, GeneratedPuzzle } from '@/lib/types';
+import { ThemeWord, GeneratedPuzzle, Difficulty, DifficultyClues } from '@/lib/types';
 import { generatePuzzle } from '@/lib/generator-api';
+import {
+  processKeywords,
+  processPlacedWords,
+  findBestGenerationResult,
+} from '@/lib/puzzle-helpers';
 import { PuzzleStats } from '@/components/puzzle-stats';
 import { CrosswordGrid } from '@/components/crossword-grid';
 import { downloadFlutterJson } from '@/lib/export-flutter';
@@ -78,18 +83,6 @@ export default function Home() {
   const [mobileTab, setMobileTab] = useState<'grid' | 'clues'>('grid');
 
   // Grid-based clues with difficulty levels (word -> { easy, medium, hard })
-  type Difficulty = 'easy' | 'medium' | 'hard';
-  interface ClueAlternatives {
-    easy: string[];    // Alternative clues for easy difficulty
-    medium: string[];  // Alternative clues for medium difficulty
-    hard: string[];    // Alternative clues for hard difficulty
-  }
-  interface DifficultyClues {
-    easy: string;      // Currently selected easy clue
-    medium: string;    // Currently selected medium clue
-    hard: string;      // Currently selected hard clue
-    alternatives?: ClueAlternatives;  // Other generated clue options
-  }
   const [gridClues, setGridClues] = useState<Record<string, DifficultyClues>>({});
   const [selectedDifficulties, setSelectedDifficulties] = useState<Record<string, Difficulty>>({});
   const [selectedGridWord, setSelectedGridWord] = useState<string | null>(null);
@@ -591,22 +584,8 @@ export default function Home() {
     }
   }, [puzzleTitle, themeWords]);
 
-  // Helper to shuffle an array (Fisher-Yates)
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
-  // Handle prophet selection - auto-generate puzzle with prophet's keywords
-  const handleProphetSelect = useCallback((prophetId: string, keywords: ProphetKeyword[], shuffle: boolean = false) => {
-    // Store prophet selection for regeneration
-    setCurrentProphet({ id: prophetId, keywords });
-
-    // Clear existing state
+  // Helper to reset all puzzle-related state
+  const resetPuzzleState = useCallback(() => {
     clearGrid();
     setThemeWords([]);
     setClues({});
@@ -614,101 +593,69 @@ export default function Home() {
     setGeneratedPuzzle(null);
     setSelectedWordId(null);
     setAutoCompleteResult(null);
-    setGridClues({}); // Also clear grid clues
+    setGridClues({});
+  }, [clearGrid]);
 
-    // Filter to 5-letter-or-less words and sort by relevance
-    let validKeywords = keywords
-      .filter(kw => kw.word.length >= 2 && kw.word.length <= 5)
-      .sort((a, b) => b.relevance - a.relevance);
+  // Handle prophet selection - auto-generate puzzle with prophet's keywords
+  const handleProphetSelect = useCallback((prophetId: string, keywords: ProphetKeyword[], shuffle: boolean = false) => {
+    // Store prophet selection for regeneration
+    setCurrentProphet({ id: prophetId, keywords });
 
-    // Shuffle keywords for variety when regenerating
-    if (shuffle) {
-      validKeywords = shuffleArray(validKeywords);
-    }
+    // Clear existing state
+    resetPuzzleState();
 
-    if (validKeywords.length === 0) return;
+    // Process keywords (filter, sort/shuffle, build index)
+    const processed = processKeywords(keywords, shuffle);
+    if (!processed) return;
+
+    const { validKeywords, keywordWords, boostedIndex, clueMap } = processed;
+    const keywordSet = new Set(keywordWords);
 
     setIsGenerating(true);
 
     try {
-      // Build a boosted word index that prioritizes prophet keywords
-      const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
-      const boostedIndex = buildBoostedWordIndex(keywordWords);
-
-      // Create a map for quick clue lookup
-      const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
-
-      // Use the auto-generator to create a complete puzzle
+      // Create theme words input for generator
       const themeWordsInput = validKeywords.map(kw => ({
         word: kw.word.toUpperCase(),
         clue: kw.clue,
       }));
 
-      // Generate using auto-generator with boosted index
-      // When shuffling (regenerating), use a random starting pattern for more variety
-      const generatorOptions: { maxTimeMs: number; wordIndex: typeof boostedIndex; preferredPattern?: number } = {
+      // Generate puzzle with optional random pattern for variety
+      const generatorOptions = {
         maxTimeMs: 10000,
         wordIndex: boostedIndex,
+        ...(shuffle && { preferredPattern: Math.floor(Math.random() * 8) }),
       };
-      if (shuffle) {
-        // Random pattern from 0-7 (8 patterns available)
-        generatorOptions.preferredPattern = Math.floor(Math.random() * 8);
-      }
       const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
 
-      // Update state with results
-      const newThemeWords: ThemeWord[] = [];
-      const newClues: Record<string, string> = {};
-      const newPlacedIds = new Set<string>();
-
-      // Track all placed words that are prophet keywords (theme or filler)
-      // Deduplicate by word (same word can appear across and down in word squares)
-      const keywordSet = new Set(keywordWords);
-      const addedWords = new Set<string>();
-      for (const placed of result.placedWords) {
-        const isKeyword = keywordSet.has(placed.word);
-        if (isKeyword && !addedWords.has(placed.word)) {
-          addedWords.add(placed.word);
-          const clue = clueMap.get(placed.word) || placed.clue || '';
-          const id = `prophet-${prophetId}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-          newThemeWords.push({
-            id,
-            word: placed.word,
-            clue,
-            activeSpelling: placed.word,
-            category: 'prophets',
-          });
-          newClues[id] = clue;
-          newPlacedIds.add(id);
-        }
-      }
+      // Process placed words into theme words
+      const { themeWords: newThemeWords, clues: newClues, placedIds } = processPlacedWords(
+        result.placedWords,
+        keywordSet,
+        clueMap,
+        prophetId
+      );
 
       setThemeWords(newThemeWords);
       setClues(newClues);
-      setPlacedInGridIds(newPlacedIds);
+      setPlacedInGridIds(placedIds);
 
-      // Apply the generated grid to the editable grid
-      // Show partial results even if success=false (user can use Auto-Complete)
+      // Apply the generated grid
       const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
       if (hasContent) {
         setCells(result.grid);
       }
 
-      // Store the generation result to show status message
       setAutoGenerateResult(result);
-      // Clear any previous auto-complete result since this is a fresh grid
-      setAutoCompleteResult(null);
 
       // Track placed words for future regeneration comparison
-      const allPlacedWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
-      setPreviousPuzzleWords(allPlacedWords);
+      setPreviousPuzzleWords(new Set(result.placedWords.map(pw => pw.word.toUpperCase())));
     } catch (error) {
       console.error('Error generating puzzle:', error);
-      // Don't crash - just show empty grid
     } finally {
       setIsGenerating(false);
     }
-  }, [clearGrid, setCells]);
+  }, [resetPuzzleState, setCells]);
 
   // Handle regenerating the puzzle with the same prophet's keywords
   // Ensures: 1) Complete grid (100% fill), 2) At least 50% different words
@@ -723,158 +670,67 @@ export default function Home() {
     setAutoCompleteResult(null);
 
     try {
-      // Filter to 5-letter-or-less words
-      const validKeywords = currentProphet.keywords
-        .filter(kw => kw.word.length >= 2 && kw.word.length <= 5);
-
-      if (validKeywords.length === 0) {
+      // Process keywords (filter, shuffle, build index)
+      const processed = processKeywords(currentProphet.keywords, true);
+      if (!processed) {
         setIsGenerating(false);
         return;
       }
 
-      // Build word index and clue map
-      const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
-      const boostedIndex = buildBoostedWordIndex(keywordWords);
-      const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
+      const { validKeywords, keywordWords, boostedIndex, clueMap } = processed;
+      const keywordSet = new Set(keywordWords);
 
-      // Helper to calculate difference percentage
-      const calculateDifferencePercent = (newWords: Set<string>, oldWords: Set<string>): number => {
-        if (oldWords.size === 0) return 1; // First generation is always "different"
-        let differentCount = 0;
-        for (const word of newWords) {
-          if (!oldWords.has(word)) differentCount++;
-        }
-        return newWords.size > 0 ? differentCount / newWords.size : 0;
-      };
+      // Find best result across multiple attempts
+      const bestResult = findBestGenerationResult(
+        validKeywords,
+        boostedIndex,
+        previousPuzzleWords,
+        MAX_ATTEMPTS,
+        MIN_DIFFERENT_PERCENT
+      );
 
-      // Try multiple times to get a complete, different puzzle
-      let bestResult: GenerationResult | null = null;
-      let bestDifferencePercent = 0;
-
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        // Shuffle keywords for variety
-        const shuffledKeywords = shuffleArray(validKeywords);
-        const themeWordsInput = shuffledKeywords.map(kw => ({
-          word: kw.word.toUpperCase(),
-          clue: kw.clue,
-        }));
-
-        // Random pattern for variety
-        const generatorOptions = {
-          maxTimeMs: 8000, // Slightly less time per attempt to allow more retries
-          wordIndex: boostedIndex,
-          preferredPattern: Math.floor(Math.random() * 8),
-        };
-
-        const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
-
-        // Get all words in this result
-        const resultWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
-        const differencePercent = calculateDifferencePercent(resultWords, previousPuzzleWords);
-
-        // Check if this is a complete grid
-        const isComplete = result.success && result.stats.gridFillPercentage >= 99;
-
-        // Perfect result: complete grid with enough different words
-        if (isComplete && differencePercent >= MIN_DIFFERENT_PERCENT) {
-          bestResult = result;
-          bestDifferencePercent = differencePercent;
-          break;
-        }
-
-        // Track best result so far (prioritize completeness, then difference)
-        if (!bestResult) {
-          bestResult = result;
-          bestDifferencePercent = differencePercent;
-        } else {
-          const currentIsComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
-
-          // Prefer complete over incomplete
-          if (isComplete && !currentIsComplete) {
-            bestResult = result;
-            bestDifferencePercent = differencePercent;
-          }
-          // If both complete (or both incomplete), prefer more different
-          else if (isComplete === currentIsComplete && differencePercent > bestDifferencePercent) {
-            bestResult = result;
-            bestDifferencePercent = differencePercent;
-          }
-          // If neither complete, prefer higher fill percentage
-          else if (!isComplete && !currentIsComplete &&
-                   result.stats.gridFillPercentage > bestResult.stats.gridFillPercentage) {
-            bestResult = result;
-            bestDifferencePercent = differencePercent;
-          }
-        }
-      }
-
-      // Use the best result we found
       if (bestResult) {
         // Clear and update state
-        clearGrid();
-        setThemeWords([]);
-        setClues({});
-        setPlacedInGridIds(new Set());
-        setSelectedWordId(null);
-        setGridClues({});
+        resetPuzzleState();
 
-        // Update state with results
-        const newThemeWords: ThemeWord[] = [];
-        const newClues: Record<string, string> = {};
-        const newPlacedIds = new Set<string>();
-
-        const keywordSet = new Set(keywordWords);
-        const addedWords = new Set<string>();
-        for (const placed of bestResult.placedWords) {
-          const isKeyword = keywordSet.has(placed.word);
-          if (isKeyword && !addedWords.has(placed.word)) {
-            addedWords.add(placed.word);
-            const clue = clueMap.get(placed.word) || placed.clue || '';
-            const id = `prophet-${currentProphet.id}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-            newThemeWords.push({
-              id,
-              word: placed.word,
-              clue,
-              activeSpelling: placed.word,
-              category: 'prophets',
-            });
-            newClues[id] = clue;
-            newPlacedIds.add(id);
-          }
-        }
+        // Process placed words into theme words
+        const { themeWords: newThemeWords, clues: newClues, placedIds } = processPlacedWords(
+          bestResult.placedWords,
+          keywordSet,
+          clueMap,
+          currentProphet.id
+        );
 
         setThemeWords(newThemeWords);
         setClues(newClues);
-        setPlacedInGridIds(newPlacedIds);
+        setPlacedInGridIds(placedIds);
 
-        // Apply the grid
+        // Apply the grid, with CSP completion if needed
         let finalGrid = bestResult.grid;
         let finalResult = bestResult;
         const hasContent = bestResult.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
-
-        // If the best result is not complete, try to auto-complete it with CSP
         const isComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
+
+        // Try CSP completion if grid is incomplete
         if (hasContent && !isComplete) {
           const cspResult = fillGridWithCSP(bestResult.grid, boostedIndex, 10000);
           if (cspResult.success) {
             finalGrid = cspResult.grid;
-            // Merge the CSP-placed words into the result
-            const mergedPlacedWords = [
-              ...bestResult.placedWords,
-              ...cspResult.placedWords.map(pw => ({
-                word: pw.word,
-                clue: '',
-                row: pw.slot.start.row,
-                col: pw.slot.start.col,
-                direction: pw.slot.direction,
-                isThemeWord: false,
-              })),
-            ];
             finalResult = {
               ...bestResult,
               success: true,
               grid: finalGrid,
-              placedWords: mergedPlacedWords,
+              placedWords: [
+                ...bestResult.placedWords,
+                ...cspResult.placedWords.map(pw => ({
+                  word: pw.word,
+                  clue: '',
+                  row: pw.slot.start.row,
+                  col: pw.slot.start.col,
+                  direction: pw.slot.direction,
+                  isThemeWord: false,
+                })),
+              ],
               stats: {
                 ...bestResult.stats,
                 gridFillPercentage: 100,
@@ -889,18 +745,14 @@ export default function Home() {
         }
 
         setAutoGenerateResult(finalResult);
-
-        // Update previous words for next regeneration
-        const allPlacedWords = new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase()));
-        setPreviousPuzzleWords(allPlacedWords);
+        setPreviousPuzzleWords(new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase())));
       }
     } catch (error) {
       console.error('Error regenerating puzzle:', error);
-      // Don't crash - show empty grid
     } finally {
       setIsGenerating(false);
     }
-  }, [currentProphet, previousPuzzleWords, clearGrid, setCells]);
+  }, [currentProphet, previousPuzzleWords, resetPuzzleState, setCells]);
 
   // Handle auto-complete (CSP-based gap filling)
   const handleAutoComplete = useCallback(async () => {
@@ -1112,6 +964,8 @@ export default function Home() {
 
             {/* Islamic Percentage - always visible but compact on mobile */}
             <div
+              role="status"
+              aria-label={`${islamicPercentage}% Islamic words ${islamicPercentage >= 50 ? '- meets requirement' : '- below required 50%'}`}
               className={cn(
                 'px-2 md:px-4 py-1 md:py-2 rounded-full flex items-center gap-1 md:gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
                 islamicPercentage >= 50
@@ -1119,43 +973,57 @@ export default function Home() {
                   : 'bg-red-900/50 border border-red-500/30'
               )}
             >
-              <div className={cn(
-                'w-2 h-2 rounded-full animate-pulse',
-                islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
-              )} />
+              <div
+                className={cn(
+                  'w-2 h-2 rounded-full animate-pulse',
+                  islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
+                )}
+                aria-hidden="true"
+              />
               <span className="text-white font-medium text-sm md:text-base">{islamicPercentage}%</span>
               <span className="text-[#8fc1e3] text-xs md:text-sm hidden md:inline">Islamic</span>
+              <span className="sr-only">
+                {islamicPercentage >= 50 ? 'Requirement met' : 'Below 50% requirement'}
+              </span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+      <main className="container mx-auto px-4 md:px-6 py-4 md:py-8" aria-label="Crossword puzzle builder">
         {/* Mobile Tab Switcher - visible only on small screens */}
-        <div className="flex md:hidden border-b border-[#4A90C2]/20 mb-4">
+        <div className="flex md:hidden border-b border-[#4A90C2]/20 mb-4" role="tablist" aria-label="View selection">
           <button
             onClick={() => setMobileTab('grid')}
+            role="tab"
+            aria-selected={mobileTab === 'grid'}
+            aria-controls="grid-panel"
+            id="grid-tab"
             className={cn(
-              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors",
+              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors min-h-[44px]",
               mobileTab === 'grid'
                 ? "text-[#D4AF37] border-b-2 border-[#D4AF37]"
                 : "text-[#8fc1e3] hover:text-white"
             )}
           >
-            <Grid3X3 className="w-4 h-4" />
+            <Grid3X3 className="w-4 h-4" aria-hidden="true" />
             Grid
           </button>
           <button
             onClick={() => setMobileTab('clues')}
+            role="tab"
+            aria-selected={mobileTab === 'clues'}
+            aria-controls="clues-panel"
+            id="clues-tab"
             className={cn(
-              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors",
+              "flex-1 py-3 flex items-center justify-center gap-2 text-sm font-medium transition-colors min-h-[44px]",
               mobileTab === 'clues'
                 ? "text-[#D4AF37] border-b-2 border-[#D4AF37]"
                 : "text-[#8fc1e3] hover:text-white"
             )}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4" aria-hidden="true" />
             Clues
           </button>
         </div>
@@ -1293,10 +1161,17 @@ export default function Home() {
                 {gridStats.whiteCells > 0 && (
                   <div className="mb-4">
                     <div className="flex justify-between text-xs text-[#8fc1e3] mb-1">
-                      <span>Grid Fill Progress</span>
+                      <span id="progress-label">Grid Fill Progress</span>
                       <span>{Math.round((gridStats.filledCells / gridStats.whiteCells) * 100)}%</span>
                     </div>
-                    <div className="h-2 bg-[#001a2c]/60 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 bg-[#001a2c]/60 rounded-full overflow-hidden"
+                      role="progressbar"
+                      aria-labelledby="progress-label"
+                      aria-valuenow={Math.round((gridStats.filledCells / gridStats.whiteCells) * 100)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
                       <div
                         className="h-full bg-gradient-to-r from-[#4A90C2] to-[#D4AF37] transition-all duration-300"
                         style={{ width: `${(gridStats.filledCells / gridStats.whiteCells) * 100}%` }}
@@ -1316,19 +1191,20 @@ export default function Home() {
                     disabled={!canUndo}
                     variant="outline"
                     size="icon"
-                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white disabled:opacity-30"
+                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white disabled:opacity-30 min-h-[44px] min-w-[44px]"
                     title="Undo (Ctrl+Z)"
+                    aria-label="Undo last action"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                     </svg>
                   </Button>
                   <Button
                     onClick={handleClearGrid}
                     variant="outline"
-                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white"
+                    className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white min-h-[44px]"
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     Clear Grid
@@ -1338,8 +1214,9 @@ export default function Home() {
                   <Button
                     onClick={handleAutoComplete}
                     disabled={isAutoCompleting || gridStats.emptyCells === 0}
+                    aria-busy={isAutoCompleting}
                     className={cn(
-                      "px-6 transition-all",
+                      "px-6 transition-all min-h-[44px]",
                       gridCompletionStatus.canFill
                         ? "bg-emerald-600 hover:bg-emerald-500 text-white hover:scale-105"
                         : "bg-amber-600 hover:bg-amber-500 text-white"
@@ -1347,7 +1224,7 @@ export default function Home() {
                   >
                     {isAutoCompleting ? (
                       <>
-                        <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
@@ -1355,7 +1232,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Auto-Complete
@@ -1368,11 +1245,12 @@ export default function Home() {
                     <Button
                       onClick={handleRegeneratePuzzle}
                       disabled={isGenerating}
-                      className="bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] px-6 transition-all hover:scale-105"
+                      aria-busy={isGenerating}
+                      className="bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] px-6 transition-all hover:scale-105 min-h-[44px]"
                     >
                       {isGenerating ? (
                         <>
-                          <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
@@ -1380,7 +1258,7 @@ export default function Home() {
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
                           Regenerate Puzzle
@@ -1393,9 +1271,10 @@ export default function Home() {
                     <Button
                       onClick={handleGenerate}
                       disabled={isGenerating}
-                      className="bg-[#4A90C2] hover:bg-[#5ba0d2] text-white px-6 transition-all hover:scale-105"
+                      aria-busy={isGenerating}
+                      className="bg-[#4A90C2] hover:bg-[#5ba0d2] text-white px-6 transition-all hover:scale-105 min-h-[44px]"
                     >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                       Auto-Generate

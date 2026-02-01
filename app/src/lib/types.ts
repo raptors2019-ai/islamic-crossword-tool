@@ -42,6 +42,21 @@ export interface ClueStatus {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+// Clue alternatives for each difficulty level
+export interface ClueAlternatives {
+  easy: string[];    // Alternative clues for easy difficulty
+  medium: string[];  // Alternative clues for medium difficulty
+  hard: string[];    // Alternative clues for hard difficulty
+}
+
+// Clues organized by difficulty with alternatives
+export interface DifficultyClues {
+  easy: string;      // Currently selected easy clue
+  medium: string;    // Currently selected medium clue
+  hard: string;      // Currently selected hard clue
+  alternatives?: ClueAlternatives;  // Other generated clue options
+}
+
 // Grid size constraints
 export type GridSize = '5x5' | '7x7' | '9x9' | 'freeform';
 
