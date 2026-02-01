@@ -630,201 +630,47 @@ export default function Home() {
 
     setIsGenerating(true);
 
-    // Build a boosted word index that prioritizes prophet keywords
-    const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
-    const boostedIndex = buildBoostedWordIndex(keywordWords);
+    try {
+      // Build a boosted word index that prioritizes prophet keywords
+      const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
+      const boostedIndex = buildBoostedWordIndex(keywordWords);
 
-    // Create a map for quick clue lookup
-    const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
+      // Create a map for quick clue lookup
+      const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
 
-    // Use the auto-generator to create a complete puzzle
-    const themeWordsInput = validKeywords.map(kw => ({
-      word: kw.word.toUpperCase(),
-      clue: kw.clue,
-    }));
-
-    // Generate using auto-generator with boosted index
-    // When shuffling (regenerating), use a random starting pattern for more variety
-    const generatorOptions: { maxTimeMs: number; wordIndex: typeof boostedIndex; preferredPattern?: number } = {
-      maxTimeMs: 10000,
-      wordIndex: boostedIndex,
-    };
-    if (shuffle) {
-      // Random pattern from 0-7 (8 patterns available)
-      generatorOptions.preferredPattern = Math.floor(Math.random() * 8);
-    }
-    const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
-
-    // Update state with results
-    const newThemeWords: ThemeWord[] = [];
-    const newClues: Record<string, string> = {};
-    const newPlacedIds = new Set<string>();
-
-    // Track all placed words that are prophet keywords (theme or filler)
-    // Deduplicate by word (same word can appear across and down in word squares)
-    const keywordSet = new Set(keywordWords);
-    const addedWords = new Set<string>();
-    for (const placed of result.placedWords) {
-      const isKeyword = keywordSet.has(placed.word);
-      if (isKeyword && !addedWords.has(placed.word)) {
-        addedWords.add(placed.word);
-        const clue = clueMap.get(placed.word) || placed.clue || '';
-        const id = `prophet-${prophetId}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        newThemeWords.push({
-          id,
-          word: placed.word,
-          clue,
-          activeSpelling: placed.word,
-          category: 'prophets',
-        });
-        newClues[id] = clue;
-        newPlacedIds.add(id);
-      }
-    }
-
-    setThemeWords(newThemeWords);
-    setClues(newClues);
-    setPlacedInGridIds(newPlacedIds);
-
-    // Apply the generated grid to the editable grid
-    // Show partial results even if success=false (user can use Auto-Complete)
-    const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
-    if (hasContent) {
-      setCells(result.grid);
-    }
-
-    // Store the generation result to show status message
-    setAutoGenerateResult(result);
-    // Clear any previous auto-complete result since this is a fresh grid
-    setAutoCompleteResult(null);
-
-    // Track placed words for future regeneration comparison
-    const allPlacedWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
-    setPreviousPuzzleWords(allPlacedWords);
-
-    setIsGenerating(false);
-  }, [clearGrid, wordIndex, setCells]);
-
-  // Handle regenerating the puzzle with the same prophet's keywords
-  // Ensures: 1) Complete grid (100% fill), 2) At least 50% different words
-  const handleRegeneratePuzzle = useCallback(() => {
-    if (!currentProphet) return;
-
-    const MAX_ATTEMPTS = 10;
-    const MIN_DIFFERENT_PERCENT = 0.5;
-
-    setIsGenerating(true);
-    setAutoGenerateResult(null);
-    setAutoCompleteResult(null);
-
-    // Filter to 5-letter-or-less words
-    const validKeywords = currentProphet.keywords
-      .filter(kw => kw.word.length >= 2 && kw.word.length <= 5);
-
-    if (validKeywords.length === 0) {
-      setIsGenerating(false);
-      return;
-    }
-
-    // Build word index and clue map
-    const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
-    const boostedIndex = buildBoostedWordIndex(keywordWords);
-    const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
-
-    // Helper to calculate difference percentage
-    const calculateDifferencePercent = (newWords: Set<string>, oldWords: Set<string>): number => {
-      if (oldWords.size === 0) return 1; // First generation is always "different"
-      let differentCount = 0;
-      for (const word of newWords) {
-        if (!oldWords.has(word)) differentCount++;
-      }
-      return newWords.size > 0 ? differentCount / newWords.size : 0;
-    };
-
-    // Try multiple times to get a complete, different puzzle
-    let bestResult: GenerationResult | null = null;
-    let bestDifferencePercent = 0;
-
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      // Shuffle keywords for variety
-      const shuffledKeywords = shuffleArray(validKeywords);
-      const themeWordsInput = shuffledKeywords.map(kw => ({
+      // Use the auto-generator to create a complete puzzle
+      const themeWordsInput = validKeywords.map(kw => ({
         word: kw.word.toUpperCase(),
         clue: kw.clue,
       }));
 
-      // Random pattern for variety
-      const generatorOptions = {
-        maxTimeMs: 8000, // Slightly less time per attempt to allow more retries
+      // Generate using auto-generator with boosted index
+      // When shuffling (regenerating), use a random starting pattern for more variety
+      const generatorOptions: { maxTimeMs: number; wordIndex: typeof boostedIndex; preferredPattern?: number } = {
+        maxTimeMs: 10000,
         wordIndex: boostedIndex,
-        preferredPattern: Math.floor(Math.random() * 8),
       };
-
+      if (shuffle) {
+        // Random pattern from 0-7 (8 patterns available)
+        generatorOptions.preferredPattern = Math.floor(Math.random() * 8);
+      }
       const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
-
-      // Get all words in this result
-      const resultWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
-      const differencePercent = calculateDifferencePercent(resultWords, previousPuzzleWords);
-
-      // Check if this is a complete grid
-      const isComplete = result.success && result.stats.gridFillPercentage >= 99;
-
-      // Perfect result: complete grid with enough different words
-      if (isComplete && differencePercent >= MIN_DIFFERENT_PERCENT) {
-        bestResult = result;
-        bestDifferencePercent = differencePercent;
-        break;
-      }
-
-      // Track best result so far (prioritize completeness, then difference)
-      if (!bestResult) {
-        bestResult = result;
-        bestDifferencePercent = differencePercent;
-      } else {
-        const currentIsComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
-
-        // Prefer complete over incomplete
-        if (isComplete && !currentIsComplete) {
-          bestResult = result;
-          bestDifferencePercent = differencePercent;
-        }
-        // If both complete (or both incomplete), prefer more different
-        else if (isComplete === currentIsComplete && differencePercent > bestDifferencePercent) {
-          bestResult = result;
-          bestDifferencePercent = differencePercent;
-        }
-        // If neither complete, prefer higher fill percentage
-        else if (!isComplete && !currentIsComplete &&
-                 result.stats.gridFillPercentage > bestResult.stats.gridFillPercentage) {
-          bestResult = result;
-          bestDifferencePercent = differencePercent;
-        }
-      }
-    }
-
-    // Use the best result we found
-    if (bestResult) {
-      // Clear and update state
-      clearGrid();
-      setThemeWords([]);
-      setClues({});
-      setPlacedInGridIds(new Set());
-      setSelectedWordId(null);
-      setGridClues({});
 
       // Update state with results
       const newThemeWords: ThemeWord[] = [];
       const newClues: Record<string, string> = {};
       const newPlacedIds = new Set<string>();
 
+      // Track all placed words that are prophet keywords (theme or filler)
+      // Deduplicate by word (same word can appear across and down in word squares)
       const keywordSet = new Set(keywordWords);
       const addedWords = new Set<string>();
-      for (const placed of bestResult.placedWords) {
+      for (const placed of result.placedWords) {
         const isKeyword = keywordSet.has(placed.word);
         if (isKeyword && !addedWords.has(placed.word)) {
           addedWords.add(placed.word);
           const clue = clueMap.get(placed.word) || placed.clue || '';
-          const id = `prophet-${currentProphet.id}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          const id = `prophet-${prophetId}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           newThemeWords.push({
             id,
             word: placed.word,
@@ -841,55 +687,219 @@ export default function Home() {
       setClues(newClues);
       setPlacedInGridIds(newPlacedIds);
 
-      // Apply the grid
-      let finalGrid = bestResult.grid;
-      let finalResult = bestResult;
-      const hasContent = bestResult.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
+      // Apply the generated grid to the editable grid
+      // Show partial results even if success=false (user can use Auto-Complete)
+      const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
+      if (hasContent) {
+        setCells(result.grid);
+      }
 
-      // If the best result is not complete, try to auto-complete it with CSP
-      const isComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
-      if (hasContent && !isComplete) {
-        const cspResult = fillGridWithCSP(bestResult.grid, boostedIndex, 10000);
-        if (cspResult.success) {
-          finalGrid = cspResult.grid;
-          // Merge the CSP-placed words into the result
-          const mergedPlacedWords = [
-            ...bestResult.placedWords,
-            ...cspResult.placedWords.map(pw => ({
-              word: pw.word,
-              clue: '',
-              row: pw.slot.start.row,
-              col: pw.slot.start.col,
-              direction: pw.slot.direction,
-              isThemeWord: false,
-            })),
-          ];
-          finalResult = {
-            ...bestResult,
-            success: true,
-            grid: finalGrid,
-            placedWords: mergedPlacedWords,
-            stats: {
-              ...bestResult.stats,
-              gridFillPercentage: 100,
-              fillerWordsPlaced: bestResult.stats.fillerWordsPlaced + cspResult.stats.filledByCSP,
-            },
-          };
+      // Store the generation result to show status message
+      setAutoGenerateResult(result);
+      // Clear any previous auto-complete result since this is a fresh grid
+      setAutoCompleteResult(null);
+
+      // Track placed words for future regeneration comparison
+      const allPlacedWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
+      setPreviousPuzzleWords(allPlacedWords);
+    } catch (error) {
+      console.error('Error generating puzzle:', error);
+      // Don't crash - just show empty grid
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [clearGrid, setCells]);
+
+  // Handle regenerating the puzzle with the same prophet's keywords
+  // Ensures: 1) Complete grid (100% fill), 2) At least 50% different words
+  const handleRegeneratePuzzle = useCallback(() => {
+    if (!currentProphet) return;
+
+    const MAX_ATTEMPTS = 10;
+    const MIN_DIFFERENT_PERCENT = 0.5;
+
+    setIsGenerating(true);
+    setAutoGenerateResult(null);
+    setAutoCompleteResult(null);
+
+    try {
+      // Filter to 5-letter-or-less words
+      const validKeywords = currentProphet.keywords
+        .filter(kw => kw.word.length >= 2 && kw.word.length <= 5);
+
+      if (validKeywords.length === 0) {
+        setIsGenerating(false);
+        return;
+      }
+
+      // Build word index and clue map
+      const keywordWords = validKeywords.map(kw => kw.word.toUpperCase());
+      const boostedIndex = buildBoostedWordIndex(keywordWords);
+      const clueMap = new Map(validKeywords.map(kw => [kw.word.toUpperCase(), kw.clue]));
+
+      // Helper to calculate difference percentage
+      const calculateDifferencePercent = (newWords: Set<string>, oldWords: Set<string>): number => {
+        if (oldWords.size === 0) return 1; // First generation is always "different"
+        let differentCount = 0;
+        for (const word of newWords) {
+          if (!oldWords.has(word)) differentCount++;
+        }
+        return newWords.size > 0 ? differentCount / newWords.size : 0;
+      };
+
+      // Try multiple times to get a complete, different puzzle
+      let bestResult: GenerationResult | null = null;
+      let bestDifferencePercent = 0;
+
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        // Shuffle keywords for variety
+        const shuffledKeywords = shuffleArray(validKeywords);
+        const themeWordsInput = shuffledKeywords.map(kw => ({
+          word: kw.word.toUpperCase(),
+          clue: kw.clue,
+        }));
+
+        // Random pattern for variety
+        const generatorOptions = {
+          maxTimeMs: 8000, // Slightly less time per attempt to allow more retries
+          wordIndex: boostedIndex,
+          preferredPattern: Math.floor(Math.random() * 8),
+        };
+
+        const result = generateAutoPuzzle(themeWordsInput, generatorOptions);
+
+        // Get all words in this result
+        const resultWords = new Set(result.placedWords.map(pw => pw.word.toUpperCase()));
+        const differencePercent = calculateDifferencePercent(resultWords, previousPuzzleWords);
+
+        // Check if this is a complete grid
+        const isComplete = result.success && result.stats.gridFillPercentage >= 99;
+
+        // Perfect result: complete grid with enough different words
+        if (isComplete && differencePercent >= MIN_DIFFERENT_PERCENT) {
+          bestResult = result;
+          bestDifferencePercent = differencePercent;
+          break;
+        }
+
+        // Track best result so far (prioritize completeness, then difference)
+        if (!bestResult) {
+          bestResult = result;
+          bestDifferencePercent = differencePercent;
+        } else {
+          const currentIsComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
+
+          // Prefer complete over incomplete
+          if (isComplete && !currentIsComplete) {
+            bestResult = result;
+            bestDifferencePercent = differencePercent;
+          }
+          // If both complete (or both incomplete), prefer more different
+          else if (isComplete === currentIsComplete && differencePercent > bestDifferencePercent) {
+            bestResult = result;
+            bestDifferencePercent = differencePercent;
+          }
+          // If neither complete, prefer higher fill percentage
+          else if (!isComplete && !currentIsComplete &&
+                   result.stats.gridFillPercentage > bestResult.stats.gridFillPercentage) {
+            bestResult = result;
+            bestDifferencePercent = differencePercent;
+          }
         }
       }
 
-      if (hasContent) {
-        setCells(finalGrid);
+      // Use the best result we found
+      if (bestResult) {
+        // Clear and update state
+        clearGrid();
+        setThemeWords([]);
+        setClues({});
+        setPlacedInGridIds(new Set());
+        setSelectedWordId(null);
+        setGridClues({});
+
+        // Update state with results
+        const newThemeWords: ThemeWord[] = [];
+        const newClues: Record<string, string> = {};
+        const newPlacedIds = new Set<string>();
+
+        const keywordSet = new Set(keywordWords);
+        const addedWords = new Set<string>();
+        for (const placed of bestResult.placedWords) {
+          const isKeyword = keywordSet.has(placed.word);
+          if (isKeyword && !addedWords.has(placed.word)) {
+            addedWords.add(placed.word);
+            const clue = clueMap.get(placed.word) || placed.clue || '';
+            const id = `prophet-${currentProphet.id}-${placed.word}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+            newThemeWords.push({
+              id,
+              word: placed.word,
+              clue,
+              activeSpelling: placed.word,
+              category: 'prophets',
+            });
+            newClues[id] = clue;
+            newPlacedIds.add(id);
+          }
+        }
+
+        setThemeWords(newThemeWords);
+        setClues(newClues);
+        setPlacedInGridIds(newPlacedIds);
+
+        // Apply the grid
+        let finalGrid = bestResult.grid;
+        let finalResult = bestResult;
+        const hasContent = bestResult.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
+
+        // If the best result is not complete, try to auto-complete it with CSP
+        const isComplete = bestResult.success && bestResult.stats.gridFillPercentage >= 99;
+        if (hasContent && !isComplete) {
+          const cspResult = fillGridWithCSP(bestResult.grid, boostedIndex, 10000);
+          if (cspResult.success) {
+            finalGrid = cspResult.grid;
+            // Merge the CSP-placed words into the result
+            const mergedPlacedWords = [
+              ...bestResult.placedWords,
+              ...cspResult.placedWords.map(pw => ({
+                word: pw.word,
+                clue: '',
+                row: pw.slot.start.row,
+                col: pw.slot.start.col,
+                direction: pw.slot.direction,
+                isThemeWord: false,
+              })),
+            ];
+            finalResult = {
+              ...bestResult,
+              success: true,
+              grid: finalGrid,
+              placedWords: mergedPlacedWords,
+              stats: {
+                ...bestResult.stats,
+                gridFillPercentage: 100,
+                fillerWordsPlaced: bestResult.stats.fillerWordsPlaced + cspResult.stats.filledByCSP,
+              },
+            };
+          }
+        }
+
+        if (hasContent) {
+          setCells(finalGrid);
+        }
+
+        setAutoGenerateResult(finalResult);
+
+        // Update previous words for next regeneration
+        const allPlacedWords = new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase()));
+        setPreviousPuzzleWords(allPlacedWords);
       }
-
-      setAutoGenerateResult(finalResult);
-
-      // Update previous words for next regeneration
-      const allPlacedWords = new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase()));
-      setPreviousPuzzleWords(allPlacedWords);
+    } catch (error) {
+      console.error('Error regenerating puzzle:', error);
+      // Don't crash - show empty grid
+    } finally {
+      setIsGenerating(false);
     }
-
-    setIsGenerating(false);
   }, [currentProphet, previousPuzzleWords, clearGrid, setCells]);
 
   // Handle auto-complete (CSP-based gap filling)
