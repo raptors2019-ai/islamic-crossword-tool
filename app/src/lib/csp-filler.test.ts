@@ -94,7 +94,7 @@ describe('CSP Filler', () => {
     it('should return false for unsatisfiable grids', () => {
       const grid = createEmptyGrid();
       // Place letters that create impossible patterns
-      let testGrid = placeWord(grid, 'XXXXX', 0, 0, 'across');
+      const testGrid = placeWord(grid, 'XXXXX', 0, 0, 'across');
       // This should create down slots starting with X, which likely have no candidates
 
       if (testGrid) {

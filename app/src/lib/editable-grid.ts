@@ -777,8 +777,8 @@ export function suggestBlackSquares(
   // Find cells that are adjacent to word ends and empty
   for (const word of placedWords) {
     // Check position after word end
-    let endR = word.direction === 'down' ? word.row + word.length : word.row;
-    let endC = word.direction === 'across' ? word.col + word.length : word.col;
+    const endR = word.direction === 'down' ? word.row + word.length : word.row;
+    const endC = word.direction === 'across' ? word.col + word.length : word.col;
 
     // Position after word
     if (endR < GRID_SIZE && endC < GRID_SIZE) {
@@ -797,8 +797,8 @@ export function suggestBlackSquares(
     }
 
     // Position before word start
-    let beforeR = word.direction === 'down' ? word.row - 1 : word.row;
-    let beforeC = word.direction === 'across' ? word.col - 1 : word.col;
+    const beforeR = word.direction === 'down' ? word.row - 1 : word.row;
+    const beforeC = word.direction === 'across' ? word.col - 1 : word.col;
 
     if (beforeR >= 0 && beforeC >= 0) {
       const cell = cells[beforeR][beforeC];
@@ -918,7 +918,7 @@ export function findBestBlackPattern(
     }
 
     // Bonus for patterns that create good slot lengths
-    let score = whiteCount;
+    const score = whiteCount;
 
     if (score > bestScore) {
       bestScore = score;
