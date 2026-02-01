@@ -489,10 +489,15 @@ export function CrosswordGrid({
           </div>
         )}
 
-        <div className={cn('inline-grid', themeStyles.container, themeStyles.gap)}>
+        <div className={cn(
+          'inline-grid',
+          // Use custom styling for editable mode: dark border around white grid
+          editable ? 'bg-gray-900 p-1 rounded-lg shadow-lg' : themeStyles.container,
+          editable ? 'gap-[1px]' : themeStyles.gap
+        )}>
           {/* Use editable grid if in edit mode, otherwise use transformed grid */}
           {(editable && editableGrid ? editableGrid : transformedGrid).map((row, r) => (
-            <div key={r} className={cn('flex', themeStyles.gap)}>
+            <div key={r} className={cn('flex', editable ? 'gap-[1px]' : themeStyles.gap)}>
               {row.map((cellData, c) => {
                 const cellKey = `${r}-${c}`;
                 const isSelected = selectedCell?.row === r && selectedCell?.col === c;
@@ -527,19 +532,19 @@ export function CrosswordGrid({
                       className={cn(
                         sizeStyles.cell,
                         'flex items-center justify-center font-bold relative transition-all duration-150 cursor-pointer',
-                        // Cell type styling
-                        isBlack && themeStyles.blackCell,
-                        !isBlack && hasLetter && themeStyles.letterCell,
-                        !isBlack && !hasLetter && 'bg-white/90 border border-gray-300 hover:bg-blue-50',
+                        // Cell type styling - white cells with solid black for black squares
+                        isBlack && 'bg-black',
+                        !isBlack && 'bg-white border border-gray-300',
+                        !isBlack && !hasLetter && 'hover:bg-blue-50',
                         // Selection state
                         isSelected && !isBlack && 'ring-2 ring-[#D4AF37] ring-inset bg-[#D4AF37]/20',
                         // Warning state - orange highlight for invalid slots
                         hasWarning && !isSelected && 'ring-2 ring-orange-500 ring-inset bg-orange-500/10',
                         // Suggested black box - dashed red outline
                         isSuggestedBlackBox && !hasWarning && !isSelected && 'ring-2 ring-dashed ring-red-400 bg-red-500/5',
-                        // User vs auto styling
-                        isUserTyped && 'text-[#001a2c]',
-                        isAutoPlaced && 'text-[#4A90C2]',
+                        // User vs auto styling - dark text on white background
+                        isUserTyped && 'text-gray-900',
+                        isAutoPlaced && 'text-blue-600',
                         // Text styling
                         sizeStyles.text,
                       )}
