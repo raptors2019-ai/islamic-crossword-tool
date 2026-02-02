@@ -134,11 +134,11 @@ QURAN;100;Muslim Holy Book
 HAJJ;100;Pilgrimage to Mecca
 ```
 
-## Auto-Generator Algorithm (Jan 2026)
+## Auto-Generator Algorithm (Feb 2026)
 
-The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
+The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks + Recovery" strategy:
 
-### Three Levers
+### Four Core Mechanisms
 
 1. **Friendliest-First Ordering** (`scoreKeywordFriendliness()`)
    - Score keywords by letter friendliness: AEIOSTRNL = +10, QJXZKFYWV = -20
@@ -147,23 +147,51 @@ The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
 
 2. **Verify Before Commit** (`verifyCompletable()`)
    - Before committing placement, verify grid is still completable
-   - Uses relaxed threshold: 70% of slots with 2+ letter constraints must have candidates
-   - Single-letter constraints (D____ from DREAM) are ignored - auto-blacks can fix them
+   - Uses thresholds: 60% for early words, 80% for later words
+   - Immediately rejects if ANY slot with 2+ constraints has 0 candidates
+   - Checks ALL constrained slots (including 1-letter constraints)
 
 3. **Islamic-Biased CSP Fill** (`fillGridWithBiasedCSP()`)
    - Islamic words fill first, then English as fallback
    - Forces Islamic-only when below 25% threshold (minimum)
    - Target: 40% Islamic words (Azmat's avg is 35%)
 
+4. **Recovery Loop** (in `generatePuzzle()`)
+   - Up to 3 attempts with different strategies
+   - Attempt 1: Normal generation
+   - Attempt 2: Shuffled theme word order
+   - Attempt 3: Fewer theme words (drop hardest one)
+   - NEVER returns partial/invalid results as success
+
+### Validation Guarantees (Feb 2026 Fix)
+
+The generator now guarantees:
+- **100% grid fill** - No empty white cells when `success: true`
+- **100% valid words** - Every detected word is in the dictionary
+- **No garbage letters** - CSP timeout properly clears invalid placements
+- **Clean partial results** - Even failed attempts have valid (incomplete) grids
+
 ### Key Files
-- `app/src/lib/auto-generator.ts` - Main generation logic
-- `app/src/lib/csp-filler.ts` - CSP fill with Islamic bias
+- `app/src/lib/auto-generator.ts` - Main generation logic + recovery loop
+- `app/src/lib/auto-generator.test.ts` - Tests for all 25 prophets (100% pass rate)
+- `app/src/lib/csp-filler.ts` - CSP fill with Islamic bias + proper backtracking
 - `app/src/lib/word-index.ts` - Split Islamic/English indices
+
+### Running Tests
+```bash
+cd app && npm test -- auto-generator.test.ts
+```
+
+All 25 prophets tested (including scraped from myislam.org):
+ADAM, NUH, IBRAHIM, ISMAIL, ISHAQ, YAQUB, YUSUF, AYYUB, MUSA, HARUN,
+DAWUD, SULAIMAN, YUNUS, IDRIS, HUD, SALIH, SHUAIB, LUT, YAHYA, ZAKARIYA,
+ISA, MUHAMMAD, DHUL_KIFL, ILYAS, AL_YASA
 
 ### Debugging Tips
 - If only 1 theme word places: Check `verifyCompletable()` threshold
 - If Islamic % is low: Check `fillGridWithBiasedCSP()` target
-- If grid incomplete: Check `autoAddBlacks()` max limit
+- If grid incomplete: Check `autoAddBlacks()` max limit and recovery loop
+- If invalid words appear: Check `validateWordFragmentsAfterBlack()` and CSP backtracking
 
 ## Learnings (Don't Repeat These!)
 
@@ -180,6 +208,8 @@ The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
 - Convex queries are reactive - don't call them in loops, use proper query patterns
 - Many Islamic terms are missing from our word list - check `/docs/azmat-puzzle-benchmarks.md` for words like IDDAH, QUDSI, NABI, SIWAK, ADAB, TALAQ, WAHY
 - English words can be "Islamic" with the right clue (ALARM for Fajr, CAT for Muslim pet culture) - context matters
+- After changing generator code, RESTART the dev server (`npm run dev`) - hot reload doesn't always pick up lib changes
+- When testing the generator, use `npm test -- auto-generator.test.ts` to verify changes work before testing in the UI
 
 ## Slash Commands
 

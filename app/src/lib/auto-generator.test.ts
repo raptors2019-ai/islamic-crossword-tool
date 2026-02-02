@@ -20,7 +20,9 @@ import { detectWords } from './word-detector';
 import { getDefaultWordIndex } from './word-index';
 
 // Prophet-specific theme words for testing
+// These match the keywords from prophet-keywords.ts (all 25 prophets)
 const PROPHET_THEMES: Record<string, ThemeWord[]> = {
+  // Core prophets
   ADAM: [
     { word: 'ADAM', clue: 'First prophet' },
     { word: 'HAWWA', clue: "Adam's wife" },
@@ -34,21 +36,138 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'JUDI', clue: 'Mountain where ark landed' },
   ],
   IBRAHIM: [
-    { word: 'KAABA', clue: 'House of Allah' },
     { word: 'FIRE', clue: 'Ibrahim was thrown into this' },
-    { word: 'HAJJ', clue: 'Annual pilgrimage' },
+    { word: 'AXE', clue: 'Tool to smash idols' },
+    { word: 'SARAH', clue: "Ibrahim's wife" },
+    { word: 'HAGAR', clue: "Ismail's mother" },
   ],
-  MUSA: [
-    { word: 'MUSA', clue: 'Prophet who spoke to Allah' },
-    { word: 'STAFF', clue: "Musa's miracle" },
-    { word: 'NILE', clue: 'River in Egypt' },
-    { word: 'TORAH', clue: 'Book revealed to Musa' },
+  ISMAIL: [
+    { word: 'KAABA', clue: 'Built with Ibrahim' },
+    { word: 'WATER', clue: 'Zamzam appeared' },
+    { word: 'RAM', clue: 'Sacrificed instead' },
+    { word: 'HAJJ', clue: 'Pilgrimage rituals' },
+  ],
+  ISHAQ: [
+    { word: 'ISHAQ', clue: 'Son born to Sarah' },
+    { word: 'ISAAC', clue: 'English name' },
+    { word: 'SARAH', clue: 'His mother' },
+    { word: 'THREE', clue: 'Angels who visited' },
+  ],
+  YAQUB: [
+    { word: 'YAQUB', clue: 'Father of twelve' },
+    { word: 'JACOB', clue: 'English name' },
+    { word: 'BLIND', clue: 'From grief over Yusuf' },
+    { word: 'SHIRT', clue: 'Restored his sight' },
   ],
   YUSUF: [
     { word: 'YUSUF', clue: 'Prophet of dreams' },
-    { word: 'DREAM', clue: 'Yusuf could interpret these' },
-    { word: 'JAIL', clue: 'Where Yusuf was imprisoned' },
-    { word: 'EGYPT', clue: 'Land where Yusuf ruled' },
+    { word: 'DREAM', clue: 'Yusuf interpreted' },
+    { word: 'JAIL', clue: 'Where imprisoned' },
+    { word: 'EGYPT', clue: 'Where he ruled' },
+  ],
+  AYYUB: [
+    { word: 'AYYUB', clue: 'Patient prophet' },
+    { word: 'SEVEN', clue: 'Years of suffering' },
+    { word: 'JOB', clue: 'English name' },
+  ],
+  MUSA: [
+    { word: 'MUSA', clue: 'Spoke to Allah' },
+    { word: 'STAFF', clue: 'Became a serpent' },
+    { word: 'NILE', clue: 'River of Egypt' },
+    { word: 'TORAH', clue: 'His scripture' },
+  ],
+  HARUN: [
+    { word: 'HARUN', clue: "Musa's brother" },
+    { word: 'AARON', clue: 'English name' },
+    { word: 'CALF', clue: 'Golden idol' },
+    { word: 'MUSA', clue: 'His brother' },
+  ],
+  DAWUD: [
+    { word: 'DAWUD', clue: 'Killed Jalut' },
+    { word: 'ZABUR', clue: 'His scripture' },
+    { word: 'IRON', clue: 'Made soft for him' },
+    { word: 'SLING', clue: 'His weapon' },
+  ],
+  SULAIMAN: [
+    { word: 'JINN', clue: 'He commanded them' },
+    { word: 'ANT', clue: 'Warned its colony' },
+    { word: 'WIND', clue: 'He controlled it' },
+    { word: 'BIRD', clue: 'Hoopoe served him' },
+  ],
+  YUNUS: [
+    { word: 'YUNUS', clue: 'In the whale' },
+    { word: 'WHALE', clue: 'Swallowed Yunus' },
+    { word: 'FISH', clue: 'Man of the fish' },
+    { word: 'SHIP', clue: 'He fled on it' },
+  ],
+  IDRIS: [
+    { word: 'IDRIS', clue: 'First to write' },
+    { word: 'ENOCH', clue: 'English name' },
+    { word: 'WISE', clue: 'His attribute' },
+  ],
+  HUD: [
+    { word: 'HUD', clue: "Sent to 'Ad" },
+    { word: 'AD', clue: 'His people' },
+    { word: 'WIND', clue: 'Destroyed them' },
+    { word: 'IRAM', clue: 'City with pillars' },
+  ],
+  SALIH: [
+    { word: 'SALIH', clue: 'Sent to Thamud' },
+    { word: 'CAMEL', clue: 'The miracle' },
+    { word: 'ROCK', clue: 'Camel emerged' },
+    { word: 'MILK', clue: "Camel's provision" },
+  ],
+  SHUAIB: [
+    { word: 'WOOD', clue: 'Companions of the wood' },
+  ],
+  LUT: [
+    { word: 'LUT', clue: "Ibrahim's nephew" },
+    { word: 'LOT', clue: 'English name' },
+    { word: 'SODOM', clue: 'Sinful city' },
+    { word: 'STONE', clue: 'Rained on them' },
+  ],
+  YAHYA: [
+    { word: 'YAHYA', clue: "Zakariya's son" },
+    { word: 'JOHN', clue: 'English name' },
+    { word: 'SON', clue: 'To Zakariya' },
+    { word: 'WEPT', clue: 'In fear of Allah' },
+  ],
+  ZAKARIYA: [
+    { word: 'YAHYA', clue: 'His son' },
+    { word: 'JOHN', clue: "Son's English name" },
+    { word: 'FRUIT', clue: "Maryam's provision" },
+  ],
+  ISA: [
+    { word: 'ISA', clue: 'Born without father' },
+    { word: 'INJIL', clue: 'His scripture' },
+    { word: 'MARY', clue: 'His mother' },
+    { word: 'HEAL', clue: 'Cured the sick' },
+    { word: 'DEAD', clue: 'Raised them' },
+  ],
+  MUHAMMAD: [
+    { word: 'MECCA', clue: 'Birthplace' },
+    { word: 'HIRA', clue: 'Cave of revelation' },
+    { word: 'HIJRA', clue: 'Migration' },
+    { word: 'QURAN', clue: 'Final scripture' },
+    { word: 'BADR', clue: 'First battle' },
+  ],
+  // Scraped prophets from myislam.org
+  DHUL_KIFL: [
+    { word: 'KIFL', clue: 'Part of his name' },
+    { word: 'FOLD', clue: 'Meaning of Kifl' },
+    { word: 'FAST', clue: 'He fasted daily' },
+    { word: 'PRAY', clue: 'He prayed nightly' },
+    { word: 'SABR', clue: 'His patience' },
+  ],
+  ILYAS: [
+    { word: 'ILYAS', clue: 'Sent against Baal' },
+    { word: 'BAAL', clue: 'Idol worshipped' },
+    { word: 'IDOL', clue: 'False god' },
+    { word: 'AHAB', clue: 'King of his time' },
+  ],
+  AL_YASA: [
+    { word: 'YASA', clue: 'Part of his name' },
+    { word: 'ILYAS', clue: 'His predecessor' },
   ],
 };
 
