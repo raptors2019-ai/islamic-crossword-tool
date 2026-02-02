@@ -1,14 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "npm run dev",
-      "npm run build",
-      "npm run lint*",
-      "npm run test*",
-      "npx convex *",
-      "python generate*.py*",
-      "cd /Users/josh/code/crosswords/*",
-      "bash /Users/josh/code/crosswords/.claude/scripts/*"
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run lint*)",
+      "Bash(npm run test*)",
+      "Bash(npx convex *)",
+      "Bash(python generate*.py*)",
+      "Bash(cd /Users/josh/code/crosswords/*)",
+      "Bash(bash /Users/josh/code/crosswords/.claude/scripts/*)"
     ],
     "deny": []
   },
