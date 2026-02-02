@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import {
@@ -79,6 +79,8 @@ export function WordHub({
   const [selectedProphet, setSelectedProphet] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [customWordInput, setCustomWordInput] = useState('');
+  // Track which prophet we've triggered generation for (to avoid duplicate triggers)
+  const [hasTriggeredGeneration, setHasTriggeredGeneration] = useState<string | null>(null);
 
   // Query Convex for keywords when a prophet is selected
   const convexKeywords = useQuery(
@@ -89,13 +91,42 @@ export function WordHub({
   const handleProphetChange = useCallback((prophetId: string) => {
     setSelectedProphet(prophetId);
     setShowAll(false);
+    // Reset trigger tracking when prophet changes - useEffect will handle generation
+    setHasTriggeredGeneration(null);
+  }, []);
 
-    // Auto-generate puzzle with all keywords for this prophet
-    if (onProphetSelect) {
-      const keywords = getKeywordsForProphet(prophetId);
-      onProphetSelect(prophetId, keywords);
+  // Trigger puzzle generation when Convex keywords load (or fallback to local after timeout)
+  useEffect(() => {
+    if (!selectedProphet || !onProphetSelect || hasTriggeredGeneration === selectedProphet) {
+      return;
     }
-  }, [onProphetSelect]);
+
+    // If Convex keywords are available, use them
+    if (convexKeywords && convexKeywords.length > 0) {
+      const keywords: ProphetKeyword[] = convexKeywords.map((kw) => ({
+        word: kw.word,
+        clue: kw.clue,
+        relevance: kw.relevance,
+        source: kw.source as KeywordSource,
+        sourceDetails: kw.sourceDetails,
+        isApproved: kw.isApproved,
+      }));
+      onProphetSelect(selectedProphet, keywords);
+      setHasTriggeredGeneration(selectedProphet);
+      return;
+    }
+
+    // Fallback: If Convex hasn't loaded after 500ms, use local keywords
+    const timeoutId = setTimeout(() => {
+      if (hasTriggeredGeneration !== selectedProphet) {
+        const localKeywords = getKeywordsForProphet(selectedProphet);
+        onProphetSelect(selectedProphet, localKeywords);
+        setHasTriggeredGeneration(selectedProphet);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [convexKeywords, selectedProphet, onProphetSelect, hasTriggeredGeneration]);
 
   const handleAddCustomWord = useCallback(() => {
     const word = customWordInput.trim().toUpperCase();

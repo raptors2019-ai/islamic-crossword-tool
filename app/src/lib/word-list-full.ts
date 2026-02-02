@@ -19,11 +19,16 @@ const ISLAMIC_WORDS = [
   'YAHYA', 'YAQUB', 'YUNUS', 'YUSUF', 'ZABUR', 'HAGAR', 'HABIL', 'BURAQ',
   'DREAM', 'EGYPT', 'JESUS', 'MOSES', 'NOAH', 'MARY', 'JOB', 'JOHN',
   'JONAH', 'JACOB', 'DAVID', 'AARON', 'LOT', 'JINN',
+  // Additional prophet-related terms from Convex keywords
+  'LUT', 'SETH', 'ISAAC', 'SALEH', 'EDEN', 'SODOM', 'SINAI', 'SHEBA',
+  'BAAL', 'IDOLS', 'DATES', 'ANTS', 'QUAKE', 'HEROD', 'ARAB',
 
   // Names of Allah
   'ALLAH', 'RAHMAN', 'RAHIM', 'MALIK', 'SALAM', 'AZIZ', 'KHALIQ', 'GHAFUR',
   'WAHAB', 'RAZZAQ', 'ALIM', 'SAMI', 'BASIR', 'HAKIM', 'WADUD', 'MAJID',
   'HAQQ', 'WAKIL', 'QADIR', 'AHAD', 'NUR', 'HADI', 'QAYYUM',
+  // Arabic terms
+  'ARSH', 'HUKM', 'FIQH', 'AMMA',
 
   // General Islamic terms
   'QURAN', 'SALAH', 'HAJJ', 'DUA', 'EID', 'FAJR', 'IQRA', 'HIRA', 'KAABA',
@@ -31,9 +36,13 @@ const ISLAMIC_WORDS = [
   'HALAL', 'HARAM', 'SUNNI', 'SURAH', 'JIHAD', 'TAQWA', 'UMMAH', 'UMRAH',
   'FATWA', 'HAFIZ', 'GHUSL', 'IHRAM', 'IHSAN', 'MIRAJ', 'SHIRK', 'DAWAH',
   'DHUHR', 'SABR', 'NAFL', 'ISHA', 'ASR', 'BADR', 'UHUD', 'ANSAR',
+  // Additional Islamic terms
+  'ISRA', 'ADHA', 'SAFA', 'MARWA', 'ZAKA',
 
   // Companions and others
   'ALI', 'UMAR', 'AISHA', 'BILAL', 'HAMZA', 'OMAR', 'ABBAS',
+  // Additional figures
+  'ASMA', 'ASIYA', 'QASIM', 'SAUDI', 'AYKAH',
 ];
 
 // Filler words from generator-api (themed for Islamic crosswords)
