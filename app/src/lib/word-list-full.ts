@@ -43,6 +43,42 @@ const ISLAMIC_WORDS = [
   'ALI', 'UMAR', 'AISHA', 'BILAL', 'HAMZA', 'OMAR', 'ABBAS',
   // Additional figures
   'ASMA', 'ASIYA', 'QASIM', 'SAUDI', 'AYKAH',
+
+  // Missing Islamic terms from Azmat's puzzles analysis
+  'IDDAH', // Waiting period after divorce
+  'QUDSI', // Type of Hadith with Allah's words
+  'HIJR',  // City of Thamud (already in use but ensuring it's here)
+  'TALAQ', // Divorce (most hated permissible thing)
+  'SIWAK', // Prophet's oral hygiene
+  'NABI',  // Arabic for "prophet"
+  'AMIN',  // Prophet's title before revelation
+  'ADAB',  // Islamic manners
+  'ABASA', // 80th Quranic chapter
+  'WAHY',  // Revelation
+
+  // Additional prophet-related keywords from scraping
+  'FLOOD', 'OVEN', 'WAVE', 'WADD', 'SUWA', 'NASR',  // Nuh
+  'IRAM', 'GALE', 'TOWER', 'PALM',                   // Hud
+  'CAMEL', 'ROCK', 'NINE',                           // Saleh
+  'HANIF', 'UR', 'COOL', 'BURN', 'FOUR',            // Ibrahim
+  'SODOM', 'GUEST', 'ANGEL', 'DAWN', 'TOWN',        // Lut
+  'KAABA', 'RAM', 'KNIFE', 'ARROW', 'MEAT',         // Ismail
+  'TWINS',                                           // Ishaq
+  'WOLF', 'SHIRT', 'SMELL', 'GATE',                 // Yaqub
+  'JAIL', 'BAKER', 'GRAIN', 'FAT', 'LEAN',          // Yusuf
+  'RAHMA', 'SKIN', 'FOOT', 'GRASS', 'OATH',         // Ayyub
+  'SCALE', 'CHEAT', 'TRADE', 'CLOUD', 'HEAT',       // Shuaib
+  'SNAKE', 'BUSH', 'SHOE', 'SPLIT', 'BOAT', 'WALL', // Musa
+  'BEARD', 'SPEAK',                                  // Harun
+  'KIFL', 'FOLD', 'NAP',                            // Dhul-Kifl
+  'TALUT', 'ARMOR', 'LION', 'BEAR',                 // Dawud
+  'HORSE', 'QUEEN', 'SABA', 'YEMEN', 'DIVER', 'RING', // Sulaiman
+  'AHAB', 'DRY',                                     // Ilyas
+  'YASA',                                            // Al-Yasa
+  'BELLY', 'GOURD', 'LEAF', 'SHIP', 'LOTS', 'SHADE', // Yunus
+  'IMRAN', 'QUILL', 'AQSA', 'MUTE', 'GRAY',         // Zakariyah
+  'WEEP', 'TEARS', 'GRAVE', 'HEAD',                 // Yahya
+  'PALM', 'DATE', 'DEAD', 'HEAL', 'CROSS', 'MARYAM', // Isa
 ];
 
 // Filler words from generator-api (themed for Islamic crosswords)

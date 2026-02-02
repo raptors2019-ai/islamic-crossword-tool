@@ -1,0 +1,119 @@
+PROPHET KEYWORDS FOR ISLAMIC CROSSWORD PUZZLES
+==============================================
+Source: myislam.org prophet stories
+Constraint: All words 2-5 letters for 5x5 grid
+For Azmat to verify accuracy
+
+================================================================================
+
+1. ADAM (آدم)
+   Keywords: ADAM, HAWWA, CLAY, IBLIS, CROW, HABIL, QABIL, HASTE, SETH, SOUL,
+             RIB, FIRE, JINN, TREE, FRUIT, LAMB, STONE, EARTH, TWINS, NAMES,
+             SALAM, ASR
+
+2. IDRIS (إدريس)
+   Keywords: IDRIS, ENOCH, PEN, WRITE, WISE, JIHAD, DEATH, WING, STARS, EGYPT,
+             SABIR
+
+3. NUH (نوح)
+   Keywords: NUH, NOAH, ARK, FLOOD, JUDI, PAIRS, OVEN, RAIN, WAVE, SON, WIFE,
+             WADD, SUWA, NASR, IDOLS, FAST, WOOD
+
+4. HUD (هود)
+   Keywords: HUD, AD, IRAM, WIND, IDOLS, EIGHT, SEVEN, YEMEN, OMAN, PALM, GALE,
+             DUST, PRIDE, TOWER
+
+5. SALEH (صالح)
+   Keywords: SALEH, SALIH, CAMEL, MILK, ROCK, THREE, HIJR, STONE, NINE, KILL,
+             AMIN
+
+6. IBRAHIM (إبراهيم)
+   Keywords: FIRE, AXE, SARAH, HAGAR, LUT, LOT, ISHAQ, ISAAC, IDOLS, STONE,
+             WOOD, BIRD, FOUR, MECCA, IRAQ, EGYPT, STARS, MOON, SUN, HANIF,
+             CAVE, THREE, CALF, BURN, COOL, UR, DATES, ADHA
+
+7. LUT (لوط)
+   Keywords: LUT, LOT, WIFE, STONE, RAIN, ANGEL, DAWN, GUEST, BLIND, TOWN,
+             SODOM
+
+8. ISMAIL (إسماعيل)
+   Keywords: HAGAR, DATES, WATER, TREE, MECCA, KAABA, SEVEN, DREAM, RAM, STONE,
+             ARROW, KNIFE, HAJJ, MEAT, BIRD, WIFE, SAFA
+
+9. ISHAQ (إسحاق)
+   Keywords: ISHAQ, ISAAC, SARAH, THREE, CALF, TWINS, YAQUB, IRAQ
+
+10. YAQUB (يعقوب)
+    Keywords: YAQUB, JACOB, SABR, WOLF, SHIRT, BLIND, WHITE, DREAM, STARS, SUN,
+              MOON, EGYPT, SMELL, TWELVE, GATE
+
+11. YUSUF (يوسف)
+    Keywords: YUSUF, WOLF, WELL, SHIRT, DREAM, STARS, SUN, MOON, KING, EGYPT,
+              JAIL, BAKER, CUP, GRAIN, SEVEN, FAT, LEAN, BLIND, SMELL
+
+12. AYYUB (أيوب)
+    Keywords: AYYUB, JOB, SABR, RAHMA, ROME, SKIN, IBLIS, FOOT, GOLD, GRASS,
+              RAIN, SLAVE, SEVEN, OATH
+
+13. SHUAIB (شعيب)
+    Keywords: WOOD, SCALE, CHEAT, TRADE, CLOUD, HEAT, FIRE, STORM, STONE,
+              MUSA, SHEEP, EIGHT, TEN
+
+14. MUSA (موسى)
+    Keywords: MUSA, MOSES, STAFF, SNAKE, HAND, WHITE, RIVER, NILE, ARK, CHEST,
+              SINAI, FIRE, BUSH, SHOE, STONE, SEA, SPLIT, TEN, CALF, GOLD,
+              KHIDR, BOAT, FISH, WALL, SLAVE, FORTY
+
+15. HARUN (هارون)
+    Keywords: HARUN, AARON, MUSA, CALF, GOLD, EGYPT, FORTY, BEARD, SPEAK,
+              SLAVE, SINAI, SEA, BURN
+
+16. DHUL-KIFL (ذو الكفل) ** NEW PROPHET **
+    Keywords: KIFL, FOLD, FAST, PRAY, NAP, CALM, SABR, YASA
+
+17. DAWUD (داوود)
+    Keywords: DAWUD, DAVID, JALUT, TALUT, SLING, STONE, IRON, BIRD, PSALM,
+              CAVE, SHEEP, ARMOR, KING, LION, BEAR, FAST, ZABUR
+
+18. SULAIMAN (سليمان)
+    Keywords: JINN, WIND, ANT, BIRD, HORSE, STAFF, GLASS, QUEEN, SABA, YEMEN,
+              DIVER, RING, GIFT
+
+19. ILYAS (إلياس) ** NEW PROPHET **
+    Keywords: ILYAS, BAAL, IDOL, AHAB, DRY
+
+20. AL-YASA (اليسع) ** NEW PROPHET **
+    Keywords: YASA, ILYAS
+
+21. YUNUS (يونس)
+    Keywords: YUNUS, JONAH, WHALE, FISH, SEA, DARK, BELLY, TREE, GOURD, LEAF,
+              SHIP, LOTS, STORM, SHADE
+
+22. ZAKARIYAH (زكريا)
+    Keywords: YAHYA, WOOD, IMRAN, FRUIT, QUILL, AQSA, MUTE, THREE, OLD, GRAY,
+              SIGN
+
+23. YAHYA (يحيى)
+    Keywords: YAHYA, JOHN, TORAH, WEEP, TEARS, RIVER, GRAVE, LION, BEAR, PURE,
+              HEAD
+
+24. ISA (عيسى)
+    Keywords: ISA, JESUS, PALM, DATE, CLAY, BIRD, DEAD, HEAL, BLIND, CROSS,
+              TABLE, FEAST, ADAM, MARYAM, INJIL
+
+25. MUHAMMAD (محمد)
+    Keywords: MECCA, HIRA, HIJRA, BURAQ, BADR, UHUD, ANSAR, QURAN, FIVE, BAYT,
+              EID, CAVE, KHADIJ, TAIF, AMINA, HALIMA
+
+================================================================================
+
+
+Please verify:
+   - Accuracy of keywords to prophet stories
+   - Any keywords that should be removed
+ 
+
+================================================================================
+
+TOTAL: 25 Prophets | ~200 unique keywords
+Source: https://myislam.org/prophet-stories/
