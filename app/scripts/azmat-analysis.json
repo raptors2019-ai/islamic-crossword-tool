@@ -1,0 +1,1003 @@
+{
+  "summary": {
+    "totalPuzzles": 34,
+    "avgWords": 9.794117647058824,
+    "avgIslamicPct": 34.99183006535947,
+    "avgIslamicPlusContextPct": 35.99450386215092,
+    "avgBlackSquares": 4.382352941176471
+  },
+  "distribution": {
+    "below30": 13,
+    "between30and50": 14,
+    "between50and70": 6,
+    "above70": 1
+  },
+  "topKeywords": [
+    [
+      "YUNUS",
+      4
+    ],
+    [
+      "UMAR",
+      3
+    ],
+    [
+      "ALI",
+      3
+    ],
+    [
+      "HARAM",
+      3
+    ],
+    [
+      "AMMA",
+      3
+    ],
+    [
+      "ISA",
+      3
+    ],
+    [
+      "ADAM",
+      2
+    ],
+    [
+      "JESUS",
+      2
+    ],
+    [
+      "ENOCH",
+      2
+    ],
+    [
+      "QABIL",
+      2
+    ],
+    [
+      "EID",
+      2
+    ],
+    [
+      "DAWAH",
+      2
+    ],
+    [
+      "AYYUB",
+      2
+    ],
+    [
+      "HABIL",
+      2
+    ],
+    [
+      "IBLIS",
+      2
+    ],
+    [
+      "YAHYA",
+      2
+    ],
+    [
+      "ALLAH",
+      2
+    ],
+    [
+      "SALAH",
+      2
+    ],
+    [
+      "FIRE",
+      2
+    ],
+    [
+      "UMRAH",
+      2
+    ],
+    [
+      "ANSAR",
+      2
+    ],
+    [
+      "CAMEL",
+      2
+    ],
+    [
+      "MUFTI",
+      2
+    ],
+    [
+      "ASIYA",
+      2
+    ],
+    [
+      "BADR",
+      2
+    ],
+    [
+      "MUSA",
+      2
+    ],
+    [
+      "FAJR",
+      2
+    ],
+    [
+      "OMIT",
+      1
+    ],
+    [
+      "DEMON",
+      1
+    ],
+    [
+      "MUSIC",
+      1
+    ]
+  ],
+  "topEnglishFillers": [
+    [
+      "AS",
+      4
+    ],
+    [
+      "AJ",
+      2
+    ],
+    [
+      "IT",
+      2
+    ],
+    [
+      "RAD",
+      2
+    ],
+    [
+      "BAAB",
+      2
+    ],
+    [
+      "ABU",
+      2
+    ],
+    [
+      "AMA",
+      2
+    ],
+    [
+      "IPSO",
+      2
+    ],
+    [
+      "ALL",
+      2
+    ],
+    [
+      "ASA",
+      2
+    ],
+    [
+      "GO",
+      2
+    ],
+    [
+      "USURY",
+      2
+    ],
+    [
+      "ALARM",
+      2
+    ],
+    [
+      "WAHY",
+      2
+    ],
+    [
+      "BA",
+      2
+    ],
+    [
+      "RA",
+      2
+    ],
+    [
+      "SAW",
+      2
+    ],
+    [
+      "ADAB",
+      2
+    ],
+    [
+      "SE",
+      1
+    ],
+    [
+      "MO",
+      1
+    ],
+    [
+      "LTE",
+      1
+    ],
+    [
+      "DEI",
+      1
+    ],
+    [
+      "SIN",
+      1
+    ],
+    [
+      "IDDAH",
+      1
+    ],
+    [
+      "QUDSI",
+      1
+    ],
+    [
+      "BLIND",
+      1
+    ],
+    [
+      "LEECH",
+      1
+    ],
+    [
+      "ERAS",
+      1
+    ],
+    [
+      "HMU",
+      1
+    ],
+    [
+      "REH",
+      1
+    ]
+  ],
+  "clueStyles": {
+    "questionMark": 26,
+    "quotation": 119,
+    "abbreviation": 3,
+    "fillInBlank": 54,
+    "reference": 3,
+    "quranReference": 35,
+    "simple": 153
+  },
+  "prophetBreakdown": {
+    "adam": {
+      "count": 6,
+      "avgIslamicPct": 34.3939393939394
+    },
+    "general": {
+      "count": 13,
+      "avgIslamicPct": 42.54079254079254
+    },
+    "nuh": {
+      "count": 2,
+      "avgIslamicPct": 40
+    },
+    "saleh": {
+      "count": 2,
+      "avgIslamicPct": 15.555555555555555
+    },
+    "yusuf": {
+      "count": 4,
+      "avgIslamicPct": 27.5
+    },
+    "ibrahim": {
+      "count": 4,
+      "avgIslamicPct": 25.48611111111111
+    },
+    "muhammad": {
+      "count": 3,
+      "avgIslamicPct": 35.75757575757576
+    }
+  },
+  "allPuzzles": [
+    {
+      "number": 1,
+      "title": "Prophet Adam 01",
+      "totalWords": 11,
+      "islamicPct": 63.63636363636363,
+      "islamicWords": [
+        "ADAM",
+        "JESUS",
+        "OMIT",
+        "ENOCH",
+        "DEMON",
+        "MUSIC",
+        "SETH"
+      ],
+      "englishWords": [
+        "SE",
+        "AJ",
+        "AS",
+        "MO"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 2,
+      "title": "Prophet Adam (AS) 2",
+      "totalWords": 10,
+      "islamicPct": 20,
+      "islamicWords": [
+        "QABIL",
+        "EID"
+      ],
+      "englishWords": [
+        "LTE",
+        "DEI",
+        "SIN",
+        "IDDAH",
+        "QUDSI",
+        "BLIND",
+        "IT",
+        "LEECH"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 3,
+      "title": "Prophet Adam 03",
+      "totalWords": 10,
+      "islamicPct": 30,
+      "islamicWords": [
+        "HAWWA",
+        "ARAB",
+        "DAWAH"
+      ],
+      "englishWords": [
+        "RAD",
+        "ERAS",
+        "BAAB",
+        "HMU",
+        "REH",
+        "SWAM",
+        "ABU"
+      ],
+      "blackSquares": 6
+    },
+    {
+      "number": 4,
+      "title": "Prophet Adam 04",
+      "totalWords": 11,
+      "islamicPct": 36.36363636363637,
+      "islamicWords": [
+        "AYYUB",
+        "HABIL",
+        "GUIDE",
+        "IBLIS"
+      ],
+      "englishWords": [
+        "CGI",
+        "AR",
+        "DI",
+        "DYES",
+        "AHA",
+        "YARD",
+        "CYB"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 5,
+      "title": "Get to know the Prophet Names",
+      "totalWords": 6,
+      "islamicPct": 83.33333333333334,
+      "islamicWords": [
+        "YAHYA",
+        "SALIH",
+        "YUNUS",
+        "HABIL",
+        "ALLAH"
+      ],
+      "englishWords": [
+        "NOBEL"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 6,
+      "title": "Prophet Stories 01",
+      "totalWords": 8,
+      "islamicPct": 25,
+      "islamicWords": [
+        "AARON",
+        "SALAH"
+      ],
+      "englishWords": [
+        "SOH",
+        "RAISE",
+        "HOE",
+        "OR",
+        "IO"
+      ],
+      "blackSquares": 7
+    },
+    {
+      "number": 7,
+      "title": "Prophet Stories 02",
+      "totalWords": 10,
+      "islamicPct": 30,
+      "islamicWords": [
+        "ARSH",
+        "RAHIM",
+        "UMAR"
+      ],
+      "englishWords": [
+        "HI",
+        "HASTE",
+        "RUH",
+        "AMA",
+        "HAS",
+        "SHIRT",
+        "HIM"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 8,
+      "title": "Prophet Adam 05",
+      "totalWords": 11,
+      "islamicPct": 36.36363636363637,
+      "islamicWords": [
+        "CROW",
+        "ALI",
+        "ANGEL",
+        "WHALE"
+      ],
+      "englishWords": [
+        "AA",
+        "CN",
+        "RIB",
+        "OG",
+        "AG",
+        "TAIL"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 9,
+      "title": "Prophet Stories 03",
+      "totalWords": 9,
+      "islamicPct": 33.33333333333333,
+      "islamicWords": [
+        "HUD",
+        "HARAM",
+        "DAWAH"
+      ],
+      "englishWords": [
+        "CROWN",
+        "AAAAA",
+        "IMTHE",
+        "CAI",
+        "OAT",
+        "NAE"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 10,
+      "title": "Prophet Stories 04",
+      "totalWords": 10,
+      "islamicPct": 40,
+      "islamicWords": [
+        "JUDI",
+        "IDRIS",
+        "FIRE",
+        "UMRAH"
+      ],
+      "englishWords": [
+        "MAP",
+        "RNA",
+        "ECHO",
+        "DNC",
+        "DAI",
+        "IPSO"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 11,
+      "title": "Prophet Nuh 01",
+      "totalWords": 10,
+      "islamicPct": 40,
+      "islamicWords": [
+        "DUA",
+        "FLOOD",
+        "IDOLS",
+        "ADHA"
+      ],
+      "englishWords": [
+        "SAID",
+        "ALL",
+        "CS",
+        "SOFA",
+        "LLC",
+        "DUO"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 12,
+      "title": "Prophet Adam 06",
+      "totalWords": 10,
+      "islamicPct": 20,
+      "islamicWords": [
+        "HARAM",
+        "AMMA"
+      ],
+      "englishWords": [
+        "NAH",
+        "BAAB",
+        "TERMS",
+        "ALAM",
+        "MAN",
+        "TAB",
+        "ABEL",
+        "ABS"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 13,
+      "title": "Prophet Nuh 02",
+      "totalWords": 10,
+      "islamicPct": 40,
+      "islamicWords": [
+        "ANSAR",
+        "ARK",
+        "UMAR",
+        "SHIRK"
+      ],
+      "englishWords": [
+        "ASA",
+        "PBUH",
+        "IAMI",
+        "AS",
+        "SPIN",
+        "ABASA"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 14,
+      "title": "Prophet Saleh 01",
+      "totalWords": 10,
+      "islamicPct": 20,
+      "islamicWords": [
+        "SALEH",
+        "CAMEL"
+      ],
+      "englishWords": [
+        "CATS",
+        "MONO",
+        "MEH",
+        "PLANS",
+        "MP",
+        "ALOHA",
+        "TEN",
+        "SHOES"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 15,
+      "title": "Prophet Saleh 02",
+      "totalWords": 9,
+      "islamicPct": 11.11111111111111,
+      "islamicWords": [
+        "JINN"
+      ],
+      "englishWords": [
+        "HIJR",
+        "MIA",
+        "THANA",
+        "MN",
+        "MRS",
+        "ATOM",
+        "IMAMS",
+        "RAA"
+      ],
+      "blackSquares": 6
+    },
+    {
+      "number": 16,
+      "title": "Prophet Stories 05",
+      "totalWords": 11,
+      "islamicPct": 36.36363636363637,
+      "islamicWords": [
+        "SALAM",
+        "IBLIS",
+        "AYYUB",
+        "MOSES"
+      ],
+      "englishWords": [
+        "MY",
+        "GO",
+        "AYAHS",
+        "UH",
+        "SMA",
+        "AHL",
+        "AGH"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 17,
+      "title": "Prophet Stories 06",
+      "totalWords": 10,
+      "islamicPct": 50,
+      "islamicWords": [
+        "ISHAQ",
+        "CAMEL",
+        "ISA",
+        "HARAM",
+        "QABIL"
+      ],
+      "englishWords": [
+        "AMA",
+        "SIR",
+        "ASA",
+        "ISSAC",
+        "AM"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 18,
+      "title": "Prophet Stories 07",
+      "totalWords": 12,
+      "islamicPct": 25,
+      "islamicWords": [
+        "ABBAS",
+        "JOB",
+        "YUNUS"
+      ],
+      "englishWords": [
+        "USURY",
+        "ABU",
+        "AJ",
+        "IN",
+        "MOM",
+        "ULAMA",
+        "UA",
+        "MB",
+        "RBI"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 19,
+      "title": "Prophet Yusuf 01",
+      "totalWords": 10,
+      "islamicPct": 60,
+      "islamicWords": [
+        "MUFTI",
+        "ALLAH",
+        "JAIL",
+        "MIRAJ",
+        "ALI",
+        "TRIAL"
+      ],
+      "englishWords": [
+        "RN",
+        "AIC",
+        "LA",
+        "INCH"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 20,
+      "title": "Prophet Yusuf 02",
+      "totalWords": 6,
+      "islamicPct": 0,
+      "islamicWords": [],
+      "englishWords": [
+        "CUP",
+        "NAJIS",
+        "TUG",
+        "CAT",
+        "SUJUD",
+        "PIG"
+      ],
+      "blackSquares": 12
+    },
+    {
+      "number": 21,
+      "title": "Prophet Yusuf 03",
+      "totalWords": 9,
+      "islamicPct": 33.33333333333333,
+      "islamicWords": [
+        "ALI",
+        "SHEBA",
+        "SALAH"
+      ],
+      "englishWords": [
+        "SSS",
+        "TALAQ",
+        "RAD",
+        "STARS",
+        "SLIDE",
+        "IQAMA"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 22,
+      "title": "Prophet Yusuf 04",
+      "totalWords": 12,
+      "islamicPct": 16.666666666666664,
+      "islamicWords": [
+        "FATWA",
+        "WOLF"
+      ],
+      "englishWords": [
+        "BLOOD",
+        "IA",
+        "LH",
+        "RAFA",
+        "SMS",
+        "FBI",
+        "ALARM",
+        "TO",
+        "AS",
+        "ADHAN"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 23,
+      "title": "Prophet Ibrahim 01",
+      "totalWords": 9,
+      "islamicPct": 44.44444444444444,
+      "islamicWords": [
+        "MUFTI",
+        "ANSAR",
+        "AXE",
+        "FIRE"
+      ],
+      "englishWords": [
+        "WAHY",
+        "WOMAN",
+        "UN",
+        "HAFSA",
+        "TAX"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 24,
+      "title": "Prophet Ibrahim",
+      "totalWords": 12,
+      "islamicPct": 25,
+      "islamicWords": [
+        "SODOM",
+        "ASIYA",
+        "LOT"
+      ],
+      "englishWords": [
+        "ALARM",
+        "IT",
+        "AS",
+        "BC",
+        "AYAH",
+        "AD",
+        "BA",
+        "ROACH",
+        "MMS"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 25,
+      "title": "Prophet Ibrahim 04",
+      "totalWords": 10,
+      "islamicPct": 20,
+      "islamicWords": [
+        "BADR",
+        "KAABA"
+      ],
+      "englishWords": [
+        "KUBRA",
+        "ASEAL",
+        "ATA",
+        "ADS",
+        "USTAD",
+        "BEADS",
+        "RA",
+        "ALM"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 26,
+      "title": "Prophet Ibrahim 05",
+      "totalWords": 8,
+      "islamicPct": 12.5,
+      "islamicWords": [
+        "ENOCH"
+      ],
+      "englishWords": [
+        "SEVEN",
+        "OK",
+        "UK",
+        "VP",
+        "GO",
+        "NIKAH"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 27,
+      "title": "Prophet Stories",
+      "totalWords": 9,
+      "islamicPct": 33.33333333333333,
+      "islamicWords": [
+        "YAHYA",
+        "YUNUS",
+        "ISA"
+      ],
+      "englishWords": [
+        "NIQAB",
+        "USURY",
+        "SALSA",
+        "QUL",
+        "YEARS",
+        "BYA"
+      ],
+      "blackSquares": 3
+    },
+    {
+      "number": 28,
+      "title": "Prophet Stories 11",
+      "totalWords": 9,
+      "islamicPct": 66.66666666666666,
+      "islamicWords": [
+        "ADAM",
+        "MARWA",
+        "AMMA",
+        "MUSA",
+        "DREAM",
+        "MARY"
+      ],
+      "englishWords": [
+        "UAE",
+        "AAA",
+        "AW"
+      ],
+      "blackSquares": 5
+    },
+    {
+      "number": 29,
+      "title": "Prophet Story 08",
+      "totalWords": 10,
+      "islamicPct": 40,
+      "islamicWords": [
+        "DATES",
+        "UHUD",
+        "DHUHR",
+        "EID"
+      ],
+      "englishWords": [
+        "HIS",
+        "HAM",
+        "RABBI",
+        "HAA",
+        "THUMB",
+        "SS"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 30,
+      "title": "Prophet Story 09",
+      "totalWords": 10,
+      "islamicPct": 40,
+      "islamicWords": [
+        "FAJR",
+        "ISA",
+        "ASIYA",
+        "JONAH"
+      ],
+      "englishWords": [
+        "IPSO",
+        "SLING",
+        "YAA",
+        "WAHY",
+        "FPL",
+        "GAY"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 31,
+      "title": "Prophet Stories 10",
+      "totalWords": 10,
+      "islamicPct": 50,
+      "islamicWords": [
+        "YUNUS",
+        "MUSA",
+        "DHIKR",
+        "UMRAH",
+        "NUR"
+      ],
+      "englishWords": [
+        "ARROW",
+        "BA",
+        "ABD",
+        "USO",
+        "SAW"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 32,
+      "title": "Prophet Muhammad 01",
+      "totalWords": 10,
+      "islamicPct": 60,
+      "islamicWords": [
+        "FAJR",
+        "QASIM",
+        "ASMA",
+        "FIQH",
+        "JESUS",
+        "AMMA"
+      ],
+      "englishWords": [
+        "ERA",
+        "HBU",
+        "ABA",
+        "RRI"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 33,
+      "title": "Prophet Muhammad 02",
+      "totalWords": 10,
+      "islamicPct": 20,
+      "islamicWords": [
+        "LUT",
+        "TAWAF"
+      ],
+      "englishWords": [
+        "SANK",
+        "SIWAK",
+        "ADAB",
+        "FIL",
+        "SAW",
+        "USID",
+        "NABI",
+        "KKK"
+      ],
+      "blackSquares": 4
+    },
+    {
+      "number": 34,
+      "title": "Prophet Muhammad 04",
+      "totalWords": 11,
+      "islamicPct": 27.27272727272727,
+      "islamicWords": [
+        "UMAR",
+        "ISLAM",
+        "BADR"
+      ],
+      "englishWords": [
+        "AMIN",
+        "SOB",
+        "ALL",
+        "BEARD",
+        "ADAB",
+        "LEU",
+        "NO",
+        "RA"
+      ],
+      "blackSquares": 4
+    }
+  ]
+}

@@ -65,9 +65,52 @@ npx convex deploy    # Deploy Convex functions
 ## Key Constraints
 
 - **5x5 grid only** - All words must be 5 letters or less
-- **50%+ Islamic words** - Validate with IslamicPercentBadge
+- **25%+ Islamic words** (minimum), **40%+ target**, **50%+ ideal** - See benchmarks below
 - **No repeated clues** - Track in Convex/Google Sheets
 - **Categories**: prophets, names-of-allah, quran, companions, general
+
+## Azmat Puzzle Benchmarks (Gold Standard)
+
+> Based on analysis of 34 existing puzzles. Full details: `/docs/azmat-puzzle-benchmarks.md`
+
+### Islamic Percentage Thresholds
+
+| Level | Percentage | Notes |
+|-------|------------|-------|
+| **Minimum** | 25% | Reject puzzles below this |
+| **Acceptable** | 25-35% | Azmat's average is 35% |
+| **Target** | 40% | Aim for this |
+| **Ideal** | 50%+ | Stretch goal (only 21% of Azmat's hit this) |
+
+### Quality Metrics
+
+| Metric | Azmat's Average | Our Target |
+|--------|-----------------|------------|
+| Words per puzzle | 10 | 8-12 |
+| Black squares | 4.4 | 3-6 |
+| Theme keywords | 3-4 | 3-5 |
+
+### Top Keywords by Prophet
+
+- **Adam**: ADAM, HAWWA, QABIL, HABIL, IBLIS, CROW, CLAY
+- **Nuh**: ARK, FLOOD, JUDI, IDOLS, FORTY
+- **Ibrahim**: KAABA, FIRE, AXE, SODOM, LOT
+- **Yusuf**: JAIL, WOLF, DREAM, TRIAL, EGYPT, COAT
+- **Musa**: STAFF, NILE, HARUN, SINAI, TORAH
+- **Muhammad**: MECCA, MEDINA, QURAN, FAJR, HIJRA, BADR
+
+### Commonly Used English Fillers
+
+AS, IT, GO, IN, ALL, TO, NO, AN, OR (2-letter)
+ALI, ISA, EID, DUA, NUR, ARK (3-letter Islamic)
+
+### Clue Style Mix
+
+- 39% simple definitions
+- 30% quotation marks
+- 14% fill-in-blank (___)
+- 9% Quran references (Q. 12:86)
+- 7% wordplay (?)
 
 ## Export Formats
 
@@ -109,8 +152,8 @@ The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
 
 3. **Islamic-Biased CSP Fill** (`fillGridWithBiasedCSP()`)
    - Islamic words fill first, then English as fallback
-   - Forces Islamic-only when below 50% threshold
-   - Target: 55-70% Islamic words
+   - Forces Islamic-only when below 25% threshold (minimum)
+   - Target: 40% Islamic words (Azmat's avg is 35%)
 
 ### Key Files
 - `app/src/lib/auto-generator.ts` - Main generation logic
@@ -135,6 +178,8 @@ The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
 - `BLOCKED_WORDS` in word-index.ts contains haram terms (alcohol, pork, gambling) - never suggest these
 - When editing React state, never mutate directly - always create new objects/arrays
 - Convex queries are reactive - don't call them in loops, use proper query patterns
+- Many Islamic terms are missing from our word list - check `/docs/azmat-puzzle-benchmarks.md` for words like IDDAH, QUDSI, NABI, SIWAK, ADAB, TALAQ, WAHY
+- English words can be "Islamic" with the right clue (ALARM for Fajr, CAT for Muslim pet culture) - context matters
 
 ## Slash Commands
 
