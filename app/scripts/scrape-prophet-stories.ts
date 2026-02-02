@@ -12,7 +12,7 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-import { chromium } from "playwright";
+import { chromium, Page } from "playwright";
 import Anthropic from "@anthropic-ai/sdk";
 import * as dotenv from "dotenv";
 
@@ -136,7 +136,7 @@ Only output the JSON array, no other text.`;
 }
 
 async function scrapeProphetPage(
-  page: Awaited<ReturnType<typeof chromium.launch>>["contexts"][0]["pages"][0],
+  page: Page,
   url: string
 ): Promise<string> {
   // Use domcontentloaded instead of networkidle for faster loading
