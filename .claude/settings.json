@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "npm run dev",
+      "npm run build",
+      "npm run lint*",
+      "npm run test*",
+      "npx convex *",
+      "python generate*.py*",
+      "cd /Users/josh/code/crosswords/*",
+      "bash /Users/josh/code/crosswords/.claude/scripts/*"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/josh/code/crosswords/app && npm run lint --fix 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/josh/code/crosswords/.claude/scripts/detect-self-correction.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/josh/code/crosswords/.claude/scripts/detect-self-correction.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

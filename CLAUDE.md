@@ -121,3 +121,28 @@ The 5x5 puzzle generator uses a "Verify-Greedy + Bias + Blacks" strategy:
 - If only 1 theme word places: Check `verifyCompletable()` threshold
 - If Islamic % is low: Check `fillGridWithBiasedCSP()` target
 - If grid incomplete: Check `autoAddBlacks()` max limit
+
+## Learnings (Don't Repeat These!)
+
+> After any correction, say: "Update CLAUDE.md so you don't make that mistake again."
+> Use `/learn` to add new learnings.
+
+- Never use `git add .` or `git add -A` - always specify files to avoid committing .env or node_modules
+- 2-letter words must be valid English - check with `hasWord()` from word-index.ts before placing
+- Prophet names can have Arabic/English variants (MUSA/MOSES, ISA/JESUS) - check `spellingVariants` array
+- Always run `npm run lint` before committing - CI will fail on lint errors
+- The grid is 5x5 - words longer than 5 letters will NEVER fit, filter them early
+- `BLOCKED_WORDS` in word-index.ts contains haram terms (alcohol, pork, gambling) - never suggest these
+- When editing React state, never mutate directly - always create new objects/arrays
+- Convex queries are reactive - don't call them in loops, use proper query patterns
+
+## Slash Commands
+
+Custom commands in `.claude/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/test-generator` | Run generator tests and verify output |
+| `/new-prophet-puzzle <name>` | Generate puzzle for a specific prophet |
+| `/verify-islamic-pct` | Check Islamic word percentage in grid |
+| `/learn [description]` | Add a learning to prevent repeating mistakes |
