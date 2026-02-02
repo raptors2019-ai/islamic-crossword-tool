@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+*.swp
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Playwright MCP (generated)
+.playwright-mcp/
+
+# Planning docs (local only)
+PLAN.md
+
+# Test scripts (local only)
+**/test-all-*.ts
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+.venv/
+
+# Node (app/ has its own .gitignore but just in case)
+node_modules/
+
+# Claude Code learnings queue (transient)
+.claude/learnings-queue.md
