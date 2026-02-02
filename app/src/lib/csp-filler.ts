@@ -348,22 +348,65 @@ function restorePrunedValues(
 }
 
 /**
- * Place a word in the grid
+ * Place a word in the grid and return cells that were already filled (intersections).
+ *
+ * @returns Set of cell keys that already had letters (should be preserved during backtrack)
  */
 function placeWordInGrid(
   grid: EditableCell[][],
   slot: CSPSlot,
   word: string
-): void {
+): Set<string> {
+  const preservedCells = new Set<string>();
+
   for (let i = 0; i < word.length; i++) {
     const r = slot.direction === 'down' ? slot.start.row + i : slot.start.row;
     const c = slot.direction === 'across' ? slot.start.col + i : slot.start.col;
+    const key = `${r}-${c}`;
+
+    // Track cells that already have letters (intersections with other words)
+    if (grid[r][c].letter) {
+      preservedCells.add(key);
+    }
 
     grid[r][c] = {
       ...grid[r][c],
       letter: word[i],
       source: 'auto',
     };
+  }
+
+  return preservedCells;
+}
+
+/**
+ * Clear a word from the grid during backtracking.
+ *
+ * We track which cells were newly placed (vs already had letters from intersections)
+ * and only clear the newly placed ones. This prevents corrupting cross-words.
+ *
+ * @param grid The grid to modify
+ * @param slot The slot whose word is being cleared
+ * @param cellsToPreserve Positions of cells that already had letters before this word
+ */
+function clearWordFromGrid(
+  grid: EditableCell[][],
+  slot: CSPSlot,
+  cellsToPreserve: Set<string>
+): void {
+  for (let i = 0; i < slot.length; i++) {
+    const r = slot.direction === 'down' ? slot.start.row + i : slot.start.row;
+    const c = slot.direction === 'across' ? slot.start.col + i : slot.start.col;
+    const key = `${r}-${c}`;
+
+    // Only clear if this cell was newly placed by this word (not an intersection)
+    if (!cellsToPreserve.has(key)) {
+      grid[r][c] = {
+        ...grid[r][c],
+        letter: '',
+        source: undefined,
+      };
+    }
   }
 }
 
@@ -408,8 +451,8 @@ function backtrackSearch(
     const { success, prunedValues } = forwardCheck(slot, word, slots, slotMap);
 
     if (success) {
-      // Place word in grid
-      placeWordInGrid(grid, slot, word);
+      // Place word in grid, get cells that were already filled (intersections)
+      const preservedCells = placeWordInGrid(grid, slot, word);
       placedWords.push({ word, slot });
 
       // Recurse
@@ -417,8 +460,10 @@ function backtrackSearch(
         return true;
       }
 
-      // Backtrack: remove word from grid
+      // Backtrack: remove word from grid AND from tracking array
+      // Preserve intersection cells that had letters from other words
       placedWords.pop();
+      clearWordFromGrid(grid, slot, preservedCells);
     }
 
     // Restore state
@@ -818,8 +863,8 @@ function biasedBacktrackSearch(
     const { success, prunedValues } = forwardCheck(slot, word, slots, slotMap);
 
     if (success) {
-      // Place word in grid
-      placeWordInGrid(grid, slot, word);
+      // Place word in grid, get cells that were already filled (intersections)
+      const preservedCells = placeWordInGrid(grid, slot, word);
       placedWords.push({ word, slot });
 
       // Recurse
@@ -838,7 +883,9 @@ function biasedBacktrackSearch(
       }
 
       // Backtrack: remove word from grid
+      // Preserve intersection cells that had letters from other words
       placedWords.pop();
+      clearWordFromGrid(grid, slot, preservedCells);
     }
 
     // Restore state

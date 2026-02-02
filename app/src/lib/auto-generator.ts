@@ -89,6 +89,47 @@ export function validateAllWords(cells: EditableCell[][]): {
   };
 }
 
+/**
+ * Clear cells that are part of invalid words.
+ *
+ * When CSP times out or fails, it can leave garbage letters in the grid.
+ * This function identifies invalid words and clears their non-theme cells
+ * to ensure partial results don't contain invalid word fragments.
+ *
+ * @param cells The grid with potentially invalid words
+ * @param invalidWords List of invalid words to clear
+ * @param themeCells Optional set of theme word cells to preserve
+ * @returns Grid with invalid word cells cleared
+ */
+export function clearInvalidCells(
+  cells: EditableCell[][],
+  invalidWords: { word: string; row: number; col: number; direction: 'across' | 'down' }[],
+  themeCells?: Set<string>
+): EditableCell[][] {
+  const grid = cells.map(row => row.map(cell => ({ ...cell })));
+
+  for (const invalid of invalidWords) {
+    for (let i = 0; i < invalid.word.length; i++) {
+      const r = invalid.direction === 'down' ? invalid.row + i : invalid.row;
+      const c = invalid.direction === 'across' ? invalid.col + i : invalid.col;
+
+      // Skip theme cells - don't clear those
+      if (themeCells && themeCells.has(`${r}-${c}`)) continue;
+
+      // Only clear auto-filled cells (not user-placed letters)
+      if (grid[r][c].source === 'auto') {
+        grid[r][c] = {
+          ...grid[r][c],
+          letter: '',
+          source: undefined,
+        };
+      }
+    }
+  }
+
+  return grid;
+}
+
 // ============================================================================
 // LEVER 1: Friendliest-First Keyword Scoring
 // ============================================================================
@@ -165,15 +206,16 @@ export function verifyCompletable(
   themeCells: Set<string>,
   placedCount: number = 0
 ): boolean {
-  // Skip verification for first 3 words - let them place freely
+  // Skip verification for first 2 words - let them place freely
   // Early placements on nearly-empty grids often fail verification
   // even when the grid is still highly solvable
-  if (placedCount < 3) return true;
+  if (placedCount < 2) return true;
 
   const slots = getAllSlots(cells);
 
   let slotsChecked = 0;
   let slotsWithCandidates = 0;
+  let criticalSlotsFailed = 0;
 
   for (const slot of slots) {
     // Skip slots that are completely filled (all letters known)
@@ -182,24 +224,33 @@ export function verifyCompletable(
     // Count how many letters are constrained (not wildcards)
     const constrainedLetters = slot.pattern.split('').filter(c => c !== '_').length;
 
-    // Only verify slots with 2+ constrained letters
-    // Single-letter constraints are too early to reject - auto-blacks can fix them
-    if (constrainedLetters < 2) continue;
+    // Check ALL constrained slots (including 1-letter constraints)
+    // Even 1-letter constraints can make grids unsolvable (e.g., Q____ has few options)
+    if (constrainedLetters === 0) continue;
 
     slotsChecked++;
     const candidates = matchPattern(slot.pattern, wordIndex);
 
     if (candidates.length > 0) {
       slotsWithCandidates++;
+    } else {
+      // Track critical failures (slots with 2+ constraints and 0 candidates)
+      if (constrainedLetters >= 2) {
+        criticalSlotsFailed++;
+      }
     }
   }
 
-  // If no significantly-constrained slots, allow the placement
+  // If no constrained slots, allow the placement
   if (slotsChecked === 0) return true;
 
-  // Progressive threshold: 50% for words 3-5, 70% for words 6+
-  // This allows more flexibility early while still preventing bad placements later
-  const threshold = placedCount < 5 ? 0.5 : 0.7;
+  // Immediately reject if any slot with 2+ constraints has 0 candidates
+  // These are almost certainly unsolvable
+  if (criticalSlotsFailed > 0) return false;
+
+  // Progressive threshold: 60% for words 2-4, 80% for words 5+
+  // Tighter thresholds catch more problems early
+  const threshold = placedCount < 5 ? 0.6 : 0.8;
   const percentWithCandidates = slotsWithCandidates / slotsChecked;
   return percentWithCandidates >= threshold;
 }
@@ -248,6 +299,38 @@ export function findAllPositions(
 // ============================================================================
 // LEVER 2: Auto-Blacks for Orphan Slots
 // ============================================================================
+
+/**
+ * Validate that adding a black square doesn't create invalid word fragments.
+ *
+ * When a black square is added, it can split existing slots into smaller words.
+ * This function checks that any complete words (no empty cells) created by
+ * the black square placement are valid dictionary words.
+ *
+ * @param cells Grid state after adding the black square
+ * @param wordIndex Word index for validation
+ * @returns true if all complete word fragments are valid
+ */
+function validateWordFragmentsAfterBlack(
+  cells: EditableCell[][],
+  wordIndex: WordIndex
+): boolean {
+  const words = detectWords(cells);
+
+  // Check each complete word (no underscores in pattern)
+  for (const word of words) {
+    // Only validate complete words (all letters filled)
+    // Skip words that still have empty cells - they'll be filled later by CSP
+    if (word.word.includes('_')) continue;
+
+    // Check if this word is valid
+    if (!word.isValid) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 /**
  * Automatically add black squares to break orphan slots that have no valid candidates.
@@ -318,6 +401,10 @@ export function autoAddBlacks(
         // Test if adding black here maintains connectivity
         const testGrid = addSymmetricBlack(grid, cell.row, cell.col);
         if (!validateConnectivity(testGrid)) continue;
+
+        // Validate that the black square doesn't create invalid word fragments
+        // Check any complete words (no underscores) created by this black placement
+        if (!validateWordFragmentsAfterBlack(testGrid, wordIndex)) continue;
 
         // Add black square (with symmetry)
         grid = testGrid;
@@ -1035,9 +1122,15 @@ function tryGenerateWithSmartMatcher(
 
   const allWords = [...themeWordsPlaced, ...fillerWords];
 
-  // If CSP failed, return partial result
+  // If CSP failed, validate and clean up partial result before returning
   if (!cspResult.success) {
     if (themeWordsPlaced.length > 0) {
+      // Validate partial result and clear any invalid cells
+      const partialValidation = validateAllWords(finalGrid);
+      if (!partialValidation.valid) {
+        finalGrid = clearInvalidCells(finalGrid, partialValidation.invalidWords, themeCells);
+      }
+
       const gridStats = getGridStats(finalGrid);
       return {
         success: false,
@@ -1213,6 +1306,12 @@ function tryGenerateWithPattern(
   // If CSP failed but we have theme words placed, return a partial result
   if (!cspResult.success) {
     if (themeWordsPlaced.length > 0) {
+      // Validate partial result and clear any invalid cells
+      const partialValidation = validateAllWords(finalGrid);
+      if (!partialValidation.valid) {
+        finalGrid = clearInvalidCells(finalGrid, partialValidation.invalidWords, themeCells);
+      }
+
       const gridStats = getGridStats(finalGrid);
       return {
         success: false,
@@ -1283,26 +1382,17 @@ function tryGenerateWithPattern(
 }
 
 /**
- * Main entry point: Generate a complete crossword puzzle
- *
- * Strategy (in order of attempt):
- * 1. SMART MATCHER: Pre-compute keyword compatibility with patterns,
- *    find valid combinations BEFORE placement to avoid dead ends
- * 2. FALLBACK: Try patterns in order with greedy placement + verification
- * 3. Multi-candidate selection to maximize Islamic word percentage
- *
- * @param themeWords The Islamic theme words to place
- * @param options Generation options
- * @returns Generation result with complete grid or best partial result
+ * Internal puzzle generation with specific theme words.
+ * Called by the main generatePuzzle function which handles recovery.
  */
-export function generatePuzzle(
+function generatePuzzleInternal(
   themeWords: ThemeWord[],
-  options: GeneratorOptions = {}
+  wordIndex: WordIndex,
+  maxTimeMs: number,
+  maxAttempts: number,
+  preferredPattern?: number
 ): GenerationResult {
   const startTime = Date.now();
-  const maxTimeMs = options.maxTimeMs ?? 15000;
-  const maxAttempts = options.maxAttempts ?? BLACK_SQUARE_PATTERNS.length;
-  const wordIndex = options.wordIndex ?? getDefaultWordIndex();
 
   // Collect successful candidates to pick the best one
   const successfulCandidates: GenerationResult[] = [];
@@ -1337,11 +1427,11 @@ export function generatePuzzle(
   // =========================================================================
 
   // If preferred pattern specified, try it first
-  const patternsToTry = options.preferredPattern !== undefined
+  const patternsToTry = preferredPattern !== undefined
     ? [
-        options.preferredPattern,
+        preferredPattern,
         ...Array.from({ length: BLACK_SQUARE_PATTERNS.length }, (_, i) => i).filter(
-          (i) => i !== options.preferredPattern
+          (i) => i !== preferredPattern
         ),
       ]
     : Array.from({ length: BLACK_SQUARE_PATTERNS.length }, (_, i) => i);
@@ -1429,6 +1519,107 @@ export function generatePuzzle(
       gridFillPercentage: 0,
       timeTakenMs: Date.now() - startTime,
       attemptsUsed: attempts,
+      patternUsed: 'none',
+    },
+  };
+}
+
+/**
+ * Main entry point: Generate a complete crossword puzzle
+ *
+ * Strategy (in order of attempt):
+ * 1. SMART MATCHER: Pre-compute keyword compatibility with patterns,
+ *    find valid combinations BEFORE placement to avoid dead ends
+ * 2. FALLBACK: Try patterns in order with greedy placement + verification
+ * 3. RECOVERY: If all fails, retry with fewer theme words or shuffled order
+ * 4. Multi-candidate selection to maximize Islamic word percentage
+ *
+ * @param themeWords The Islamic theme words to place
+ * @param options Generation options
+ * @returns Generation result with complete grid or best partial result
+ */
+export function generatePuzzle(
+  themeWords: ThemeWord[],
+  options: GeneratorOptions = {}
+): GenerationResult {
+  const startTime = Date.now();
+  const maxTimeMs = options.maxTimeMs ?? 15000;
+  const maxAttempts = options.maxAttempts ?? BLACK_SQUARE_PATTERNS.length;
+  const wordIndex = options.wordIndex ?? getDefaultWordIndex();
+
+  // Recovery loop: try up to 3 times with different strategies
+  const maxRecoveryAttempts = 3;
+  let bestResult: GenerationResult | null = null;
+
+  for (let recovery = 0; recovery < maxRecoveryAttempts; recovery++) {
+    // Check if we've exceeded total time budget
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= maxTimeMs) break;
+
+    const remainingTime = maxTimeMs - elapsed;
+    // Allocate time for this recovery attempt
+    const attemptTime = Math.max(remainingTime / (maxRecoveryAttempts - recovery), 2000);
+
+    // Determine theme words for this attempt
+    let attemptThemeWords = themeWords;
+
+    if (recovery === 1 && themeWords.length > 3) {
+      // Second attempt: try with shuffled theme word order
+      // This can help find different valid combinations
+      attemptThemeWords = [...themeWords].sort(() => Math.random() - 0.5);
+    } else if (recovery === 2 && themeWords.length > 2) {
+      // Third attempt: try with fewer theme words (drop the hardest one)
+      // Sort by friendliness and drop the least friendly word
+      attemptThemeWords = [...themeWords]
+        .sort((a, b) => scoreKeywordFriendliness(b.word) - scoreKeywordFriendliness(a.word))
+        .slice(0, Math.max(2, themeWords.length - 1));
+    }
+
+    const result = generatePuzzleInternal(
+      attemptThemeWords,
+      wordIndex,
+      attemptTime,
+      maxAttempts,
+      options.preferredPattern
+    );
+
+    // Track best result across all recovery attempts
+    if (!bestResult ||
+        (result.success && !bestResult.success) ||
+        (result.success && bestResult.success && result.stats.islamicPercentage > bestResult.stats.islamicPercentage) ||
+        (!result.success && !bestResult.success && result.stats.themeWordsPlaced > bestResult.stats.themeWordsPlaced)) {
+      bestResult = result;
+    }
+
+    // If we got a successful result, we're done
+    if (result.success) {
+      result.stats.timeTakenMs = Date.now() - startTime;
+      result.stats.attemptsUsed += recovery; // Include recovery attempts
+      return result;
+    }
+  }
+
+  // Return best result from all attempts
+  if (bestResult) {
+    bestResult.stats.timeTakenMs = Date.now() - startTime;
+    return bestResult;
+  }
+
+  // Complete failure (shouldn't reach here normally)
+  return {
+    success: false,
+    grid: createEmptyGrid(),
+    placedWords: [],
+    unplacedThemeWords: themeWords,
+    stats: {
+      totalSlots: 0,
+      themeWordsPlaced: 0,
+      fillerWordsPlaced: 0,
+      islamicPercentage: 0,
+      avgWordScore: 0,
+      gridFillPercentage: 0,
+      timeTakenMs: Date.now() - startTime,
+      attemptsUsed: maxRecoveryAttempts,
       patternUsed: 'none',
     },
   };
