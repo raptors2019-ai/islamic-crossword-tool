@@ -13,7 +13,9 @@
     "import:puzzles": "npx tsx scripts/import-puzzle-archive.ts",
     "import:wordlist": "npx tsx scripts/import-word-list.ts",
     "import:scrape": "npx tsx scripts/scrape-prophet-stories.ts",
-    "import:ai": "npx tsx scripts/generate-ai-keywords.ts"
+    "import:ai": "npx tsx scripts/generate-ai-keywords.ts",
+    "e2e": "npx tsx scripts/e2e/daily-e2e-test.ts",
+    "e2e:install": "cp scripts/e2e/com.crosswords.e2e.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.crosswords.e2e.plist"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",

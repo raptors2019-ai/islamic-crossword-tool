@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.crosswords.e2e</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/josh/code/crosswords/app/scripts/e2e/run-e2e.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/josh/code/crosswords/app</string>
+
+    <!-- Run at 6 AM EST = 11:00 UTC -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/josh</string>
+    </dict>
+
+    <!-- Logging -->
+    <key>StandardOutPath</key>
+    <string>/Users/josh/code/crosswords/app/e2e-results/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/josh/code/crosswords/app/e2e-results/launchd-stderr.log</string>
+
+    <!-- Don't run if already running -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Run when loaded for first-time verification -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
