@@ -210,6 +210,7 @@ ISA, MUHAMMAD, DHUL_KIFL, ILYAS, AL_YASA
 - English words can be "Islamic" with the right clue (ALARM for Fajr, CAT for Muslim pet culture) - context matters
 - After changing generator code, RESTART the dev server (`npm run dev`) - hot reload doesn't always pick up lib changes
 - When testing the generator, use `npm test -- auto-generator.test.ts` to verify changes work before testing in the UI
+- There are TWO different friendliness functions: `scoreKeywordFriendliness` (auto-generator.ts) and `calculateWordFriendliness` (word-index.ts) - they use different algorithms and are NOT interchangeable! Using the wrong one breaks certain prophet themes.
 
 ## Slash Commands
 

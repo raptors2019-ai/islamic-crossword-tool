@@ -81,6 +81,10 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'AARON', clue: 'English name' },
     { word: 'CALF', clue: 'Golden idol' },
     { word: 'MUSA', clue: 'His brother' },
+    { word: 'SPEAK', clue: 'His eloquence' },
+    { word: 'AIDE', clue: "Musa's helper" },
+    { word: 'SINAI', clue: 'Holy mountain' },
+    { word: 'ELDER', clue: 'Older brother' },
   ],
   DAWUD: [
     { word: 'DAWUD', clue: 'Killed Jalut' },

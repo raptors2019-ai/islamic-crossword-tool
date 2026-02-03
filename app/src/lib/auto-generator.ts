@@ -51,7 +51,6 @@ import {
   WORD_SCORE,
   ISLAMIC_FILLER_WORDS,
   CONTEXTUALLY_ISLAMIC_WORDS,
-  calculateWordFriendliness,
   matchPattern,
 } from './word-index';
 import { ISLAMIC_WORDS_SET } from './word-list-full';
@@ -605,34 +604,114 @@ function scorePosition(
   const distFromCenter = Math.abs(centerR - 2) + Math.abs(centerC - 2);
   score += (4 - distFromCenter) * 10;
 
+  // BONUS: Intersection at center (2,2) specifically
+  for (let i = 0; i < length; i++) {
+    const r = direction === 'down' ? row + i : row;
+    const c = direction === 'across' ? col + i : col;
+    if (r === 2 && c === 2) {
+      score += 50; // Big bonus for covering center
+      break;
+    }
+  }
+
+  // BONUS: Being on center row (2) or center col (2)
+  if (direction === 'across' && row === 2) {
+    score += 30; // On center row
+  } else if (direction === 'down' && col === 2) {
+    score += 30; // On center col
+  }
+
   return score;
 }
 
+// ============================================================================
+// KEYWORD OVERLAP ANALYSIS
+// ============================================================================
+
 /**
- * Sort theme words by placeability (friendliness - length penalty).
- * Friendlier letters + shorter words = easier to place.
- *
- * Strategy: Place easy words first to establish a grid foundation,
- * then attempt harder words that can leverage existing intersections.
+ * Find common letters between two words.
+ * Returns a set of letters that appear in both words.
  */
-function sortThemeWordsByPlaceability(themeWords: ThemeWord[]): ThemeWord[] {
-  return [...themeWords].sort((a, b) => {
-    const friendA = calculateWordFriendliness(a.word);
-    const friendB = calculateWordFriendliness(b.word);
+function findCommonLetters(word1: string, word2: string): Set<string> {
+  const letters1 = new Set(word1.toUpperCase());
+  const letters2 = new Set(word2.toUpperCase());
+  const common = new Set<string>();
 
-    // Length penalty: longer words are harder (-5 per letter over 3)
-    const penaltyA = Math.max(0, (a.word.length - 3) * 5);
-    const penaltyB = Math.max(0, (b.word.length - 3) * 5);
-
-    const scoreA = friendA - penaltyA;
-    const scoreB = friendB - penaltyB;
-
-    // Primary: placeability score (higher first)
-    if (Math.abs(scoreA - scoreB) > 5) {
-      return scoreB - scoreA;
+  for (const letter of letters1) {
+    if (letters2.has(letter)) {
+      common.add(letter);
     }
-    // Tiebreaker: prefer longer words (harder, so place first when scores similar)
-    return b.word.length - a.word.length;
+  }
+
+  return common;
+}
+
+/**
+ * Calculate connectivity score for a word relative to other keywords.
+ *
+ * A word with high connectivity has many common letters with other keywords,
+ * making it more likely to form intersections.
+ *
+ * @param word The word to score
+ * @param otherWords Other keywords to compare against
+ * @returns Connectivity score (higher = more connectable)
+ */
+function calculateConnectivity(word: string, otherWords: string[]): number {
+  let totalConnections = 0;
+
+  for (const other of otherWords) {
+    if (other.toUpperCase() === word.toUpperCase()) continue;
+
+    const common = findCommonLetters(word, other);
+    // Each common letter is a potential intersection point
+    totalConnections += common.size;
+  }
+
+  return totalConnections;
+}
+
+/**
+ * Sort theme words for optimal placement order.
+ *
+ * Strategy:
+ * 1. Primary: Friendliness score (easy letters for CSP fill)
+ * 2. Tie-breaker: Connectivity (shared letters with other keywords)
+ *
+ * Friendliness is primary because:
+ * - Easy letters (A,E,I,O,S,T,R,N,L) make CSP fill much more likely to succeed
+ * - Hard letters (Q,J,X,Z,K,F,Y,W,V) can create unsolvable grids
+ *
+ * Connectivity as tie-breaker because:
+ * - When friendliness is equal, prefer words that can intersect with more keywords
+ * - This helps maximize keyword count without sacrificing success rate
+ *
+ * IMPORTANT: Uses scoreKeywordFriendliness (not calculateWordFriendliness from word-index.ts)
+ * These are different algorithms and using the wrong one breaks certain prophet themes.
+ *
+ * @param themeWords Keywords to sort
+ * @returns Sorted keywords (best first)
+ */
+export function sortByIntersectionPotential(themeWords: ThemeWord[]): ThemeWord[] {
+  const words = themeWords.map(tw => tw.word.toUpperCase());
+
+  return [...themeWords].sort((a, b) => {
+    const wordA = a.word.toUpperCase();
+    const wordB = b.word.toUpperCase();
+
+    // Calculate friendliness using scoreKeywordFriendliness (same as original sorting)
+    const friendA = scoreKeywordFriendliness(wordA);
+    const friendB = scoreKeywordFriendliness(wordB);
+
+    // Friendliness is the primary sort criterion
+    if (friendA !== friendB) {
+      return friendB - friendA; // Higher friendliness first
+    }
+
+    // Only use connectivity as tie-breaker when friendliness is EQUAL
+    const connectA = calculateConnectivity(wordA, words);
+    const connectB = calculateConnectivity(wordB, words);
+
+    return connectB - connectA; // Higher connectivity first
   });
 }
 
@@ -883,11 +962,12 @@ function tryWithStrategicBlacks(
 }
 
 /**
- * Place theme words in the grid using the "Verify-Greedy" strategy:
+ * Place theme words in the grid using the "Intersection-Optimized" strategy:
  *
- * 1. FRIENDLIEST-FIRST: Sort keywords by friendliness score (highest first)
- *    - Words with common letters (A,E,I,O,S,T,R,N,L) placed first
- *    - Words with rare letters (Q,J,X,Z,K,F,Y,W,V) placed last
+ * 1. INTERSECTION-FIRST: Sort keywords by connectivity (shared letters with other keywords)
+ *    - Words that share many letters with other keywords are placed first
+ *    - This maximizes opportunities for keywords to cross each other
+ *    - Also factors in letter friendliness for CSP fill success
  *
  * 2. VERIFY BEFORE COMMIT: Before committing each placement, verify the grid
  *    is still completable (all slots have valid candidates)
@@ -895,8 +975,9 @@ function tryWithStrategicBlacks(
  * 3. TRACK THEME CELLS: Keep track of which cells are part of theme words
  *    (these cannot be turned into black squares later)
  *
- * This strategy prevents dead-ends by:
- * - Placing "easy" words first to establish a viable grid foundation
+ * This strategy maximizes keyword count by:
+ * - Analyzing letter overlap between keywords to find natural intersection points
+ * - Placing highly-connectable words first to create a foundation for others
  * - Only committing placements that don't create unsolvable slots
  */
 function placeThemeWords(
@@ -910,12 +991,11 @@ function placeThemeWords(
     allowEmptySlotsUnderLength: 2,
   };
 
-  // FRIENDLIEST-FIRST: Sort by friendliness score (highest first)
+  // Sort by friendliness (primary) with intersection potential as tie-breaker
+  // This maximizes success rate while preferring words that can cross
   // Take top 12 candidates to avoid trying too many
-  const sortedWords = [...themeWords]
-    .filter(tw => tw.word.length <= GRID_SIZE)
-    .sort((a, b) => scoreKeywordFriendliness(b.word) - scoreKeywordFriendliness(a.word))
-    .slice(0, 12);
+  const filteredWords = themeWords.filter(tw => tw.word.length <= GRID_SIZE);
+  const sortedWords = sortByIntersectionPotential(filteredWords).slice(0, 12);
 
   let grid = cells.map((row) => row.map((cell) => ({ ...cell })));
   const placed: PlacedWord[] = [];

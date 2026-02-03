@@ -240,6 +240,12 @@ export const PROPHET_KEYWORDS: Record<string, ProphetData> = {
       { word: "AARON", clue: "English equivalent to Prophet Harun", relevance: 95 },
       { word: "MUSA", clue: "Younger brother of Harun", relevance: 90 },
       { word: "CALF", clue: "Golden idol worshipped while Harun was guardian", relevance: 85 },
+      { word: "SPEAK", clue: "Harun was eloquent and could ___ well", relevance: 90 },
+      { word: "AIDE", clue: "Harun served as Musa's helper and ___", relevance: 85 },
+      { word: "SINAI", clue: "Mountain where Musa and Harun received guidance", relevance: 80 },
+      { word: "ELDER", clue: "Harun was the ___ brother", relevance: 80 },
+      { word: "STAFF", clue: "Harun also carried a ___", relevance: 75 },
+      { word: "TORAH", clue: "Scripture Harun helped teach", relevance: 75 },
     ],
   },
 
