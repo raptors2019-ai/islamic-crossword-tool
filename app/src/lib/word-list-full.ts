@@ -79,6 +79,12 @@ const ISLAMIC_WORDS = [
   'IMRAN', 'QUILL', 'AQSA', 'MUTE', 'GRAY',         // Zakariyah
   'WEEP', 'TEARS', 'GRAVE', 'HEAD',                 // Yahya
   'PALM', 'DATE', 'DEAD', 'HEAL', 'CROSS', 'MARYAM', // Isa
+  // Expanded keywords for struggling prophets (Feb 2026)
+  'ESAU',                                            // Ishaq - firstborn twin
+  'ROME',                                            // Ayyub - where he lived
+  'LEPER',                                           // Al-Yasa - he healed lepers
+  'ALTAR',                                           // Zakariya/Ilyas - place of prayer
+  'RUINS',                                           // Hud - remains of 'Ad
 ];
 
 // Filler words from generator-api (themed for Islamic crosswords)

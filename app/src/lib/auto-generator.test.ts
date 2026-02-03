@@ -52,12 +52,19 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'ISAAC', clue: 'English name' },
     { word: 'SARAH', clue: 'His mother' },
     { word: 'THREE', clue: 'Angels who visited' },
+    { word: 'ANGEL', clue: 'Brought glad tidings' },
+    { word: 'SMILE', clue: "Sarah's reaction" },
+    { word: 'TWINS', clue: 'Ishaq fathered sons' },
   ],
   YAQUB: [
     { word: 'YAQUB', clue: 'Father of twelve' },
     { word: 'JACOB', clue: 'English name' },
     { word: 'BLIND', clue: 'From grief over Yusuf' },
     { word: 'SHIRT', clue: 'Restored his sight' },
+    { word: 'STARS', clue: 'In Yusuf\'s dream' },
+    { word: 'TEARS', clue: 'Wept until blind' },
+    { word: 'DREAM', clue: 'Prophetic vision' },
+    { word: 'MOON', clue: 'Bowed in dream' },
   ],
   YUSUF: [
     { word: 'YUSUF', clue: 'Prophet of dreams' },
@@ -69,6 +76,11 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'AYYUB', clue: 'Patient prophet' },
     { word: 'SEVEN', clue: 'Years of suffering' },
     { word: 'JOB', clue: 'English name' },
+    { word: 'RAIN', clue: 'Golden locusts' },
+    { word: 'SABR', clue: 'Beautiful patience' },
+    { word: 'GRASS', clue: 'Bundle for oath' },
+    { word: 'SKIN', clue: 'Was afflicted' },
+    { word: 'GOLD', clue: 'Locusts blessing' },
   ],
   MUSA: [
     { word: 'MUSA', clue: 'Spoke to Allah' },
@@ -105,15 +117,23 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'SHIP', clue: 'He fled on it' },
   ],
   IDRIS: [
-    { word: 'IDRIS', clue: 'First to write' },
-    { word: 'ENOCH', clue: 'English name' },
+    // Prioritize friendly-letter keywords over IDRIS itself (which has unfriendly D-R-I-S combo)
+    { word: 'STARS', clue: 'He studied them' },
+    { word: 'RISE', clue: 'Raised high' },
+    { word: 'TRUE', clue: 'Man of truth' },
+    { word: 'PEN', clue: 'First to write with' },
     { word: 'WISE', clue: 'His attribute' },
+    { word: 'NUH', clue: 'Great-grandson' },
   ],
   HUD: [
     { word: 'HUD', clue: "Sent to 'Ad" },
     { word: 'AD', clue: 'His people' },
     { word: 'WIND', clue: 'Destroyed them' },
     { word: 'IRAM', clue: 'City with pillars' },
+    { word: 'STORM', clue: 'Violent destruction' },
+    { word: 'RUINS', clue: 'Remains of Ad' },
+    { word: 'SAND', clue: 'Buried in' },
+    { word: 'STONE', clue: 'Carved homes' },
   ],
   SALIH: [
     { word: 'SALIH', clue: 'Sent to Thamud' },
@@ -123,6 +143,13 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
   ],
   SHUAIB: [
     { word: 'WOOD', clue: 'Companions of the wood' },
+    { word: 'TRADE', clue: 'Dishonest practice' },
+    { word: 'SCALE', clue: 'Honest weights' },
+    { word: 'STONE', clue: 'Rained on them' },
+    { word: 'SHEEP', clue: 'Flock for Musa' },
+    { word: 'STORM', clue: 'Dark cloud' },
+    { word: 'MUSA', clue: 'Son-in-law' },
+    { word: 'HEAT', clue: 'Before punishment' },
   ],
   LUT: [
     { word: 'LUT', clue: "Ibrahim's nephew" },
@@ -131,15 +158,21 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
     { word: 'STONE', clue: 'Rained on them' },
   ],
   YAHYA: [
-    { word: 'YAHYA', clue: "Zakariya's son" },
-    { word: 'JOHN', clue: 'English name' },
+    // Use diverse friendly keywords
+    { word: 'TEARS', clue: 'Shed in devotion' },
+    { word: 'PURE', clue: 'And devout' },
     { word: 'SON', clue: 'To Zakariya' },
-    { word: 'WEPT', clue: 'In fear of Allah' },
+    { word: 'NOBLE', clue: 'Prophet' },
   ],
   ZAKARIYA: [
-    { word: 'YAHYA', clue: 'His son' },
-    { word: 'JOHN', clue: "Son's English name" },
-    { word: 'FRUIT', clue: "Maryam's provision" },
+    // Prioritize friendly keywords over YAHYA (unfriendly Y letters)
+    { word: 'ALTAR', clue: 'Where he prayed' },
+    { word: 'ROOM', clue: 'Maryam\'s sanctuary' },
+    { word: 'SIGN', clue: 'Made mute as' },
+    { word: 'HEIR', clue: 'Prayed for' },
+    { word: 'THREE', clue: 'Days mute' },
+    { word: 'NIGHT', clue: 'Called on Lord at' },
+    { word: 'ALONE', clue: 'Called in secret' },
   ],
   ISA: [
     { word: 'ISA', clue: 'Born without father' },
@@ -157,21 +190,34 @@ const PROPHET_THEMES: Record<string, ThemeWord[]> = {
   ],
   // Scraped prophets from myislam.org
   DHUL_KIFL: [
-    { word: 'KIFL', clue: 'Part of his name' },
-    { word: 'FOLD', clue: 'Meaning of Kifl' },
-    { word: 'FAST', clue: 'He fasted daily' },
-    { word: 'PRAY', clue: 'He prayed nightly' },
+    // Prioritize friendly keywords
+    { word: 'REST', clue: 'Never from worship' },
+    { word: 'RISE', clue: 'Raised to high station' },
+    { word: 'SENT', clue: 'Messenger of Allah' },
+    { word: 'TRUE', clue: 'To his word' },
+    { word: 'NIGHT', clue: 'Spent in prayer' },
+    { word: 'TRIAL', clue: 'Faced with patience' },
+    { word: 'TRUST', clue: 'Known for' },
     { word: 'SABR', clue: 'His patience' },
   ],
   ILYAS: [
-    { word: 'ILYAS', clue: 'Sent against Baal' },
+    // Prioritize friendly keywords
+    { word: 'RAIN', clue: 'Prayed and it came' },
+    { word: 'ALTAR', clue: 'Called upon Allah' },
+    { word: 'STONE', clue: 'Built altar from' },
+    { word: 'ALONE', clue: 'Fled to wilderness' },
+    { word: 'SENT', clue: 'Warner to people' },
+    { word: 'RISEN', clue: 'To high station' },
     { word: 'BAAL', clue: 'Idol worshipped' },
-    { word: 'IDOL', clue: 'False god' },
-    { word: 'AHAB', clue: 'King of his time' },
   ],
   AL_YASA: [
     { word: 'YASA', clue: 'Part of his name' },
     { word: 'ILYAS', clue: 'His predecessor' },
+    { word: 'RAIN', clue: 'Ended drought' },
+    { word: 'HEAL', clue: 'Healed the sick' },
+    { word: 'DEAD', clue: 'Raised them' },
+    { word: 'PURE', clue: 'Chosen and excellent' },
+    { word: 'BAAL', clue: 'Idol worshipped' },
   ],
 };
 
