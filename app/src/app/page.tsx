@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Grid3X3, FileText } from 'lucide-react';
-import { ThemeWord, GeneratedPuzzle, Difficulty, DifficultyClues } from '@/lib/types';
+import { ThemeWord, GeneratedPuzzle, Difficulty, DifficultyClues, PuzzleHistoryEntry } from '@/lib/types';
 import { generatePuzzle } from '@/lib/generator-api';
 import {
   processKeywords,
@@ -95,6 +97,53 @@ export default function Home() {
 
   // Track previous puzzle words for ensuring regeneration produces different results
   const [previousPuzzleWords, setPreviousPuzzleWords] = useState<Set<string>>(new Set());
+
+  // Query pre-generated clues for the current prophet
+  const preGeneratedClues = useQuery(
+    api.difficultyClues.getForProphet,
+    currentProphet ? { prophetId: currentProphet.id } : 'skip'
+  );
+
+  // Load pre-generated clues into gridClues state when they arrive
+  useEffect(() => {
+    if (!preGeneratedClues || Object.keys(preGeneratedClues).length === 0) {
+      return;
+    }
+
+    // Convert pre-generated clues to gridClues format
+    setGridClues(prev => {
+      const newClues = { ...prev };
+
+      for (const [word, clueData] of Object.entries(preGeneratedClues)) {
+        // Only add if we don't already have clues for this word (don't overwrite user edits)
+        if (!newClues[word] || (!newClues[word].easy && !newClues[word].medium && !newClues[word].hard)) {
+          newClues[word] = {
+            easy: clueData.easy[0] || '',
+            medium: clueData.medium[0] || '',
+            hard: clueData.hard[0] || '',
+            alternatives: {
+              easy: clueData.easy.slice(1),
+              medium: clueData.medium.slice(1),
+              hard: clueData.hard.slice(1),
+            },
+          };
+        }
+      }
+
+      return newClues;
+    });
+  }, [preGeneratedClues]);
+
+  // Puzzle history for comparing variations
+  const [puzzleHistory, setPuzzleHistory] = useState<PuzzleHistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1); // -1 means viewing current (unsaved) state
+
+  // Sorted puzzle history by theme words placed (highest first)
+  const sortedPuzzleHistory = useMemo(() => {
+    return [...puzzleHistory].sort((a, b) =>
+      b.stats.themeWordsPlaced - a.stats.themeWordsPlaced
+    );
+  }, [puzzleHistory]);
 
   // Handle clue change from LiveClueEditor
   const handleGridClueChange = useCallback((word: string, difficulty: Difficulty, clue: string) => {
@@ -256,6 +305,94 @@ export default function Home() {
 
   // Auto-generate result (from prophet selection)
   const [autoGenerateResult, setAutoGenerateResult] = useState<GenerationResult | null>(null);
+
+  // Save current puzzle state to history
+  const savePuzzleToHistory = useCallback((
+    prophetId: string,
+    cells: typeof editableCells,
+    words: ThemeWord[],
+    placedIds: Set<string>,
+    clues: Record<string, DifficultyClues>,
+    result: GenerationResult | null
+  ) => {
+    const entry: PuzzleHistoryEntry = {
+      id: `puzzle-${Date.now()}`,
+      timestamp: Date.now(),
+      prophetId,
+      themeWords: words,
+      placedInGridIds: Array.from(placedIds),
+      gridClues: clues,
+      stats: {
+        islamicPercentage: result?.stats.islamicPercentage || 0,
+        gridFillPercentage: result?.stats.gridFillPercentage || 0,
+        themeWordsPlaced: result?.stats.themeWordsPlaced || 0,
+        totalWords: result?.placedWords.length || 0,
+      },
+      gridData: cells.map(row =>
+        row.map(cell => ({
+          letter: cell.letter,
+          isBlack: cell.isBlack,
+          source: cell.source,
+        }))
+      ),
+    };
+
+    setPuzzleHistory(prev => {
+      // If we're not at the end of history, truncate before adding
+      const newHistory = historyIndex >= 0 && historyIndex < prev.length - 1
+        ? prev.slice(0, historyIndex + 1)
+        : prev;
+      return [...newHistory, entry];
+    });
+    setHistoryIndex(prev => prev + 1);
+  }, [historyIndex]);
+
+  // Restore puzzle from history entry
+  const restorePuzzleFromHistory = useCallback((entry: PuzzleHistoryEntry) => {
+    // Restore grid cells
+    const restoredCells = entry.gridData.map(row =>
+      row.map(cell => ({
+        letter: cell.letter,
+        isBlack: cell.isBlack,
+        source: cell.source as 'user' | 'auto' | 'empty',
+        number: null, // Will be recalculated
+      }))
+    );
+    setCells(restoredCells);
+
+    // Restore theme words
+    setThemeWords(entry.themeWords);
+
+    // Restore placed IDs
+    setPlacedInGridIds(new Set(entry.placedInGridIds));
+
+    // Restore clues
+    setGridClues(entry.gridClues);
+
+    // Update previous words for regeneration comparison
+    const placedWords = entry.themeWords
+      .filter(w => entry.placedInGridIds.includes(w.id))
+      .map(w => w.activeSpelling.toUpperCase());
+    setPreviousPuzzleWords(new Set(placedWords));
+  }, [setCells]);
+
+  // Navigate to previous puzzle in sorted history (better puzzles first)
+  const goToPreviousPuzzle = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      restorePuzzleFromHistory(sortedPuzzleHistory[newIndex]);
+    }
+  }, [historyIndex, sortedPuzzleHistory, restorePuzzleFromHistory]);
+
+  // Navigate to next puzzle in sorted history
+  const goToNextPuzzle = useCallback(() => {
+    if (historyIndex < sortedPuzzleHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      restorePuzzleFromHistory(sortedPuzzleHistory[newIndex]);
+    }
+  }, [historyIndex, sortedPuzzleHistory, restorePuzzleFromHistory]);
 
   // Detect words in the editable grid
   const detectedWords = useMemo(() => {
@@ -640,22 +777,63 @@ export default function Home() {
       setClues(newClues);
       setPlacedInGridIds(placedIds);
 
-      // Apply the generated grid
+      // Apply the generated grid, with CSP completion if needed
+      let finalGrid = result.grid;
+      let finalResult = result;
       const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
-      if (hasContent) {
-        setCells(result.grid);
+      const isComplete = result.success && result.stats.gridFillPercentage >= 99;
+
+      // Try CSP completion if grid is incomplete
+      if (hasContent && !isComplete) {
+        const cspResult = fillGridWithCSP(result.grid, boostedIndex, 10000);
+        if (cspResult.success) {
+          finalGrid = cspResult.grid;
+          finalResult = {
+            ...result,
+            success: true,
+            grid: finalGrid,
+            placedWords: [
+              ...result.placedWords,
+              ...cspResult.placedWords.map(pw => ({
+                word: pw.word,
+                clue: '',
+                row: pw.slot.start.row,
+                col: pw.slot.start.col,
+                direction: pw.slot.direction,
+                isThemeWord: false,
+              })),
+            ],
+            stats: {
+              ...result.stats,
+              gridFillPercentage: 100,
+              fillerWordsPlaced: result.stats.fillerWordsPlaced + cspResult.stats.filledByCSP,
+            },
+          };
+        }
       }
 
-      setAutoGenerateResult(result);
+      if (hasContent) {
+        setCells(finalGrid);
+      }
+
+      setAutoGenerateResult(finalResult);
 
       // Track placed words for future regeneration comparison
-      setPreviousPuzzleWords(new Set(result.placedWords.map(pw => pw.word.toUpperCase())));
+      setPreviousPuzzleWords(new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase())));
+
+      // Save to puzzle history (clear history for new prophet)
+      setPuzzleHistory([]);
+      setHistoryIndex(-1);
+      // Schedule save after state updates
+      setTimeout(() => {
+        savePuzzleToHistory(prophetId, finalGrid, newThemeWords, placedIds, {}, finalResult);
+      }, 0);
     } catch (error) {
       console.error('Error generating puzzle:', error);
     } finally {
       setIsGenerating(false);
     }
-  }, [resetPuzzleState, setCells]);
+  }, [resetPuzzleState, setCells, savePuzzleToHistory]);
 
   // Handle regenerating the puzzle with the same prophet's keywords
   // Ensures: 1) Complete grid (100% fill), 2) At least 50% different words
@@ -746,13 +924,18 @@ export default function Home() {
 
         setAutoGenerateResult(finalResult);
         setPreviousPuzzleWords(new Set(finalResult.placedWords.map(pw => pw.word.toUpperCase())));
+
+        // Save to puzzle history
+        setTimeout(() => {
+          savePuzzleToHistory(currentProphet.id, finalGrid, newThemeWords, placedIds, gridClues, finalResult);
+        }, 0);
       }
     } catch (error) {
       console.error('Error regenerating puzzle:', error);
     } finally {
       setIsGenerating(false);
     }
-  }, [currentProphet, previousPuzzleWords, resetPuzzleState, setCells]);
+  }, [currentProphet, previousPuzzleWords, resetPuzzleState, setCells, savePuzzleToHistory, gridClues]);
 
   // Handle auto-complete (CSP-based gap filling)
   const handleAutoComplete = useCallback(async () => {
@@ -1181,6 +1364,50 @@ export default function Home() {
                       <span>{gridStats.filledCells} filled</span>
                       <span>{gridStats.emptyCells} empty</span>
                     </div>
+                  </div>
+                )}
+
+                {/* Puzzle History Navigation - sorted by theme word count (best first) */}
+                {sortedPuzzleHistory.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 mb-4 py-2 px-4 bg-[#001a2c]/40 rounded-lg border border-[#4A90C2]/20">
+                    <Button
+                      onClick={goToPreviousPuzzle}
+                      disabled={historyIndex <= 0}
+                      variant="outline"
+                      size="icon"
+                      className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white disabled:opacity-30 h-8 w-8"
+                      title="Better variation (more theme words)"
+                      aria-label="Go to better puzzle variation"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </Button>
+                    <div className="text-center min-w-[140px]">
+                      <span className="text-[#D4AF37] font-medium">
+                        #{historyIndex + 1} of {sortedPuzzleHistory.length}
+                      </span>
+                      {historyIndex >= 0 && sortedPuzzleHistory[historyIndex] && (
+                        <div className="text-[10px] text-[#6ba8d4] mt-0.5">
+                          {sortedPuzzleHistory[historyIndex].stats.themeWordsPlaced} theme words
+                          {' • '}
+                          {sortedPuzzleHistory[historyIndex].stats.islamicPercentage.toFixed(0)}% Islamic
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      onClick={goToNextPuzzle}
+                      disabled={historyIndex >= sortedPuzzleHistory.length - 1}
+                      variant="outline"
+                      size="icon"
+                      className="border-[#4A90C2]/40 text-[#8fc1e3] hover:bg-[#4A90C2]/20 hover:text-white disabled:opacity-30 h-8 w-8"
+                      title="Next variation (fewer theme words)"
+                      aria-label="Go to next puzzle variation"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Button>
                   </div>
                 )}
 

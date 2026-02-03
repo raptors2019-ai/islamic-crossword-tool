@@ -404,7 +404,7 @@ function clearWordFromGrid(
       grid[r][c] = {
         ...grid[r][c],
         letter: '',
-        source: undefined,
+        source: 'empty',
       };
     }
   }

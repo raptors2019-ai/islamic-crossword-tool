@@ -152,3 +152,25 @@ export interface FillerSuggestion {
   }[];
   reason: 'too_long' | 'no_fit' | 'conflicts';  // Why it couldn't be placed
 }
+
+// Puzzle history entry for tracking generated variations
+export interface PuzzleHistoryEntry {
+  id: string;                                    // Unique ID for this entry
+  timestamp: number;                             // When it was generated
+  prophetId: string;                             // Which prophet this was for
+  themeWords: ThemeWord[];                       // The theme words used
+  placedInGridIds: string[];                     // IDs of words placed in grid
+  gridClues: Record<string, DifficultyClues>;    // Clues for each word
+  stats: {
+    islamicPercentage: number;
+    gridFillPercentage: number;
+    themeWordsPlaced: number;
+    totalWords: number;
+  };
+  // Grid state is stored as serializable data
+  gridData: {
+    letter: string | null;
+    isBlack: boolean;
+    source: string;
+  }[][];
+}

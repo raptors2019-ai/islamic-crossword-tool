@@ -100,6 +100,33 @@ const CROSSWORDESE = new Set([
 ]);
 
 /**
+ * Words that are English but have documented Islamic context from prophet stories.
+ * These appear in prophetKeywords with Islamic clues and should be counted
+ * as Islamic for percentage calculations and displayed differently from regular fillers.
+ *
+ * Examples:
+ * - FIRE: "coolness for Ibrahim"
+ * - DREAM: "Yusuf interpreted"
+ * - WELL: "Yusuf thrown in"
+ */
+export const CONTEXTUALLY_ISLAMIC_WORDS = new Set([
+  // Ibrahim story
+  'FIRE', 'AXE', 'BIRD', 'MOON', 'SUN', 'STAR',
+  // Yusuf story
+  'DREAM', 'WELL', 'JAIL', 'COAT', 'WOLF', 'EGYPT',
+  // Musa story
+  'STAFF', 'NILE', 'RIVER', 'FROG', 'BLOOD',
+  // Nuh story
+  'ARK', 'FLOOD', 'DOVE', 'CROW',
+  // Yunus story
+  'WHALE', 'FISH',
+  // General prophet stories
+  'CAMEL', 'CAVE', 'ANGEL', 'WATER',
+  // Common Islamic context words
+  'MANNA', 'CALF', 'CLAY', 'IRON', 'WIND',
+]);
+
+/**
  * BLOCKED WORDS - Haram/inappropriate words that should NEVER appear
  * in an Islamic crossword puzzle. These are filtered out during index building.
  */
@@ -507,6 +534,13 @@ export function getEnglishWordIndex(): WordIndex {
 export function isIslamicWord(word: string): boolean {
   const upper = word.toUpperCase();
   return ISLAMIC_WORDS_SET.has(upper) || ISLAMIC_FILLER_WORDS.has(upper);
+}
+
+/**
+ * Check if a word is contextually Islamic (English word with Islamic meaning in prophet stories).
+ */
+export function isContextuallyIslamicWord(word: string): boolean {
+  return CONTEXTUALLY_ISLAMIC_WORDS.has(word.toUpperCase());
 }
 
 /**

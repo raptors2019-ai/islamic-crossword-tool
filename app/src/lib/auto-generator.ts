@@ -50,6 +50,7 @@ import {
   getScore,
   WORD_SCORE,
   ISLAMIC_FILLER_WORDS,
+  CONTEXTUALLY_ISLAMIC_WORDS,
   calculateWordFriendliness,
   matchPattern,
 } from './word-index';
@@ -121,7 +122,7 @@ export function clearInvalidCells(
         grid[r][c] = {
           ...grid[r][c],
           letter: '',
-          source: undefined,
+          source: 'empty',
         };
       }
     }
@@ -1172,7 +1173,8 @@ function tryGenerateWithSmartMatcher(
     const upperWord = pw.word.toUpperCase();
     const score = getScore(upperWord, wordIndex);
     totalScore += score;
-    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord)) {
+    // Count Islamic keywords, Islamic fillers, and contextually Islamic words
+    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord) || CONTEXTUALLY_ISLAMIC_WORDS.has(upperWord)) {
       islamicCount++;
     }
   }
@@ -1352,8 +1354,8 @@ function tryGenerateWithPattern(
     const upperWord = pw.word.toUpperCase();
     const score = getScore(upperWord, wordIndex);
     totalScore += score;
-    // Count both core Islamic words and Islamic filler words as "Islamic"
-    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord)) {
+    // Count Islamic keywords, Islamic fillers, and contextually Islamic words
+    if (ISLAMIC_WORDS_SET.has(upperWord) || ISLAMIC_FILLER_WORDS.has(upperWord) || CONTEXTUALLY_ISLAMIC_WORDS.has(upperWord)) {
       islamicCount++;
     }
   }

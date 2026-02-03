@@ -11,6 +11,7 @@ import {
 } from '@/lib/editable-grid';
 import { getWordInfo } from '@/lib/word-detector';
 import { findMatchingWords, WordSuggestion } from '@/lib/constraint-suggester';
+import { CONTEXTUALLY_ISLAMIC_WORDS } from '@/lib/word-index';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -276,6 +277,7 @@ export function LiveClueEditor({
     const category = dictInfo?.category;
     const isLoading = loadingAI === word.word;
     const isIslamic = !!dictInfo;
+    const isContextuallyIslamic = !isIslamic && CONTEXTUALLY_ISLAMIC_WORDS.has(word.word.toUpperCase());
 
     const commonEnglish = ['THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'HAD', 'HAS', 'HIS', 'HOW', 'ITS', 'MAY', 'NEW', 'NOW', 'OLD', 'SEE', 'WAY', 'WHO', 'BOY', 'DID', 'GET', 'HIM', 'LET', 'PUT', 'SAY', 'SHE', 'TOO', 'USE', 'ARK', 'AXE', 'CALF', 'CLAY', 'CROW', 'FIRE', 'FISH', 'IRON', 'WELL', 'WIND', 'STAFF', 'WHALE', 'WATER', 'EARTH'];
     const isArabicWord = category && !commonEnglish.includes(word.word.toUpperCase()) &&
@@ -346,7 +348,12 @@ export function LiveClueEditor({
                 {category === 'names-of-allah' ? 'ALLAH' : category}
               </span>
             )}
-            {!isIslamic && (
+            {!isIslamic && isContextuallyIslamic && (
+              <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider bg-teal-500/20 text-teal-400">
+                CONTEXT
+              </span>
+            )}
+            {!isIslamic && !isContextuallyIslamic && (
               <>
                 <span className="px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider bg-orange-500/20 text-orange-400">
                   FILLER
