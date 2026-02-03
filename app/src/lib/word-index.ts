@@ -174,22 +174,36 @@ export function isBlockedWord(word: string): boolean {
 }
 
 /**
- * Calculate the score for a word based on its category.
+ * Calculate the score for a word based on its category and length.
+ *
+ * Length multipliers discourage short words (especially 2-letter):
+ * - 2-letter: 0.5x (heavily penalized - use only as fallback)
+ * - 3-letter: 0.85x (slight penalty)
+ * - 4-letter: 1.0x (baseline)
+ * - 5-letter: 1.05x (slight bonus for full-length words)
  */
 export function getWordScore(word: string): number {
   const upper = word.toUpperCase();
 
+  // Get base score from category
+  let baseScore: number;
   if (ISLAMIC_WORDS_SET.has(upper)) {
-    return WORD_SCORE.ISLAMIC_KEYWORD;
+    baseScore = WORD_SCORE.ISLAMIC_KEYWORD;
+  } else if (ISLAMIC_FILLER_WORDS.has(upper)) {
+    baseScore = WORD_SCORE.ISLAMIC_FILLER;
+  } else if (CROSSWORDESE.has(upper)) {
+    baseScore = WORD_SCORE.CROSSWORDESE;
+  } else {
+    baseScore = WORD_SCORE.COMMON_ENGLISH;
   }
-  if (ISLAMIC_FILLER_WORDS.has(upper)) {
-    return WORD_SCORE.ISLAMIC_FILLER;
-  }
-  if (CROSSWORDESE.has(upper)) {
-    return WORD_SCORE.CROSSWORDESE;
-  }
-  // Common words are everything else
-  return WORD_SCORE.COMMON_ENGLISH;
+
+  // Apply length multiplier to discourage 2-letter words
+  const lengthMultiplier =
+    upper.length === 2 ? 0.5 :
+    upper.length === 3 ? 0.85 :
+    upper.length === 5 ? 1.05 : 1.0;
+
+  return Math.floor(baseScore * lengthMultiplier);
 }
 
 /**

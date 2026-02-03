@@ -121,4 +121,21 @@ export default defineSchema({
     .index("by_source", ["source"])
     .index("by_approved", ["isApproved"])
     .index("by_prophet_approved", ["prophetId", "isApproved"]),
+
+  // Pre-generated difficulty clues for prophet keywords
+  // Stores easy/medium/hard clues (3 each per word) from AI generation
+  difficultyClues: defineTable({
+    word: v.string(), // Word (uppercase)
+    prophetId: v.optional(v.string()), // Link to prophet (e.g., "MUSA", "YUSUF")
+    difficulty: v.string(), // "easy" | "medium" | "hard"
+    clue: v.string(), // The clue text
+    clueIndex: v.number(), // 0, 1, or 2 (which alternative within difficulty)
+    source: v.string(), // "ai-generated" | "manual"
+    isApproved: v.boolean(), // Review status
+    generatedAt: v.number(), // Timestamp when generated
+  })
+    .index("by_word", ["word"])
+    .index("by_word_difficulty", ["word", "difficulty"])
+    .index("by_prophet", ["prophetId"])
+    .index("by_prophet_word", ["prophetId", "word"]),
 });

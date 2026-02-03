@@ -659,6 +659,10 @@ export function getUnfilledSlotsByDifficulty(
 /**
  * Get candidates for a pattern with Islamic words prioritized.
  * Returns Islamic matches first, then English matches (deduplicated).
+ *
+ * To reduce 2-letter words in puzzles:
+ * - First pass: exclude 2-letter words
+ * - Fallback: if no candidates, allow 2-letter words
  */
 export function getIslamicBiasedCandidates(
   pattern: string,
@@ -675,7 +679,17 @@ export function getIslamicBiasedCandidates(
   const islamicSet = new Set(islamicMatches);
   const filteredEnglish = englishMatches.filter(w => !islamicSet.has(w));
 
-  return [...islamicMatches, ...filteredEnglish];
+  const allMatches = [...islamicMatches, ...filteredEnglish];
+
+  // First pass: prefer words with 3+ letters
+  const longerWords = allMatches.filter(w => w.length > 2);
+
+  // Fallback: if no 3+ letter candidates exist, allow 2-letter words
+  if (longerWords.length === 0) {
+    return allMatches;
+  }
+
+  return longerWords;
 }
 
 /**

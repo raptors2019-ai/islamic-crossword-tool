@@ -11,9 +11,11 @@
 import type * as clueGeneration from "../clueGeneration.js";
 import type * as clues from "../clues.js";
 import type * as dataImport from "../dataImport.js";
+import type * as difficultyClues from "../difficultyClues.js";
 import type * as gridGenerator from "../gridGenerator.js";
 import type * as prophetKeywords from "../prophetKeywords.js";
 import type * as puzzles from "../puzzles.js";
+import type * as testing from "../testing.js";
 import type * as themeKeywords from "../themeKeywords.js";
 import type * as words from "../words.js";
 
@@ -27,9 +29,11 @@ declare const fullApi: ApiFromModules<{
   clueGeneration: typeof clueGeneration;
   clues: typeof clues;
   dataImport: typeof dataImport;
+  difficultyClues: typeof difficultyClues;
   gridGenerator: typeof gridGenerator;
   prophetKeywords: typeof prophetKeywords;
   puzzles: typeof puzzles;
+  testing: typeof testing;
   themeKeywords: typeof themeKeywords;
   words: typeof words;
 }>;

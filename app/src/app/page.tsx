@@ -399,6 +399,55 @@ export default function Home() {
     return detectWords(editableCells);
   }, [editableCells]);
 
+  // Get list of detected words that need clue lookups
+  // (words not already covered by prophet-specific clues)
+  const wordsNeedingClues = useMemo(() => {
+    const detectedWordsList = detectedWords.map(w => w.word.toUpperCase());
+    const prophetWordSet = new Set(
+      preGeneratedClues ? Object.keys(preGeneratedClues) : []
+    );
+    // Filter to words not already in prophet clues and not already in gridClues
+    return detectedWordsList.filter(
+      w => !prophetWordSet.has(w) && (!gridClues[w] || (!gridClues[w].easy && !gridClues[w].medium && !gridClues[w].hard))
+    );
+  }, [detectedWords, preGeneratedClues, gridClues]);
+
+  // Query clues for filler words (words with no prophetId)
+  const fillerWordClues = useQuery(
+    api.difficultyClues.getForWords,
+    wordsNeedingClues.length > 0 ? { words: wordsNeedingClues } : 'skip'
+  );
+
+  // Load filler word clues into gridClues state when they arrive
+  useEffect(() => {
+    if (!fillerWordClues || Object.keys(fillerWordClues).length === 0) {
+      return;
+    }
+
+    // Convert filler word clues to gridClues format
+    setGridClues(prev => {
+      const newClues = { ...prev };
+
+      for (const [word, clueData] of Object.entries(fillerWordClues)) {
+        // Only add if we don't already have clues for this word (don't overwrite user edits)
+        if (!newClues[word] || (!newClues[word].easy && !newClues[word].medium && !newClues[word].hard)) {
+          newClues[word] = {
+            easy: clueData.easy[0] || '',
+            medium: clueData.medium[0] || '',
+            hard: clueData.hard[0] || '',
+            alternatives: {
+              easy: clueData.easy.slice(1),
+              medium: clueData.medium.slice(1),
+              hard: clueData.hard.slice(1),
+            },
+          };
+        }
+      }
+
+      return newClues;
+    });
+  }, [fillerWordClues]);
+
   // Handle regenerating a filler word
   const handleRegenerateWord = useCallback((word: { word: string; row: number; col: number; direction: 'across' | 'down' }) => {
     // Get all words currently in the grid to exclude from alternatives
