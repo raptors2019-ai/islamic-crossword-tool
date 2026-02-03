@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Card, CardContent } from '@/components/ui/card';
@@ -1218,6 +1219,17 @@ export default function Home() {
                 {islamicPercentage >= 50 ? 'Requirement met' : 'Below 50% requirement'}
               </span>
             </div>
+
+            {/* Clue Editor Link */}
+            <Link
+              href="/clue-editor"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#002a42]/80 border border-[#4A90C2]/30 text-[#8fc1e3] hover:text-white hover:border-[#D4AF37]/50 transition-all text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              <span>Clue Editor</span>
+            </Link>
           </div>
         </div>
       </header>
