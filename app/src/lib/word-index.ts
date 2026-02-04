@@ -151,6 +151,14 @@ const BLOCKED_WORDS = new Set([
   // Profanity/vulgar (common crossword traps)
   'DAMN', 'DAMNS', 'CRAP', 'HELL', 'ASS', 'ASSES',
 
+  // Violence/sexual - inappropriate for kids & religious context
+  'RAPE', 'RAPED', 'RAPES', 'KILL', 'KILLS', 'SLAY', 'SLAYS',
+  'MURDER', 'STAB', 'STABS', 'SMITE', 'SLEW',
+  'LEWD', 'LEWDS', 'LUST', 'LUSTS', 'LUSTY',
+  'WHORE', 'PIMP', 'PIMPS', 'HUSSY',
+  'DRUG', 'DRUGS', 'WEED', 'DOPE',
+  'GORE', 'GORY', 'GORED',
+
   // Other inappropriate for Islamic context
   'NUDE', 'NUDES', 'NAKED', 'SEXY', 'STRIPPER',
 ]);

@@ -1,22 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Grid3X3, FileText } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
 import { ThemeWord, GeneratedPuzzle, Difficulty, DifficultyClues, PuzzleHistoryEntry } from '@/lib/types';
 import { generatePuzzle } from '@/lib/generator-api';
 import {
@@ -63,17 +56,11 @@ import {
 import { fillGridWithCSP, canGridBeFilled, CSPFillResult } from '@/lib/csp-filler';
 import { buildBoostedWordIndex, matchPattern } from '@/lib/word-index';
 
-const themePresets = [
-  { id: 'prophets', name: 'Prophet Stories', icon: '📖' },
-  { id: 'ramadan', name: 'Ramadan', icon: '🌙' },
-  { id: 'names', name: '99 Names of Allah', icon: '✨' },
-  { id: 'pillars', name: '5 Pillars', icon: '🕌' },
-  { id: 'quran', name: 'Quran', icon: '📚' },
-  { id: 'companions', name: 'Companions', icon: '👥' },
-];
+// TODO: Enable more themes after Prophet Stories milestone is complete
+// const themePresets = ['prophets', 'ramadan', 'names', 'pillars', 'quran', 'companions'];
 
 export default function Home() {
-  const [selectedTheme, setSelectedTheme] = useState<string>('prophets');
+  const selectedTheme = 'prophets';
   const [puzzleTitle, setPuzzleTitle] = useState('Prophet Stories Crossword');
   const [themeWords, setThemeWords] = useState<ThemeWord[]>([]);
   const [clues, setClues] = useState<Record<string, string>>({});
@@ -502,21 +489,6 @@ export default function Home() {
 
   // Start with empty word list - user selects keywords from Word Hub
 
-  useEffect(() => {
-    const preset = themePresets.find(t => t.id === selectedTheme);
-    if (preset) {
-      setPuzzleTitle(`${preset.name} Crossword`);
-    }
-  }, [selectedTheme]);
-
-  const clearWordsForTheme = () => {
-    setThemeWords([]);
-    setClues({});
-    setGeneratedPuzzle(null);
-    setSelectedWordId(null);
-    setPlacedInGridIds(new Set());
-    clearGrid();
-  };
 
   const islamicPercentage = useMemo(() => {
     if (themeWords.length === 0) return 0;
@@ -547,9 +519,16 @@ export default function Home() {
     if (result) {
       setCells(result.cells);
       setPlacedInGridIds(prev => new Set([...prev, id]));
+
+      // Auto-fill remaining empty cells with CSP so the grid isn't left half-empty
+      const cspResult = fillGridWithCSP(result.cells, wordIndex, 10000);
+      if (cspResult.success) {
+        setCells(cspResult.grid);
+        setAutoCompleteResult(cspResult);
+      }
     }
 
-    // Auto-generate puzzle if we have enough words
+    // Auto-generate puzzle if we have enough words (for clue generation etc.)
     if (newThemeWords.length >= 3) {
       setIsGenerating(true);
       generatePuzzle({
@@ -564,7 +543,7 @@ export default function Home() {
     } else {
       setGeneratedPuzzle(null);
     }
-  }, [themeWords, clues, puzzleTitle, editableCells, setCells]);
+  }, [themeWords, clues, puzzleTitle, editableCells, setCells, wordIndex]);
 
   const addProphetKeyword = useCallback((keyword: ProphetKeyword) => {
     // STRICT 5x5 validation: word must be 2-5 letters
@@ -597,11 +576,18 @@ export default function Home() {
       setCells(result.cells);
       // Track that this word was successfully placed in the grid
       setPlacedInGridIds(prev => new Set([...prev, id]));
+
+      // Auto-fill remaining empty cells with CSP so the grid isn't left half-empty
+      const cspResult = fillGridWithCSP(result.cells, wordIndex, 10000);
+      if (cspResult.success) {
+        setCells(cspResult.grid);
+        setAutoCompleteResult(cspResult);
+      }
     }
     // If placement fails, word is still in themeWords but not in grid
     // The UI will show it as "not placed"
 
-    // Auto-generate puzzle if we have enough words
+    // Auto-generate puzzle if we have enough words (for clue generation etc.)
     if (newThemeWords.length >= 3) {
       setIsGenerating(true);
       generatePuzzle({
@@ -616,7 +602,7 @@ export default function Home() {
     } else {
       setGeneratedPuzzle(null);
     }
-  }, [themeWords, clues, puzzleTitle, editableCells, setCells]);
+  }, [themeWords, clues, puzzleTitle, editableCells, setCells, wordIndex]);
 
   const removeProphetKeyword = useCallback((word: string) => {
     const wordToRemove = themeWords.find(
@@ -1014,6 +1000,7 @@ export default function Home() {
   // Handle clearing the grid (also clears generation result states)
   const handleClearGrid = useCallback(() => {
     clearGrid();
+    setPlacedInGridIds(new Set());
     setAutoGenerateResult(null);
     setAutoCompleteResult(null);
   }, [clearGrid]);
@@ -1150,89 +1137,32 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#001a2c] via-[#003B5C] to-[#002a42]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#004d77]/60 backdrop-blur-md border-b border-[#4A90C2]/20">
-        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
-          <div className="flex flex-wrap items-center gap-3 md:gap-6">
-            {/* Logo - smaller on mobile */}
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#b8952f] flex items-center justify-center shadow-lg">
-                <span className="text-lg md:text-xl">☪</span>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-white text-base md:text-lg tracking-wide font-serif font-semibold">
-                  Crossword Builder
-                </h1>
-                <p className="text-[#8fc1e3] text-[10px] md:text-xs tracking-widest uppercase">5×5 Islamic Puzzles</p>
-              </div>
-            </div>
-
-            {/* Theme Selector - full width on mobile */}
-            <div className="w-full sm:w-auto order-last sm:order-none">
-              <Select value={selectedTheme} onValueChange={(v) => { setSelectedTheme(v); clearWordsForTheme(); }}>
-                <SelectTrigger className="w-full sm:w-[200px] bg-[#002a42]/80 border-[#4A90C2]/30 text-white hover:border-[#D4AF37]/50 transition-colors">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#002a42] border-[#4A90C2]/30">
-                  {themePresets.map(t => (
-                    <SelectItem key={t.id} value={t.id} className="text-white data-[highlighted]:bg-[#D4AF37] data-[highlighted]:text-[#001a2c]">
-                      <span className="flex items-center gap-2">
-                        <span>{t.icon}</span>
-                        <span>{t.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Title Input - hidden on mobile, shown on tablet+ */}
-            <div className="hidden sm:flex flex-1 min-w-[200px] max-w-[320px]">
-              <Input
-                value={puzzleTitle}
-                onChange={(e) => setPuzzleTitle(e.target.value)}
-                className="bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] font-serif text-lg focus:ring-2 focus:ring-[#4A90C2]/30"
-              />
-            </div>
-
-            {/* Islamic Percentage - always visible but compact on mobile */}
-            <div
-              role="status"
-              aria-label={`${islamicPercentage}% Islamic words ${islamicPercentage >= 50 ? '- meets requirement' : '- below required 50%'}`}
-              className={cn(
-                'px-2 md:px-4 py-1 md:py-2 rounded-full flex items-center gap-1 md:gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
-                islamicPercentage >= 50
-                  ? 'bg-emerald-900/50 border border-emerald-500/30'
-                  : 'bg-red-900/50 border border-red-500/30'
-              )}
-            >
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full animate-pulse',
-                  islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
-                )}
-                aria-hidden="true"
-              />
-              <span className="text-white font-medium text-sm md:text-base">{islamicPercentage}%</span>
-              <span className="text-[#8fc1e3] text-xs md:text-sm hidden md:inline">Islamic</span>
-              <span className="sr-only">
-                {islamicPercentage >= 50 ? 'Requirement met' : 'Below 50% requirement'}
-              </span>
-            </div>
-
-            {/* Clue Editor Link */}
-            <Link
-              href="/clue-editor"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#002a42]/80 border border-[#4A90C2]/30 text-[#8fc1e3] hover:text-white hover:border-[#D4AF37]/50 transition-all text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              <span>Clue Editor</span>
-            </Link>
-          </div>
+      <AppHeader>
+        {/* Islamic Percentage Badge */}
+        <div
+          role="status"
+          aria-label={`${islamicPercentage}% Islamic words ${islamicPercentage >= 50 ? '- meets requirement' : '- below required 50%'}`}
+          className={cn(
+            'px-2 md:px-4 py-1 md:py-2 rounded-full flex items-center gap-1 md:gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg',
+            islamicPercentage >= 50
+              ? 'bg-emerald-900/50 border border-emerald-500/30'
+              : 'bg-red-900/50 border border-red-500/30'
+          )}
+        >
+          <div
+            className={cn(
+              'w-2 h-2 rounded-full animate-pulse',
+              islamicPercentage >= 50 ? 'bg-emerald-400' : 'bg-red-400'
+            )}
+            aria-hidden="true"
+          />
+          <span className="text-white font-medium text-sm md:text-base">{islamicPercentage}%</span>
+          <span className="text-[#8fc1e3] text-xs md:text-sm hidden md:inline">Islamic</span>
+          <span className="sr-only">
+            {islamicPercentage >= 50 ? 'Requirement met' : 'Below 50% requirement'}
+          </span>
         </div>
-      </header>
+      </AppHeader>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 md:px-6 py-4 md:py-8" aria-label="Crossword puzzle builder">

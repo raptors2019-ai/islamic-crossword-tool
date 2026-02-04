@@ -10,6 +10,15 @@ Islamic Crossword Puzzle Tool for myislam.org. Two main parts:
 
 **Goal:** Create 365 daily Islamic crossword puzzles. First milestone: 50-60 Prophet Stories puzzles.
 
+## Startup
+
+Always start the Next.js dev server in the background at the beginning of each session:
+```bash
+cd /Users/josh/code/crosswords/app && npm run dev
+```
+Check if port 3000 is already in use first (`lsof -i :3000`). If it is, skip starting the server.
+The dev server should be running at http://localhost:3000 throughout the session.
+
 ## Commands
 
 ### Python CLI (from repo root)
@@ -211,6 +220,10 @@ ISA, MUHAMMAD, DHUL_KIFL, ILYAS, AL_YASA
 - After changing generator code, RESTART the dev server (`npm run dev`) - hot reload doesn't always pick up lib changes
 - When testing the generator, use `npm test -- auto-generator.test.ts` to verify changes work before testing in the UI
 - There are TWO different friendliness functions: `scoreKeywordFriendliness` (auto-generator.ts) and `calculateWordFriendliness` (word-index.ts) - they use different algorithms and are NOT interchangeable! Using the wrong one breaks certain prophet themes.
+- `BLOCKED_WORDS` must also include violence/sexual terms (RAPE, KILL, STAB, etc.) - not just haram. These puzzles are for kids in a religious context. Always think "would this word be appropriate for a child solving an Islamic puzzle?"
+- `handleClearGrid()` must also clear `placedInGridIds` - otherwise cleared words still show as "placed" in the keyword chips
+- Manual keyword selection auto-fills remaining cells with CSP after each word is placed - don't leave the grid half-empty
+- Grid quality requires 2+ intersections per word where possible - freeform grids with only 1 intersection per word are unsolvable. `scorePosition()` in auto-generator.ts uses 300pts/intersection + 200pt bonus for 2+ intersections
 
 ## Slash Commands
 

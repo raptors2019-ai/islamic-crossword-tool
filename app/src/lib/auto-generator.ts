@@ -595,10 +595,14 @@ function scorePosition(
     }
   }
 
-  // Heavily reward intersections
-  score += intersections * 100;
+  // Heavily reward intersections - each one is worth far more than any centrality bonus
+  // 2+ intersections is the sweet spot for good crossword puzzles
+  score += intersections * 300;
+  if (intersections >= 2) {
+    score += 200; // Extra bonus for well-connected placements
+  }
 
-  // Reward central positions
+  // Reward central positions (but much less than intersections)
   const centerR = direction === 'down' ? row + length / 2 : row;
   const centerC = direction === 'across' ? col + length / 2 : col;
   const distFromCenter = Math.abs(centerR - 2) + Math.abs(centerC - 2);
@@ -1018,23 +1022,24 @@ function placeThemeWords(
       const firstWordPrefer = word.length === 5 ? 'across' : preferDirection;
       positions = findOpenPosition(grid, word, wordIndex, firstWordPrefer, relaxedOptions);
     } else {
-      // Subsequent words: combine intersection and open positions
-      // findIntersection now returns multiple positions with scores
+      // Subsequent words: prefer intersection positions for better connectivity
       const intersectionPositions = findIntersection(grid, word, wordIndex, relaxedOptions);
-      // Boost intersection scores since they're preferred
       for (const pos of intersectionPositions) {
         positions.push({ ...pos, score: pos.score + 100 });
       }
 
-      // Also get open positions as fallback
-      const openPositions = findOpenPosition(grid, word, wordIndex, preferDirection, relaxedOptions);
-      for (const pos of openPositions) {
-        // Check if this position is already in the list (from intersections)
-        const isDuplicate = positions.some(
-          p => p.row === pos.row && p.col === pos.col && p.direction === pos.direction
-        );
-        if (!isDuplicate) {
-          positions.push(pos);
+      // Only add open (0-intersection) positions as fallback when:
+      // - No intersection positions exist, OR
+      // - We have fewer than 2 words placed (still building initial structure)
+      if (intersectionPositions.length === 0 || placed.length < 2) {
+        const openPositions = findOpenPosition(grid, word, wordIndex, preferDirection, relaxedOptions);
+        for (const pos of openPositions) {
+          const isDuplicate = positions.some(
+            p => p.row === pos.row && p.col === pos.col && p.direction === pos.direction
+          );
+          if (!isDuplicate) {
+            positions.push(pos);
+          }
         }
       }
     }

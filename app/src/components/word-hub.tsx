@@ -170,6 +170,9 @@ export function WordHub({
 
   const selectedWordStrings = selectedWords.map((w) => w.activeSpelling.toUpperCase());
 
+  // Custom words are those with IDs starting with "custom-"
+  const customWords = selectedWords.filter((w) => w.id.startsWith('custom-'));
+
   // Show more keywords when expanded
   const visibleCount = showAll ? scoredKeywords.length : 20;
   const visibleKeywords = scoredKeywords.slice(0, visibleCount);
@@ -415,27 +418,58 @@ export function WordHub({
         </div>
       )}
 
-      {/* Custom Word Input - Compact inline section */}
-      <div className="flex items-center gap-2">
-        <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">Custom:</span>
-        <div className="flex items-center gap-1">
-          <Input
-            placeholder="Add word..."
-            value={customWordInput}
-            onChange={(e) => setCustomWordInput(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCustomWord()}
-            maxLength={5}
-            className="w-28 h-8 px-2 text-sm bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest focus:ring-2 focus:ring-[#D4AF37]/30"
-          />
-          {customWordInput.trim() && customWordInput.length >= 2 && customWordInput.length <= 5 && (
-            <button
-              onClick={handleAddCustomWord}
-              className="w-8 h-8 rounded-lg bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] font-bold flex items-center justify-center transition-colors"
-            >
-              +
-            </button>
-          )}
+      {/* Custom Word Input + Added Custom Words */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">Custom:</span>
+          <div className="flex items-center gap-1">
+            <Input
+              placeholder="Add word..."
+              value={customWordInput}
+              onChange={(e) => setCustomWordInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCustomWord()}
+              maxLength={5}
+              className="w-28 h-8 px-2 text-sm bg-[#002a42]/80 border-[#4A90C2]/30 text-white placeholder:text-[#6ba8d4] uppercase tracking-widest focus:ring-2 focus:ring-[#D4AF37]/30"
+            />
+            {customWordInput.trim() && customWordInput.length >= 2 && customWordInput.length <= 5 && (
+              <button
+                onClick={handleAddCustomWord}
+                className="w-8 h-8 rounded-lg bg-[#D4AF37] hover:bg-[#e5c86b] text-[#001a2c] font-bold flex items-center justify-center transition-colors"
+              >
+                +
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Display added custom words as chips */}
+        {customWords.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {customWords.map((cw) => {
+              const isPlaced = placedInGridIds?.has(cw.id);
+              return (
+                <button
+                  key={cw.id}
+                  onClick={() => onKeywordDeselect?.(cw.activeSpelling)}
+                  className={cn(
+                    'group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
+                    isPlaced
+                      ? 'bg-[#D4AF37] text-[#001a2c] hover:bg-[#e5c86b] border border-[#D4AF37]'
+                      : 'bg-violet-500/30 text-white hover:bg-violet-500/40 border border-violet-500/50'
+                  )}
+                >
+                  {isPlaced && (
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                    </svg>
+                  )}
+                  <span className="font-mono tracking-wide">{cw.activeSpelling}</span>
+                  <span className="opacity-60 hover:opacity-100 transition-opacity ml-0.5">&times;</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
