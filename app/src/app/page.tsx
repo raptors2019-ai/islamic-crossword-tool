@@ -507,43 +507,124 @@ export default function Home() {
     if (exists || themeWords.length >= 12) return;
 
     const id = `custom-${Date.now()}`;
-    const newThemeWords = [...themeWords, { id, word: upperWord, clue: '', activeSpelling: upperWord }];
-    const newClues = { ...clues, [id]: '' };
-    setThemeWords(newThemeWords);
-    setClues(newClues);
+    setThemeWords(prev => [...prev, { id, word: upperWord, clue: '', activeSpelling: upperWord }]);
+    setClues(prev => ({ ...prev, [id]: '' }));
     setSelectedWordId(id);
+    // Words are collected only — no grid placement until "Generate Puzzle" is clicked
+  }, [themeWords]);
 
-    // Try to place the word in the editable grid
-    const preferDirection = themeWords.length % 2 === 0 ? 'across' : 'down';
-    const result = placeWordAtBestPosition(editableCells, upperWord, preferDirection);
-    if (result) {
-      setCells(result.cells);
-      setPlacedInGridIds(prev => new Set([...prev, id]));
+  // Generate puzzle from collected custom words using the full auto-generator
+  const handleGenerateFromCustomWords = useCallback(() => {
+    const customWords = themeWords.filter(w => w.id.startsWith('custom-'));
+    if (customWords.length < 2) return;
 
-      // Auto-fill remaining empty cells with CSP so the grid isn't left half-empty
-      const cspResult = fillGridWithCSP(result.cells, wordIndex, 10000);
-      if (cspResult.success) {
-        setCells(cspResult.grid);
-        setAutoCompleteResult(cspResult);
-      }
-    }
+    // Clear any existing prophet context since this is custom
+    setCurrentProphet(null);
 
-    // Auto-generate puzzle if we have enough words (for clue generation etc.)
-    if (newThemeWords.length >= 3) {
-      setIsGenerating(true);
-      generatePuzzle({
-        title: puzzleTitle,
-        themeWords: newThemeWords,
-        targetWords: Math.min(newThemeWords.length, 8),
-      }).then((puzzle) => {
-        setGeneratedPuzzle(puzzle);
-      }).finally(() => {
-        setIsGenerating(false);
+    setIsGenerating(true);
+    setAutoGenerateResult(null);
+    setAutoCompleteResult(null);
+
+    try {
+      // Build theme words input for the auto-generator
+      const themeWordsInput = customWords.map(w => ({
+        word: w.activeSpelling.toUpperCase(),
+        clue: w.clue || '',
+      }));
+
+      // Build a boosted word index for the custom words
+      const customKeywords = customWords.map(w => w.activeSpelling.toUpperCase());
+      const boostedIndex = buildBoostedWordIndex(customKeywords);
+
+      const result = generateAutoPuzzle(themeWordsInput, {
+        maxTimeMs: 10000,
+        wordIndex: boostedIndex,
       });
-    } else {
-      setGeneratedPuzzle(null);
+
+      // Process placed words into theme words state
+      const customWordSet = new Set(customKeywords);
+      const newThemeWords: ThemeWord[] = [];
+      const newClues: Record<string, string> = {};
+      const placedIds = new Set<string>();
+      const addedWords = new Set<string>();
+
+      for (const placed of result.placedWords) {
+        const isCustom = customWordSet.has(placed.word);
+        if (isCustom && !addedWords.has(placed.word)) {
+          addedWords.add(placed.word);
+          // Find the existing custom word to preserve its ID
+          const existing = customWords.find(
+            w => w.activeSpelling.toUpperCase() === placed.word
+          );
+          const id = existing?.id || `custom-${Date.now()}-${placed.word}`;
+          newThemeWords.push({
+            id,
+            word: placed.word,
+            clue: placed.clue || '',
+            activeSpelling: placed.word,
+          });
+          newClues[id] = placed.clue || '';
+          placedIds.add(id);
+        }
+      }
+
+      // Also keep custom words that weren't placed (so they stay as chips)
+      for (const cw of customWords) {
+        if (!addedWords.has(cw.activeSpelling.toUpperCase())) {
+          newThemeWords.push(cw);
+          newClues[cw.id] = cw.clue || '';
+        }
+      }
+
+      setThemeWords(newThemeWords);
+      setClues(newClues);
+      setPlacedInGridIds(placedIds);
+
+      // Apply the generated grid, with CSP completion if needed
+      let finalGrid = result.grid;
+      let finalResult = result;
+      const hasContent = result.grid.some(row => row.some(cell => cell.letter || cell.isBlack));
+      const isComplete = result.success && result.stats.gridFillPercentage >= 99;
+
+      if (hasContent && !isComplete) {
+        const cspResult = fillGridWithCSP(result.grid, boostedIndex, 10000);
+        if (cspResult.success) {
+          finalGrid = cspResult.grid;
+          finalResult = {
+            ...result,
+            success: true,
+            grid: finalGrid,
+            placedWords: [
+              ...result.placedWords,
+              ...cspResult.placedWords.map(pw => ({
+                word: pw.word,
+                clue: '',
+                row: pw.slot.start.row,
+                col: pw.slot.start.col,
+                direction: pw.slot.direction,
+                isThemeWord: false,
+              })),
+            ],
+            stats: {
+              ...result.stats,
+              gridFillPercentage: 100,
+              fillerWordsPlaced: result.stats.fillerWordsPlaced + cspResult.stats.filledByCSP,
+            },
+          };
+        }
+      }
+
+      if (hasContent) {
+        setCells(finalGrid);
+      }
+
+      setAutoGenerateResult(finalResult);
+    } catch (error) {
+      console.error('Error generating puzzle from custom words:', error);
+    } finally {
+      setIsGenerating(false);
     }
-  }, [themeWords, clues, puzzleTitle, editableCells, setCells, wordIndex]);
+  }, [themeWords, setCells]);
 
   const addProphetKeyword = useCallback((keyword: ProphetKeyword) => {
     // STRICT 5x5 validation: word must be 2-5 letters
@@ -1304,6 +1385,8 @@ export default function Home() {
                     wordIndex={wordIndex}
                     onInvalidPlacement={handleInvalidPlacement}
                     onProphetSelect={handleProphetSelect}
+                    onGenerateFromCustom={handleGenerateFromCustomWords}
+                    isGenerating={isGenerating}
                   />
                 </CardContent>
               </Card>

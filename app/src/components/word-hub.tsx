@@ -32,6 +32,7 @@ import {
 } from '@/lib/perpendicular-validator';
 import { EditableCell, findBestPlacement } from '@/lib/editable-grid';
 import { WordIndex } from '@/lib/word-index';
+import { getSuggestedWords } from '@/lib/word-suggestions';
 
 interface WordHubProps {
   onKeywordSelect: (keyword: ProphetKeyword) => void;
@@ -50,6 +51,9 @@ interface WordHubProps {
   onInvalidPlacement?: (word: string, invalidSlots: SlotValidation[]) => void;
   // Auto-generate callback when prophet is selected
   onProphetSelect?: (prophetId: string, keywords: ProphetKeyword[]) => void;
+  // Custom word generation
+  onGenerateFromCustom?: () => void;
+  isGenerating?: boolean;
 }
 
 // Source badge colors - more visible
@@ -75,6 +79,8 @@ export function WordHub({
   wordIndex,
   onInvalidPlacement,
   onProphetSelect,
+  onGenerateFromCustom,
+  isGenerating,
 }: WordHubProps) {
   const [selectedProphet, setSelectedProphet] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -172,6 +178,15 @@ export function WordHub({
 
   // Custom words are those with IDs starting with "custom-"
   const customWords = selectedWords.filter((w) => w.id.startsWith('custom-'));
+
+  // Suggested Islamic words based on shared letters with custom words
+  const suggestedWords = useMemo(() => {
+    if (customWords.length === 0) return [];
+    return getSuggestedWords(
+      customWords.map(w => w.activeSpelling),
+      12
+    );
+  }, [customWords]);
 
   // Show more keywords when expanded
   const visibleCount = showAll ? scoredKeywords.length : 20;
@@ -468,6 +483,59 @@ export function WordHub({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* Generate Puzzle button — appears with 2+ custom words */}
+        {customWords.length >= 2 && onGenerateFromCustom && (
+          <button
+            onClick={onGenerateFromCustom}
+            disabled={isGenerating}
+            className={cn(
+              'w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2',
+              isGenerating
+                ? 'bg-[#D4AF37]/50 text-[#001a2c]/60 cursor-wait'
+                : 'bg-[#D4AF37] text-[#001a2c] hover:bg-[#e5c86b] hover:scale-[1.02]'
+            )}
+          >
+            {isGenerating ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Generating...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Generate Puzzle
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Suggested Words — Islamic words sharing letters with custom words */}
+        {suggestedWords.length > 0 && (
+          <div className="pt-2 border-t border-[#4A90C2]/20">
+            <span className="text-[#8fc1e3] text-xs uppercase tracking-widest">
+              Suggested Words
+            </span>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {suggestedWords.map((sw) => (
+                <button
+                  key={sw.word}
+                  onClick={() => onCustomWordAdd(sw.word)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-[#002a42] text-[#8fc1e3] hover:bg-[#003B5C] hover:text-white border border-[#4A90C2]/20 hover:border-[#D4AF37]/40 transition-all"
+                >
+                  <span className="font-mono tracking-wide">{sw.word}</span>
+                  <span className="text-[#6ba8d4] text-[10px]">+{sw.sharedLetters}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
